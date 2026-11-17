@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba010a9490ec9cb408854a47e7d1d35b, type: 3}
+  m_Name: V05
+  m_EditorClassIdentifier: CarWash.Runtime::CarWash.Data.VehicleData
+  id: V05
+  displayName: "\uC544\uC774\uC2A4\uD06C\uB9BC \uD2B8\uB7ED"
+  mvp: 0
+  isBoss: 0
+  size: L
+  tier: 2
+  basePay: 100
+  timeLimit: 150
+  dirt: {x: 0.2, y: 0.9, z: 0}
+  trashCount: 2
+  textureSize: 1024
+  surprisePool:
+  - critterId: C07
+    weight: 1
+    count: 1
+  prefab: Prefabs/Vehicles/V05_IceCreamTruck

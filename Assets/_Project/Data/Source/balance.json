@@ -1,0 +1,32 @@
+{
+  "player": {
+    "walkSpeed": 4.5, "sprintSpeed": 7.0, "crouchSpeed": 2.5, "jumpSpeed": 4.8,
+    "accel": 40, "airAccel": 8, "friction": 10, "foamFriction": 1.2, "gravity": 18,
+    "knockbackDecay": 6, "knockdownSpeed": 9, "knockedTime": 1.5,
+    "soakedSlow": 0.1, "soakedTime": 3, "stungSlow": 0.3, "stungTime": 3,
+    "interactRange": 2.5, "lookSensitivity": 0.1, "fov": 90,
+    "respawnY": -20, "pvpKnockbackScale": 0.4
+  },
+  "grab": { "holdStiffness": 15, "maxMass": 40, "throwImpulse": 14, "chargeTime": 1.0, "holdDistance": 1.6, "grabRange": 2.5 },
+  "economy": {
+    "startMoney": 50,
+    "cleanThresholds": [0.6, 0.8, 0.95],
+    "cleanMults": [0.0, 0.6, 1.0, 1.3],
+    "fastFinishFraction": 0.5, "fastMult": 1.2, "overtimePenaltyPerSec": 0.01, "minSpeedMult": 0.5,
+    "waxTip": 0.2, "cleanSurpriseTip": 0.1,
+    "damagePerHit": 5, "damageCap": 0.3,
+    "repStart": 3, "repMax": 5, "repGain": 0.1, "repLoss": 0.3,
+    "arrivalSlow": 30, "arrivalFast": 12,
+    "weeklyRentIncrease": 0.4,
+    "patience": 45, "dayLength": 240, "maxOvertime": 60, "inspectTime": 2,
+    "vendingPerCustomer": 2, "arrivalScalePerPlayer": 0.25
+  },
+  "dirt": {
+    "weights": {"x": 0.5, "y": 0.3, "z": 0.2},
+    "trashPenalty": 0.02, "foamDuration": 20, "spotsFraction": 0.4,
+    "readbackInterval": 0.5, "strokeSendRate": 10,
+    "brushMinRadius": 0.15, "brushMaxRadius": 0.4
+  },
+  "critter": { "wetnessDecay": 5, "hpScalePerPlayer": 0.25, "captureBonus": 15, "slimeSplitWetness": 50, "slimeMaxGen": 3, "slimeSplitScale": 0.6 },
+  "tools": { "hoseLength": 8, "hosePull": 12, "towelRadius": 1.0, "vacRadius": 2.0, "vacForce": 25, "netRange": 2.5, "sprayTickRate": 30 }
+}
