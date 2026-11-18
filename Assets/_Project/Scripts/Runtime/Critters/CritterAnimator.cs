@@ -60,7 +60,8 @@ namespace CarWash.Critters
         void LateUpdate()
         {
             float dt = Mathf.Max(Time.deltaTime, 1e-4f);
-            var d = transform.position - _lastPos; d.y = 0f;
+            var full = transform.position - _lastPos;
+            var d = full; d.y = 0f;
             _lastPos = transform.position;
             _speed = Mathf.Lerp(_speed, Mathf.Min(d.magnitude / dt, 12f), 1f - Mathf.Exp(-dt * 10f));
             var state = _critter != null ? _critter.State.Value : CritterState.Idle;
@@ -79,7 +80,50 @@ namespace CarWash.Critters
                 case Kind.Slime: Slime(dt, t, move, stunned); break;
                 case Kind.Rigid: Rigid(dt, t, move, carried); break;
             }
+            Jelly(dt, full / dt);
             if (carried) HangOnNet();
+        }
+
+        // ---------------- M4.8 F6: spring-mass jelly + rolling (code, a few floats per critter; nothing networked) ----------------
+        Vector3 _jelly, _jellyV, _lastVel;
+        float _sq, _sqV, _rollAngle;
+        Vector3 _rollAxis = Vector3.right;
+        const float JellyK = 140f, JellyC = 7f, SquashK = 220f, SquashC = 9f;
+
+        /// <summary>Hit / throw / bounce: a world-space shove of the body (m/s-ish).</summary>
+        public void Punch(Vector3 impulse)
+        {
+            var l = transform.InverseTransformDirection(impulse);
+            _jellyV += new Vector3(l.x, 0f, l.z) * 0.9f;
+            _sqV -= Mathf.Abs(l.y) * 1.2f + new Vector2(l.x, l.z).magnitude * 0.35f;
+        }
+
+        public float JellyAmount => _jelly.magnitude + Mathf.Abs(_sq);
+
+        void Jelly(float dt, Vector3 vel)
+        {
+            if (_body == null) return;
+            dt = Mathf.Min(dt, 0.05f);
+            var acc = (vel - _lastVel) / dt; _lastVel = vel;
+            var la = transform.InverseTransformDirection(acc);
+            if (la.sqrMagnitude < 2500f) { _jellyV -= new Vector3(la.x, 0f, la.z) * 0.0025f; _sqV += la.y * 0.0015f; } // inertia (big jumps = teleports, skipped)
+            _jellyV += (-JellyK * _jelly - JellyC * _jellyV) * dt; _jelly += _jellyV * dt;
+            _sqV += (-SquashK * _sq - SquashC * _sqV) * dt; _sq += _sqV * dt;
+            _jelly = Vector3.ClampMagnitude(_jelly, 0.35f); _sq = Mathf.Clamp(_sq, -0.35f, 0.35f);
+            // lean the body the way it is pushed + squash / stretch keeping the volume
+            _body.localRotation = Quaternion.Euler(_jelly.z * 70f, 0f, -_jelly.x * 70f) * _body.localRotation;
+            float sy = 1f + _sq, sxz = 1f / Mathf.Sqrt(Mathf.Max(0.3f, sy));
+            _body.localScale = Vector3.Scale(_kind == Kind.Quadruped ? _bodyScale : _body.localScale, new Vector3(sxz, sy, sxz)); // quadruped bodies don't reset their scale each frame
+            // thrown: roll over the ground in the direction of travel (not the slime: it splats instead)
+            bool thrown = _critter != null && _critter.Thrown.Value && _kind != Kind.Slime;
+            var hv = new Vector3(vel.x, 0f, vel.z);
+            if (thrown && hv.sqrMagnitude > 0.09f)
+            {
+                _rollAxis = transform.InverseTransformDirection(Vector3.Cross(Vector3.up, hv.normalized));
+                _rollAngle += hv.magnitude / 0.25f * Mathf.Rad2Deg * dt;
+            }
+            else _rollAngle = Mathf.MoveTowardsAngle(_rollAngle, Mathf.Round(_rollAngle / 360f) * 360f, dt * 540f);
+            if (Mathf.Abs(Mathf.DeltaAngle(_rollAngle, 0f)) > 0.5f) _body.localRotation = Quaternion.AngleAxis(_rollAngle, _rollAxis) * _body.localRotation;
         }
 
         void Quadruped(float dt, float t, float move, bool carried)

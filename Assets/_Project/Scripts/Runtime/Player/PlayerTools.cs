@@ -81,7 +81,23 @@ namespace CarWash.Player
         }
 
         [Rpc(SendTo.Everyone)]
-        void SwingFxRpc() { Equipped?.PlaySwing(); }
+        void SwingFxRpc() { Equipped?.PlaySwing(); Core.Services.Get<Core.AudioService>()?.Play3D("swing", _look.Head.position); }
+
+        /// <summary>M4.8 F5 game feel: everyone hears the hit (sound hook "swing_hit"); the swinger gets a 70 ms hit-stop, a little
+        /// camera kick and the hit marker.</summary>
+        [Rpc(SendTo.Everyone)]
+        void SwingHitFxRpc(Vector3 point)
+        {
+            Core.Services.Get<Core.AudioService>()?.Play3D("swing_hit", point);
+            if (!IsOwner) return;
+            Equipped?.HitStop(0.07f);
+            _look.AddShake(0.22f);
+            UI.Hud.Instance?.HitMarker();
+            LastHitFx = Time.time;
+        }
+
+        /// <summary>Owner: when the last hit feedback played (dev checks).</summary>
+        public float LastHitFx { get; private set; } = -1f;
 
         /// <summary>Server: first thing in a 0.45 m sweep 1.9 m ahead — a player is knocked down, a critter stunned, a prop knocked away.</summary>
         string ServerSwingHit(Vector3 origin, Vector3 dir)
@@ -95,11 +111,17 @@ namespace CarWash.Player
                 if (col.transform.IsChildOf(transform)) continue;
                 var flat = new Vector3(dir.x, 0f, dir.z).normalized;
                 var p = col.GetComponentInParent<PlayerNet>();
-                if (p != null && p != GetComponent<PlayerNet>()) { p.Motor.AddKnockback(flat * 11f + Vector3.up * 3.5f); return "player c" + p.OwnerClientId; }
+                if (p != null && p != GetComponent<PlayerNet>()) { p.Motor.AddKnockback(flat * 11f + Vector3.up * 3.5f); SwingHitFxRpc(SwingHits[i].point); return "player c" + p.OwnerClientId; }
                 var c = col.GetComponentInParent<Critters.CritterBase>();
-                if (c != null) { c.ServerAddWetness(c.MaxWetness.Value * 1.1f); return "critter " + c.CritterId + " → " + c.State.Value; }
+                if (c != null && !c.IsCarried)
+                {
+                    // M4.8 F5: a smack stuns AND launches it tumbling (the same code flight as a throw)
+                    c.ServerLaunch(flat * 5f + Vector3.up * 3f);
+                    SwingHitFxRpc(SwingHits[i].point);
+                    return "critter " + c.CritterId + " → " + c.State.Value;
+                }
                 var rb = col.attachedRigidbody;
-                if (rb != null && !rb.isKinematic) { rb.AddForce(flat * 6f + Vector3.up * 2.5f, ForceMode.VelocityChange); return "prop " + rb.name; }
+                if (rb != null && !rb.isKinematic) { rb.AddForce(flat * 6f + Vector3.up * 2.5f, ForceMode.VelocityChange); SwingHitFxRpc(SwingHits[i].point); return "prop " + rb.name; }
             }
             return $"nothing ({n} hits, from {origin.ToString("F1")} dir {dir.ToString("F2")})";
         }

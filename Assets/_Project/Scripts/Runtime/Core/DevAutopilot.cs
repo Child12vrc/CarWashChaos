@@ -58,6 +58,12 @@ namespace CarWash.Core
                 if (NetworkManager.Singleton.IsServer && ReleaseMode && DevChecksSwing.Requested) StartCoroutine(DevChecksSwing.HostObserve()); // M4.6 D8
                 yield break;
             }
+            if (DevChecksF5.Requested && !NetworkManager.Singleton.IsServer) // M4.8 F5/F6: swing / grab / throw players + critters
+            {
+                yield return DevChecksF5.Run(me);
+                Log("DONE");
+                yield break;
+            }
             if (DevChecksViews.Label != null) // M4.7 E4: environment screenshots, 3 spots × 8 directions
             {
                 yield return DevChecksViews.Run(me);

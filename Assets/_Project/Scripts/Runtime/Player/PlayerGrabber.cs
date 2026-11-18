@@ -33,7 +33,55 @@ namespace CarWash.Player
         readonly NetworkVariable<NetworkObjectReference> _heldPlayer = new NetworkVariable<NetworkObjectReference>();
         public PlayerRagdoll HeldPlayer { get; private set; }
         public PlayerRagdoll LookPlayer { get; private set; }
-        bool HoldingAnything => Held != null || HeldPlayer != null;
+        bool HoldingAnything => Held != null || HeldPlayer != null || HeldCritter != null;
+
+        // ---- M4.8 F5: critters by hand (F on a stunned one = pick up; hold F + release = throw; G = put down) ----
+        public Critters.CritterBase LookCritter { get; private set; }
+        /// <summary>The critter this player carries by hand (not in the net), from the synced CarrierClient.</summary>
+        public Critters.CritterBase HeldCritter
+        {
+            get
+            {
+                foreach (var c in Critters.CritterBase.All)
+                    if (c != null && c.IsCarried && c.CarrierClient.Value == OwnerClientId && !c.CarriedInNet) return c;
+                return null;
+            }
+        }
+
+        Critters.CritterBase FindCritter()
+        {
+            var ray = _look.AimRay;
+            int n = Physics.RaycastNonAlloc(ray, _hits, T.grabRange + 0.8f, 1 << Layers.Critter, QueryTriggerInteraction.Collide);
+            Critters.CritterBase best = null; float bestD = float.MaxValue;
+            var me = GetComponent<PlayerNet>();
+            for (int i = 0; i < n; i++)
+            {
+                var c = _hits[i].collider.GetComponentInParent<Critters.CritterBase>();
+                if (c == null || c.IsCarried || !c.CanInteract(me) || _hits[i].distance >= bestD) continue;
+                best = c; bestD = _hits[i].distance;
+            }
+            return best;
+        }
+
+        [Rpc(SendTo.Server)]
+        void GrabCritterRpc(NetworkObjectReference target)
+        {
+            if (!target.TryGet(out var no) || HoldingAnything) return;
+            var c = no.GetComponent<Critters.CritterBase>();
+            if (c == null || Vector3.Distance(_look.Head.position, c.transform.position) > T.grabRange + 1.6f) return;
+            c.ServerTryCarry(GetComponent<PlayerNet>(), null);
+        }
+
+        [Rpc(SendTo.Server)]
+        void ThrowCritterRpc(float charge)
+        {
+            var c = HeldCritter;
+            if (c == null) return;
+            // critters are light: about a prop throw, a little up so they arc and roll
+            var v = _motor.Velocity + _look.Head.forward * (2f + charge * T.throwImpulse * 0.55f) + Vector3.up * (1.5f + charge * 2.5f);
+            c.ServerThrow(v);
+            Debug.Log($"[CRITTER] client {OwnerClientId} {(charge > 0f ? "threw" : "dropped")} {c.CritterId} (charge {charge:0.00}, {v.magnitude:0.0} m/s)");
+        }
 
         public override void OnNetworkSpawn()
         {
@@ -48,6 +96,7 @@ namespace CarWash.Player
             _motor.Carrying = HoldingAnything;
             LookTarget = !HoldingAnything ? FindTarget() : null;
             LookPlayer = !HoldingAnything && LookTarget == null ? FindPlayer() : null;
+            LookCritter = !HoldingAnything && LookTarget == null && LookPlayer == null ? FindCritter() : null;
 
             if (!HoldingAnything)
             {
@@ -62,6 +111,24 @@ namespace CarWash.Player
                 {
                     GrabPlayerRpc(LookPlayer.NetworkObject);
                     _ignoreNextRelease = true;
+                }
+                else if (_input.GrabPressed && LookCritter != null)
+                {
+                    GrabCritterRpc(LookCritter.NetworkObject);
+                    _ignoreNextRelease = true;
+                }
+                return;
+            }
+
+            if (HeldCritter != null)
+            {
+                if (_input.DropPressed) { ThrowCritterRpc(0f); return; }
+                if (_input.GrabPressed && !_ignoreNextRelease) Charging = true;
+                if (Charging && _input.GrabHeld) Charge = Mathf.Clamp01(Charge + Time.deltaTime / Mathf.Max(0.05f, T.chargeTime));
+                if (_input.GrabReleased)
+                {
+                    if (_ignoreNextRelease) _ignoreNextRelease = false;
+                    else if (Charging) { ThrowCritterRpc(Charge < 0.15f ? 0f : Charge); Charging = false; Charge = 0f; }
                 }
                 return;
             }
@@ -128,6 +195,9 @@ namespace CarWash.Player
         {
             if (HeldPlayer != null) return Charging ? $"던지기 충전 {Mathf.RoundToInt(Charge * 100)}%" : $"[F 길게] 던지기   [G] 내려놓기   ({NameOf(HeldPlayer)} 들고 있음)";
             if (LookPlayer != null) return $"[F] 붙잡기  쓰러진 {NameOf(LookPlayer)}";
+            var hc = HeldCritter;
+            if (hc != null) return Charging ? $"던지기 충전 {Mathf.RoundToInt(Charge * 100)}%" : $"[F 길게] 던지기   [G] 내려놓기   ({hc.DisplayName} 들고 있음 — 보호소 우리로!)";
+            if (LookCritter != null) return $"[F] 잡기  {LookCritter.DisplayName}";
             if (Held != null) return Charging ? $"던지기 충전 {Mathf.RoundToInt(Charge * 100)}%" : $"[F 길게] 던지기   [G] 내려놓기   ({Held.DisplayName})";
             if (LookTarget == null) return null;
             return LookTarget.Mass > T.maxMass ? $"{LookTarget.DisplayName} — 너무 무거움 ({LookTarget.Mass:0}kg)" : $"[F] 집기  {LookTarget.DisplayName} ({LookTarget.Mass:0}kg)";

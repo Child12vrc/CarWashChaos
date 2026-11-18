@@ -52,7 +52,9 @@ namespace CarWash.Player
         PlayerNet _holder;
 
         // client interpolation
-        struct Snap { public float t; public Vector3 pos; public Quaternion[] rot; }
+        // M4.8 F7: only the hips are streamed (pos + packed rot, 20 B); every client simulates the limbs itself on a kinematic hips
+        // (cosmetic, local: free dangling, no 20 Hz pose steps, ~60 % less ragdoll traffic). The server keeps the full body.
+        struct Snap { public float t; public Vector3 pos; public Quaternion rot; }
         Snap _a, _b; int _snaps;
 
         // get-up blend
@@ -89,6 +91,18 @@ namespace CarWash.Player
             bool down = m == Mode.Down;
             if (_animator) _animator.enabled = m != Mode.Down;
             for (int i = 0; i < _cols.Length; i++) if (_cols[i]) _cols[i].enabled = down;
+            // smooth bodies while simulated (physics runs at 50 Hz), none while the animator drives them
+            foreach (var b in _bones) if (b) b.interpolation = down ? RigidbodyInterpolation.Interpolate : RigidbodyInterpolation.None;
+            if (!IsServer && _bones.Length > 0)
+            {
+                if (down)
+                {
+                    Hips.SetParent(null, true);                      // world space, like the server copy
+                    _bones[0].isKinematic = true;                    // driven by the streamed hips
+                    for (int i = 1; i < _bones.Length; i++) { _bones[i].isKinematic = false; _bones[i].angularVelocity = UnityEngine.Random.insideUnitSphere * 3f; }
+                }
+                else foreach (var b in _bones) b.isKinematic = true;
+            }
             if (TryGetComponent<Net.RemoteVisualSmoother>(out var sm)) sm.enabled = m == Mode.Off;
             if (IsOwner && TryGetComponent<CharacterController>(out var cc)) cc.enabled = m == Mode.Off;
             if (IsOwner && m == Mode.Off && _net != null && _net.Status != null) _net.Status.ClearKnock();
@@ -153,6 +167,16 @@ namespace CarWash.Player
 
         void FixedUpdate()
         {
+            // M4.8 F7 clients: move the kinematic hips along the streamed path; the local limbs follow through their joints
+            if (IsSpawned && !IsServer && State.Value == Mode.Down && _snaps > 0 && _bones.Length > 0)
+            {
+                float rt = (float)NetworkManager.ServerTime.Time - InterpDelay;
+                float span = Mathf.Max(1e-4f, _b.t - _a.t);
+                float k = _snaps > 1 ? Mathf.Clamp01((rt - _a.t) / span) : 1f;
+                _bones[0].MovePosition(Vector3.Lerp(_a.pos, _b.pos, k));
+                _bones[0].MoveRotation(Quaternion.Slerp(_a.rot, _b.rot, k));
+                return;
+            }
             if (!IsSpawned || !IsServer || State.Value != Mode.Down || !IsHeld) return;
             if (_holder == null) { ServerRelease(Vector3.zero); return; }
             // P4: spring the hips (and chest) to the grabber's hold point — carried in front of them, dragged if they look down
@@ -169,18 +193,14 @@ namespace CarWash.Player
 
         void SendPose()
         {
-            var rots = new uint[RagdollPose.BoneCount];
-            rots[0] = RagdollPose.Pack(Hips.rotation);
-            for (int i = 1; i < RagdollPose.BoneCount && i < _bones.Length; i++) rots[i] = RagdollPose.Pack(_bones[i].transform.rotation); // world: identical on every peer
-            PoseRpc(Hips.position, rots, (float)NetworkManager.ServerTime.Time);
+            PoseRpc(Hips.position, RagdollPose.Pack(Hips.rotation), (float)NetworkManager.ServerTime.Time);
             SnapshotsSent++;
         }
 
         [Rpc(SendTo.NotServer, Delivery = RpcDelivery.Unreliable)]
-        void PoseRpc(Vector3 hipsPos, uint[] rots, float serverTime)
+        void PoseRpc(Vector3 hipsPos, uint hipsRot, float serverTime)
         {
-            var s = new Snap { t = serverTime, pos = hipsPos, rot = new Quaternion[rots.Length] };
-            for (int i = 0; i < rots.Length; i++) s.rot[i] = RagdollPose.Unpack(rots[i]);
+            var s = new Snap { t = serverTime, pos = hipsPos, rot = RagdollPose.Unpack(hipsRot) };
             if (_snaps > 0 && serverTime <= _b.t) return;          // old / duplicate
             _a = _snaps > 0 ? _b : s; _b = s; _snaps++;
             SnapshotsReceived++;
@@ -206,11 +226,15 @@ namespace CarWash.Player
         [Rpc(SendTo.Everyone)]
         void GetUpRpc(Vector3 hipsPos, uint[] rots, Vector3 ground, float yaw)
         {
-            // final fallen pose in world space (all peers end from the same pose)
+            // final fallen pose in world space: the server's hips; the limbs from the server on the host, from the client's own
+            // local simulation everywhere else (M4.8 F7 — no pop into a pose it never showed)
+            foreach (var b in _bones) b.isKinematic = true;
+            var ownLimbs = new Quaternion[_bones.Length];
+            for (int i = 1; i < _bones.Length; i++) ownLimbs[i] = _bones[i].transform.rotation;
             ReattachHips();
             var hipsRot = RagdollPose.Unpack(rots[0]);
             var localRots = new Quaternion[_bones.Length];
-            for (int i = 1; i < _bones.Length && i < rots.Length; i++) localRots[i] = RagdollPose.Unpack(rots[i]);
+            for (int i = 1; i < _bones.Length && i < rots.Length; i++) localRots[i] = IsServer ? RagdollPose.Unpack(rots[i]) : ownLimbs[i];
             if (IsOwner)
             {
                 if (TryGetComponent<CharacterController>(out var cc)) cc.enabled = false;
@@ -272,15 +296,7 @@ namespace CarWash.Player
         {
             if (!IsSpawned || _bones.Length == 0) return;
             var m = State.Value;
-            if (m == Mode.Down && !IsServer && _snaps > 0)
-            {
-                float rt = (float)NetworkManager.ServerTime.Time - InterpDelay;
-                float span = Mathf.Max(1e-4f, _b.t - _a.t);
-                float k = _snaps > 1 ? Mathf.Clamp01((rt - _a.t) / span) : 1f;
-                Hips.SetPositionAndRotation(Vector3.Lerp(_a.pos, _b.pos, k), Quaternion.Slerp(_a.rot[0], _b.rot[0], k));
-                for (int i = 1; i < _bones.Length && i < _b.rot.Length; i++)
-                    _bones[i].transform.rotation = Quaternion.Slerp(_a.rot[i], _b.rot[i], k);
-            }
+            // (clients: hips + limbs are physics now — FixedUpdate moves the hips, interpolation draws them smoothly)
             if (m == Mode.Down && IsOwner)
             {
                 // the (owner-authoritative) root follows the body so the camera, name tags and late joiners see the right spot

@@ -44,6 +44,16 @@ namespace CarWash.Core
         // --------- frames ---------
         readonly List<float> _frameMs = new List<float>(8192);
         ProfilerRecorder _gcAlloc;
+        // M4.8 F7: CPU markers (ms per frame) + physics counters
+        static readonly (string name, ProfilerCategory cat, bool time)[] Markers =
+        {
+            ("Physics.Simulate", ProfilerCategory.Physics, true), ("FixedUpdate.PhysicsFixedUpdate", ProfilerCategory.Physics, true),
+            ("Physics.SyncColliderTransform", ProfilerCategory.Physics, true), ("FixedBehaviourUpdate", ProfilerCategory.Scripts, true),
+            ("BehaviourUpdate", ProfilerCategory.Scripts, true), ("LateBehaviourUpdate", ProfilerCategory.Scripts, true),
+            ("Active Dynamic Bodies", ProfilerCategory.Physics, false), ("Active Kinematic Bodies", ProfilerCategory.Physics, false), ("Contacts", ProfilerCategory.Physics, false),
+        };
+        ProfilerRecorder[] _mk;
+        double[] _mkSum, _mkMax;
         long _gcSum, _selfAlloc;
         int _gc0, _logLines, _framesRecv;
         float _lastRecvTime, _maxRecvGap; int _recvGaps200;
@@ -86,6 +96,8 @@ namespace CarWash.Core
         {
             _duration = seconds; _t0 = Time.unscaledTime; Recording = true; Done = false;
             _gcAlloc = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame");
+            _mk = new ProfilerRecorder[Markers.Length]; _mkSum = new double[Markers.Length]; _mkMax = new double[Markers.Length];
+            for (int i = 0; i < Markers.Length; i++) _mk[i] = ProfilerRecorder.StartNew(Markers[i].cat, Markers[i].name);
             _gc0 = GC.CollectionCount(0);
             _lastRecvTime = Time.unscaledTime;
             Application.logMessageReceived += OnLog;
@@ -235,6 +247,7 @@ namespace CarWash.Core
             float now = Time.unscaledTime, dt = Time.unscaledDeltaTime;
             _frameMs.Add(dt * 1000f);
             if (_gcAlloc.Valid) _gcSum += _gcAlloc.LastValue;
+            if (_mk != null) for (int i = 0; i < _mk.Length; i++) if (_mk[i].Valid) { double v = Markers[i].time ? _mk[i].LastValue / 1e6 : _mk[i].LastValue; _mkSum[i] += v; if (v > _mkMax[i]) _mkMax[i] = v; }
             if (_bytesThisFrameRecv > 0) { float gap = now - _lastRecvTime; if (gap > _maxRecvGap) _maxRecvGap = gap; if (gap > 0.2f) _recvGaps200++; _lastRecvTime = now; _framesRecv++; }
             _bytesThisFrameRecv = 0;
 
@@ -303,6 +316,7 @@ namespace CarWash.Core
             float P(float q) => f.Count == 0 ? 0f : f[Mathf.Clamp((int)(q * f.Count), 0, f.Count - 1)];
             long gcNet = Math.Max(0, _gcSum - _selfAlloc);
             sb.Append($"[NETSTATS]   frames: {f.Count / secs:0.0} fps, ms p50 {P(0.5f):0.0} p95 {P(0.95f):0.0} p99 {P(0.99f):0.0} max {P(1f):0.0}, >33 ms {f.Count(x => x > 33.4f)}, >50 ms {f.Count(x => x > 50f)}; GC {gcNet / 1024f / Math.Max(1, f.Count):0.0} KB/frame (recorder itself {_selfAlloc / 1024f / Math.Max(1, f.Count):0.0} excluded), collections {GC.CollectionCount(0) - _gc0}; logs {_logLines / secs:0.0}/s\n");
+            if (_mk != null) { var ms = new StringBuilder("[NETSTATS]   cpu/physics (avg / max per frame): "); for (int i = 0; i < _mk.Length; i++) ms.Append(_mk[i].Valid ? $"{Markers[i].name} {_mkSum[i] / Math.Max(1, f.Count):0.000}/{_mkMax[i]:0.00}{(Markers[i].time ? " ms" : "")}; " : $"{Markers[i].name} n/a; "); sb.Append(ms).Append('\n'); foreach (var r in _mk) if (r.Valid) r.Dispose(); }
             sb.Append($"[NETSTATS]   receive: frames with data {_framesRecv / secs:0.0}/s, longest gap {_maxRecvGap * 1000f:0} ms, gaps > 200 ms {_recvGaps200}\n");
             foreach (var kv in _motion.OrderBy(k => k.Key))
             {

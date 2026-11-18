@@ -125,6 +125,14 @@ namespace CarWash.Critters
             Enter(CritterState.Flee);
         }
 
+        /// <summary>M4.8 F5: thrown by a player → dizzy (stunned) for the flight + the usual stun time after it.</summary>
+        public void Stun()
+        {
+            if (IsGone || State == CritterState.Hidden) return;
+            Wetness = MaxWetness;
+            Enter(CritterState.Stunned);
+        }
+
         /// <summary>Put in the Animal Control cage.</summary>
         public bool Capture()
         {

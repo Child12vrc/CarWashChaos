@@ -67,12 +67,40 @@ namespace CarWash.Core
             while (dm.State.Value != GameState.Day && Time.time - t0 < 90f) yield return null;
             Log($"day state {dm.State.Value}");
             float dayStart = Time.time;
+            // M4.8 F7 stress: extra revealed critters + a knockdown every few seconds (several ragdolls at once)
+            int stress = ArgInt("-stress-critters", 0);
+            if (nm.IsServer && stress > 0) me.StartCoroutine(Stress(stress, players, rec));
             if (k < 3) yield return Washer(me, input, k, rec, dayStart, seconds);
             else yield return Chaos(me, input, players, rec, dayStart, seconds);
             input.sUse = false; input.sMove = Vector2.zero;
             while (!rec.Done) yield return null;
             yield return new WaitForSeconds(2f);
             input.scripted = false;
+        }
+
+        static IEnumerator Stress(int critters, System.Collections.Generic.List<PlayerNet> players, NetStatsRecorder rec)
+        {
+            var nm = NetworkManager.Singleton;
+            var prefabs = nm.NetworkConfig.Prefabs.Prefabs.Select(p => p.Prefab).Where(p => p != null && (p.name.StartsWith("C01_") || p.name.StartsWith("C05_") || p.name.StartsWith("C03_"))).ToList();
+            var rng = new System.Random(5);
+            for (int i = 0; i < critters && prefabs.Count > 0; i++)
+            {
+                var pos = new Vector3(-6f + (float)rng.NextDouble() * 30f, 0.1f, -12f + (float)rng.NextDouble() * 6f);
+                var go = Object.Instantiate(prefabs[i % prefabs.Count], pos, Quaternion.Euler(0, (float)rng.NextDouble() * 360f, 0));
+                go.GetComponent<NetworkObject>().Spawn(true);
+                yield return null;
+                go.GetComponent<Critters.CritterBase>()?.ServerReveal();
+            }
+            Log($"stress: {critters} critters spawned + revealed ({Critters.CritterBase.All.Count} total)");
+            while (!rec.Done)
+            {
+                yield return new WaitForSeconds(4f);
+                var up = players.Where(p => p != null && !p.GetComponent<PlayerRagdoll>().ControlsBody).ToList();
+                if (up.Count == 0) continue;
+                var victim = up[rng.Next(up.Count)];
+                var dir = Quaternion.Euler(0, (float)rng.NextDouble() * 360f, 0) * Vector3.forward;
+                victim.Motor.AddKnockback(dir * 11f + Vector3.up * 4f);
+            }
         }
 
         static float _nextDue;

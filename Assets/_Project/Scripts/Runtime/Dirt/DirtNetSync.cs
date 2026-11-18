@@ -85,7 +85,7 @@ namespace CarWash.Dirt
                 if (n > 0) list.CopyTo(c * chunk, arr, 0, n);
                 SnapshotRpc(arr, c == chunks - 1, RpcTarget.Single(to, RpcTargetUse.Temp));
             }
-            Debug.Log($"[DIRT] snapshot for client {to}: {list.Count} strokes in {chunks} chunks ({name})");
+            if (list.Count > 0) Debug.Log($"[DIRT] snapshot for client {to}: {list.Count} strokes in {chunks} chunks ({name})"); // M4.7/8: no log spam for clean cars
         }
 
         [Rpc(SendTo.SpecifiedInParams)]

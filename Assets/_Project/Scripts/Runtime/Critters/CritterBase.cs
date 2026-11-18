@@ -143,10 +143,66 @@ namespace CarWash.Critters
         /// <summary>All peers: lie on the side (stunned; the possum also while playing dead).</summary>
         protected virtual bool LooksKnockedOut => State.Value == CritterState.Stunned;
 
+        // ---------------- M4.8 F5 / F6: thrown by hand, flies in code (no Rigidbody), wobbles like jelly ----------------
+        /// <summary>Carried in a net (true) or by hand (false) — clients need it for the F-throw prompt.</summary>
+        public readonly NetworkVariable<bool> InNet = new NetworkVariable<bool>();
+        /// <summary>In flight after a throw (every peer rolls the body while it is set).</summary>
+        public readonly NetworkVariable<bool> Thrown = new NetworkVariable<bool>();
+        public bool CarriedInNet => InNet.Value;
+        Vector3 _flightV;
+        bool _flying;
+        static readonly int WorldMask = (1 << Core.Layers.Default) | (1 << Core.Layers.Vehicle) | (1 << Core.Layers.PlayBounds);
+
+        /// <summary>Server: let go of a hand-carried critter with a velocity — it flies stunned, bounces, rolls, stays dizzy.</summary>
+        public void ServerThrow(Vector3 velocity)
+        {
+            if (!IsServer || Brain == null || !IsCarried || InNet.Value) return;
+            ServerLaunch(velocity);
+        }
+
+        /// <summary>Server: smacked or thrown — stunned, flies in code, bounces off walls / the ground, rolls, then lies dizzy.</summary>
+        public void ServerLaunch(Vector3 velocity)
+        {
+            if (!IsServer || Brain == null || Brain.IsGone || State.Value == CritterState.Hidden) return;
+            Brain.Stun();
+            _flightV = Vector3.ClampMagnitude(velocity, 12f);
+            _flying = true; Thrown.Value = true;
+            if (Agent.enabled) Agent.enabled = false;
+            PunchRpc(velocity * 0.12f);
+        }
+
+        void ServerFlight(float dt)
+        {
+            var p = transform.position;
+            _flightV.y -= 9.81f * dt;
+            var step = _flightV * dt;
+            if (step.sqrMagnitude > 1e-6f && Physics.SphereCast(p + Vector3.up * 0.3f, 0.22f, step.normalized, out var wall, step.magnitude, WorldMask, QueryTriggerInteraction.Ignore) && wall.normal.y < 0.5f)
+            {
+                _flightV = Vector3.Reflect(_flightV, wall.normal) * 0.45f; // bonk off walls / cars
+                PunchRpc(wall.normal * Mathf.Min(4f, step.magnitude / dt * 0.25f));
+                step = Vector3.zero;
+            }
+            p += step;
+            float ground = Physics.Raycast(p + Vector3.up * 1.0f, Vector3.down, out var g, 3f, Core.Layers.GroundMask, QueryTriggerInteraction.Ignore) ? g.point.y : 0f;
+            if (p.y <= ground)
+            {
+                p.y = ground;
+                if (_flightV.y < -1.5f) { PunchRpc(Vector3.down * Mathf.Min(5f, -_flightV.y * 0.6f)); _flightV.y = -_flightV.y * 0.35f; _flightV.x *= 0.7f; _flightV.z *= 0.7f; }
+                else { var h = new Vector3(_flightV.x, 0f, _flightV.z) * Mathf.Max(0f, 1f - 3.5f * dt); _flightV = h; }
+                if (_flightV.sqrMagnitude < 0.16f) { _flying = false; Thrown.Value = false; if (Brain.IsFree && !Agent.enabled) SetupAgent(); }
+            }
+            transform.position = p;
+        }
+
+        /// <summary>Every peer: jiggle the body (hit, throw, bounce) — CritterAnimator's spring.</summary>
+        [Rpc(SendTo.Everyone)]
+        public void PunchRpc(Vector3 impulse) { if (_animator != null) _animator.Punch(impulse); }
+
         public bool ServerTryCarry(PlayerNet player, ToolBase net)
         {
-            if (!IsServer || Brain == null || player == null || !Brain.TryCarry(net != null)) return false;
+            if (!IsServer || Brain == null || player == null || _flying || !Brain.TryCarry(net != null)) return false;
             _carrier = player; _carrierTool = net;
+            InNet.Value = net != null;
             CarrierClient.Value = player.OwnerClientId;
             if (Agent.enabled) Agent.enabled = false;
             Debug.Log($"[CRITTER] {_critterId} picked up by client {player.OwnerClientId} ({(net != null ? "net" : "hands")})");
@@ -186,10 +242,10 @@ namespace CarWash.Critters
 
         void OnBrainChanged(CritterState s)
         {
-            if (s != CritterState.Carried) { _carrier = null; _carrierTool = null; CarrierClient.Value = ulong.MaxValue; }
+            if (s != CritterState.Carried) { _carrier = null; _carrierTool = null; CarrierClient.Value = ulong.MaxValue; InNet.Value = false; }
             Wetness.Value = Brain.Wetness;
             bool roam = Brain.IsFree;
-            if (roam && !Agent.enabled) SetupAgent();
+            if (roam && !Agent.enabled && !_flying) SetupAgent();
             if (!roam && Agent.enabled && Agent.isOnNavMesh) Agent.ResetPath();
             if (s == CritterState.Flee) FleeFromNearest(6f);
             OnStateEntered(s);
@@ -236,6 +292,7 @@ namespace CarWash.Critters
             Brain.Tick(dt);
             if (Mathf.Abs(Wetness.Value - Brain.Wetness) > 0.5f || (Brain.Wetness == 0f && Wetness.Value != 0f)) Wetness.Value = Brain.Wetness;
 
+            if (_flying) { ServerFlight(dt); return; } // M4.8: thrown — no brain movement until it lands
             if (Brain.State == CritterState.Carried)
             {
                 if (_carrier == null || (_carrierTool != null && (_carrierTool.HolderPlayer != _carrier || _carrierTool.Stowed))) { Brain.Release(); return; }

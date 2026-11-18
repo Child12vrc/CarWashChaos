@@ -181,7 +181,7 @@ namespace CarWash.Tools
             if (_aim > 0.5f) off += Random.insideUnitSphere * 0.004f;
             if (_swingT >= 0f)
             {
-                _swingT += dt / SwingTime;
+                if (_hitStop > 0f) _hitStop -= dt; else _swingT += dt / SwingTime; // M4.8 F5: hit-stop freezes the arc for a beat
                 float k = Mathf.Clamp01(_swingT);
                 float s = Mathf.Sin(k * Mathf.PI);
                 // wind-up to the right, sweep across to the left and down, settle back
@@ -211,5 +211,8 @@ namespace CarWash.Tools
         public float SwingYaw { get; private set; }
         /// <summary>Every peer: play the swing arc (PlayerTools.SwingFxRpc).</summary>
         public void PlaySwing() => _swingT = 0f;
+        float _hitStop;
+        /// <summary>M4.8 F5: the swing connected — hold the arc where it is for a moment (owner-side game feel).</summary>
+        public void HitStop(float seconds) => _hitStop = Mathf.Max(_hitStop, seconds);
     }
 }

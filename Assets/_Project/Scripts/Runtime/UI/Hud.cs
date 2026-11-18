@@ -117,7 +117,19 @@ namespace CarWash.UI
             }
             CrosshairOnTarget = onTarget;
             if (_crosshair != null && _skin != null) _crosshair.sprite = onTarget && _skin.crosshairHit != null ? _skin.crosshairHit : _skin.crosshair;
+            // M4.8 F5: hit marker — the crosshair flashes red and pops for 0.18 s
+            if (_crosshair != null)
+            {
+                _hitT = Mathf.Max(0f, _hitT - Time.deltaTime);
+                float k = _hitT / 0.18f;
+                _crosshair.color = Color.Lerp(Color.white, new Color(1f, 0.25f, 0.2f), k);
+                _crosshair.rectTransform.localScale = Vector3.one * (1f + 0.45f * k);
+            }
         }
+
+        float _hitT;
+        /// <summary>M4.8 F5: the local player's swing connected.</summary>
+        public void HitMarker() => _hitT = 0.18f;
 
         readonly Image[] _slots = new Image[4];
         readonly Text[] _slotLabels = new Text[4];

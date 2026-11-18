@@ -16,16 +16,16 @@ namespace CarWash.Editor
         static readonly Part[] Parts =
         {
             new Part { bone = HumanBodyBones.Hips, child = HumanBodyBones.Spine, parent = HumanBodyBones.LastBone, mass = 15f, kind = "box" },
-            new Part { bone = HumanBodyBones.Chest, child = HumanBodyBones.Neck, parent = HumanBodyBones.Hips, mass = 15f, kind = "box", lowTwist = -15, highTwist = 15, swing = 20 },
-            new Part { bone = HumanBodyBones.Head, child = HumanBodyBones.LastBone, parent = HumanBodyBones.Chest, mass = 5f, radius = 0.11f, kind = "sphere", lowTwist = -40, highTwist = 25, swing = 25 },
-            new Part { bone = HumanBodyBones.LeftUpperArm, child = HumanBodyBones.LeftLowerArm, parent = HumanBodyBones.Chest, mass = 2.5f, radius = 0.05f, kind = "capsule", lowTwist = -70, highTwist = 10, swing = 50 },
-            new Part { bone = HumanBodyBones.LeftLowerArm, child = HumanBodyBones.LeftHand, parent = HumanBodyBones.LeftUpperArm, mass = 2f, radius = 0.045f, kind = "capsule", lowTwist = -90, highTwist = 0, swing = 10 },
-            new Part { bone = HumanBodyBones.RightUpperArm, child = HumanBodyBones.RightLowerArm, parent = HumanBodyBones.Chest, mass = 2.5f, radius = 0.05f, kind = "capsule", lowTwist = -70, highTwist = 10, swing = 50 },
-            new Part { bone = HumanBodyBones.RightLowerArm, child = HumanBodyBones.RightHand, parent = HumanBodyBones.RightUpperArm, mass = 2f, radius = 0.045f, kind = "capsule", lowTwist = -90, highTwist = 0, swing = 10 },
-            new Part { bone = HumanBodyBones.LeftUpperLeg, child = HumanBodyBones.LeftLowerLeg, parent = HumanBodyBones.Hips, mass = 7f, radius = 0.075f, kind = "capsule", lowTwist = -20, highTwist = 70, swing = 30 },
-            new Part { bone = HumanBodyBones.LeftLowerLeg, child = HumanBodyBones.LeftFoot, parent = HumanBodyBones.LeftUpperLeg, mass = 5f, radius = 0.06f, kind = "capsule", lowTwist = -80, highTwist = 0, swing = 10 },
-            new Part { bone = HumanBodyBones.RightUpperLeg, child = HumanBodyBones.RightLowerLeg, parent = HumanBodyBones.Hips, mass = 7f, radius = 0.075f, kind = "capsule", lowTwist = -20, highTwist = 70, swing = 30 },
-            new Part { bone = HumanBodyBones.RightLowerLeg, child = HumanBodyBones.RightFoot, parent = HumanBodyBones.RightUpperLeg, mass = 5f, radius = 0.06f, kind = "capsule", lowTwist = -80, highTwist = 0, swing = 10 },
+            new Part { bone = HumanBodyBones.Chest, child = HumanBodyBones.Neck, parent = HumanBodyBones.Hips, mass = 15f, kind = "box", lowTwist = -25, highTwist = 25, swing = 30 },
+            new Part { bone = HumanBodyBones.Head, child = HumanBodyBones.LastBone, parent = HumanBodyBones.Chest, mass = 5f, radius = 0.11f, kind = "sphere", lowTwist = -50, highTwist = 40, swing = 40 },
+            new Part { bone = HumanBodyBones.LeftUpperArm, child = HumanBodyBones.LeftLowerArm, parent = HumanBodyBones.Chest, mass = 2.5f, radius = 0.05f, kind = "capsule", lowTwist = -90, highTwist = 40, swing = 85 },
+            new Part { bone = HumanBodyBones.LeftLowerArm, child = HumanBodyBones.LeftHand, parent = HumanBodyBones.LeftUpperArm, mass = 2f, radius = 0.045f, kind = "capsule", lowTwist = -115, highTwist = 0, swing = 25 },
+            new Part { bone = HumanBodyBones.RightUpperArm, child = HumanBodyBones.RightLowerArm, parent = HumanBodyBones.Chest, mass = 2.5f, radius = 0.05f, kind = "capsule", lowTwist = -90, highTwist = 40, swing = 85 },
+            new Part { bone = HumanBodyBones.RightLowerArm, child = HumanBodyBones.RightHand, parent = HumanBodyBones.RightUpperArm, mass = 2f, radius = 0.045f, kind = "capsule", lowTwist = -115, highTwist = 0, swing = 25 },
+            new Part { bone = HumanBodyBones.LeftUpperLeg, child = HumanBodyBones.LeftLowerLeg, parent = HumanBodyBones.Hips, mass = 7f, radius = 0.075f, kind = "capsule", lowTwist = -30, highTwist = 85, swing = 45 },
+            new Part { bone = HumanBodyBones.LeftLowerLeg, child = HumanBodyBones.LeftFoot, parent = HumanBodyBones.LeftUpperLeg, mass = 5f, radius = 0.06f, kind = "capsule", lowTwist = -105, highTwist = 0, swing = 20 },
+            new Part { bone = HumanBodyBones.RightUpperLeg, child = HumanBodyBones.RightLowerLeg, parent = HumanBodyBones.Hips, mass = 7f, radius = 0.075f, kind = "capsule", lowTwist = -30, highTwist = 85, swing = 45 },
+            new Part { bone = HumanBodyBones.RightLowerLeg, child = HumanBodyBones.RightFoot, parent = HumanBodyBones.RightUpperLeg, mass = 5f, radius = 0.06f, kind = "capsule", lowTwist = -105, highTwist = 0, swing = 20 },
         };
 
         public static Rigidbody[] Build(Animator anim)
@@ -41,7 +41,8 @@ namespace CarWash.Editor
                 if (!t.TryGetComponent<Rigidbody>(out var rb)) rb = t.gameObject.AddComponent<Rigidbody>();
                 rb.mass = p.mass; rb.isKinematic = true; rb.interpolation = RigidbodyInterpolation.None;
                 rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative; // valid for kinematic too
-                rb.linearDamping = 0.6f; rb.angularDamping = 1.0f;   // bodies tumble and stop instead of gliding 13 m (P3 check)
+                rb.linearDamping = 0.6f; rb.angularDamping = 0.3f;   // P3: no 13 m glides (linear); M4.8 F6: limbs swing freely (angular 1.0 → 0.3)
+                rb.solverIterations = 10; rb.solverVelocityIterations = 2;  // looser joint limits stay stable
                 AddCollider(t, anim, p);
                 if (p.parent != HumanBodyBones.LastBone && byBone.TryGetValue(p.parent, out var parentRb))
                 {
