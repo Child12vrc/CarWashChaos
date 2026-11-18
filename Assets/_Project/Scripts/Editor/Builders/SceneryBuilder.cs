@@ -66,7 +66,7 @@ namespace CarWash.Editor
             {
                 t.gameObject.layer = Layers.Scenery;
                 foreach (var c in t.GetComponents<Collider>()) Object.DestroyImmediate(c);
-                GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic);
+                if (t.GetComponent<TextMesh>() == null) GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.BatchingStatic); // text meshes stay dynamic
             }
             Bounds(env);
         }
@@ -441,6 +441,8 @@ namespace CarWash.Editor
                 tm.text = ad.text; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
                 tm.font = UI.UiFactory.Font; tm.fontSize = 64; tm.characterSize = 0.075f; tm.color = ad.fg; tm.fontStyle = FontStyle.Bold;
                 txt.GetComponent<MeshRenderer>().sharedMaterial = UI.UiFactory.Font.material;
+                // M4.6 B4: depth-tested text (the font's GUI material ignores depth → text showed through buildings)
+                SceneBuilder.Set(txt.AddComponent<Visual.WorldTextDepth>(), "_shader", Shader.Find("CarWash/WorldText"));
                 // TextMesh faces -Z: boards face the lot (their -Z side)
             }
         }
