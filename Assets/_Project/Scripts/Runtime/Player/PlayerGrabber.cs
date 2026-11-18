@@ -188,7 +188,7 @@ namespace CarWash.Player
         static string NameOf(PlayerRagdoll r)
         {
             var n = r != null ? r.Net : null;
-            return n != null ? PlayerNet.ColorNames[Mathf.Max(0, n.ColorIndex.Value) % PlayerNet.ColorNames.Length] : "동료";
+            return n != null ? n.DisplayName : "동료";
         }
 
         public string PromptText()

@@ -76,6 +76,32 @@ namespace CarWash.Tests
             });
         }
 
+        [TestCase("김철수", true)]
+        [TestCase("세차왕", true)]
+        [TestCase("Bob", true)]
+        [TestCase("ab", true)]
+        [TestCase("열두글자닉네임입니다요", true)]   // 11
+        [TestCase("열두글자닉네임입니다요요", true)] // 12
+        [TestCase("열두글자닉네임입니다요요요", false)] // 13
+        [TestCase("김", false)]
+        [TestCase("  ", false)]
+        [TestCase("<b>x</b>", false)]
+        [TestCase("a/b", false)]
+        [TestCase("player_1-2.", true)]
+        public void Nickname_Validation(string name, bool ok)
+        {
+            Assert.AreEqual(ok, Core.PlayerProfile.Validate(name) == null, name + " → " + Core.PlayerProfile.Validate(name));
+        }
+
+        [Test]
+        public void Nickname_TwelveKoreanCharacters_FitTheNetworkString()
+        {
+            var s = "가나다라마바사아자차카타";
+            Assert.IsNull(Core.PlayerProfile.Validate(s));
+            var f = new Unity.Collections.FixedString64Bytes(s);
+            Assert.AreEqual(s, f.ToString());
+        }
+
         [Test]
         public void VehicleShader_ReceivesForwardPlusLights_AndCarsHaveHeadlights()
         {

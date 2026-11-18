@@ -19,8 +19,8 @@ namespace CarWash.UI
         public static MainMenuUI Instance { get; private set; }
         public Transform Root { get; private set; }
 
-        InputField _ip, _code;
-        Text _status, _myIp;
+        InputField _ip, _code, _nick;
+        Text _status, _myIp, _nickHint;
         GameObject _main, _advanced;
         Button[] _buttons;
         bool _busy;
@@ -39,16 +39,24 @@ namespace CarWash.UI
             // --- default: Relay code flow ---
             _main = UiFactory.Rect("Main", Root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject;
             var m = _main.transform;
-            UiFactory.FramePanel("MenuPanel", m, c, new Vector2(0, -90), new Vector2(720, 520), new Color(0.12f, 0.17f, 0.3f, 0.9f));
-            var bHost = UiFactory.Button("Host", m, "방 만들기 (참가 코드 발급)", c, new Vector2(0, 110), new Vector2(560, 84), HostRelay);
-            UiFactory.Label("CodeHint", m, "친구에게 받은 참가 코드", 22, c, new Vector2(-120, 30), new Vector2(320, 30), color: new Color(0.75f, 0.85f, 1f));
-            _code = UiFactory.Input("Code", m, "", c, new Vector2(-120, -20), new Vector2(320, 74));
+            UiFactory.FramePanel("MenuPanel", m, c, new Vector2(0, -110), new Vector2(720, 600), new Color(0.12f, 0.17f, 0.3f, 0.9f));
+            // M4.9 G4: nickname (required before hosting / joining; remembered)
+            UiFactory.Label("NickLabel", m, "닉네임", 26, c, new Vector2(-250, 140), new Vector2(120, 40), color: new Color(0.75f, 0.85f, 1f));
+            _nick = UiFactory.Input("Nick", m, PlayerProfile.Nickname, c, new Vector2(60, 140), new Vector2(440, 64));
+            _nick.characterLimit = PlayerProfile.MaxLen;
+            _nick.textComponent.fontSize = 30;
+            _nick.onValueChanged.AddListener(_ => NickHint());
+            _nickHint = UiFactory.Label("NickHint", m, "", 20, c, new Vector2(60, 98), new Vector2(560, 26), color: new Color(1f, 0.85f, 0.5f));
+            var bHost = UiFactory.Button("Host", m, "방 만들기 (참가 코드 발급)", c, new Vector2(0, 40), new Vector2(560, 84), HostRelay);
+            UiFactory.Label("CodeHint", m, "친구에게 받은 참가 코드", 22, c, new Vector2(-120, -32), new Vector2(320, 30), color: new Color(0.75f, 0.85f, 1f));
+            _code = UiFactory.Input("Code", m, "", c, new Vector2(-120, -80), new Vector2(320, 74));
             _code.characterLimit = 12;
             _code.textComponent.fontSize = 36;
             _code.textComponent.alignment = TextAnchor.MiddleCenter;
-            var bJoin = UiFactory.Button("JoinCode", m, "코드로 참가", c, new Vector2(170, -20), new Vector2(240, 74), JoinRelay);
-            var bAdv = UiFactory.Button("Advanced", m, "고급 (IP로 플레이)", c, new Vector2(0, -130), new Vector2(560, 64), () => ShowAdvanced(true));
-            var bQuit = UiFactory.Button("Quit", m, "종료", c, new Vector2(0, -220), new Vector2(560, 64), Application.Quit);
+            var bJoin = UiFactory.Button("JoinCode", m, "코드로 참가", c, new Vector2(170, -80), new Vector2(240, 74), JoinRelay);
+            var bAdv = UiFactory.Button("Advanced", m, "고급 (IP로 플레이)", c, new Vector2(0, -185), new Vector2(560, 64), () => ShowAdvanced(true));
+            var bQuit = UiFactory.Button("Quit", m, "종료", c, new Vector2(0, -270), new Vector2(560, 64), Application.Quit);
+            NickHint();
 
             // --- 고급: direct IP (LAN / port forwarding) ---
             _advanced = UiFactory.Rect("Advanced", Root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject;
@@ -89,10 +97,25 @@ namespace CarWash.UI
             bool again = _autoStarted && AutoReconnect && NetSession.ArgJoin != null;
             if (_autoStarted && !again) return; // command-line auto start only once
             _autoStarted = true;
+            if (NetSession.ArgHostRelay || NetSession.ArgJoinCode != null || NetSession.ArgHost || NetSession.ArgJoin != null) PlayerProfile.EnsureTemporary();
+            if (DevFlags.DevContent && System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-autotest") >= 0) LogNickCheck();
             if (NetSession.ArgHostRelay) HostRelay();
             else if (NetSession.ArgJoinCode != null) { _code.text = NetSession.ArgJoinCode; JoinRelay(); }
             else if (NetSession.ArgHost) HostIp();
             else if (NetSession.ArgJoin != null) { _ip.text = NetSession.ArgJoin; if (again) Invoke(nameof(JoinIp), 3f); else JoinIp(); }
+        }
+
+        /// <summary>Dev (-autotest): IME availability under the Input System + Korean glyphs of the UI font for a sample name.</summary>
+        void LogNickCheck()
+        {
+            string ime;
+            try { var prev = Input.imeCompositionMode; Input.imeCompositionMode = IMECompositionMode.On; ime = $"ok (composition '{Input.compositionString}', mode {Input.imeCompositionMode})"; Input.imeCompositionMode = prev; }
+            catch (System.Exception e) { ime = "FAIL " + e.GetType().Name; }
+            const string sample = "세차왕김철수abc123_-.";
+            var font = UiFactory.Font;
+            font.RequestCharactersInTexture(sample, 30);
+            int missing = 0; foreach (char ch in sample) if (!font.GetCharacterInfo(ch, out _, 30)) missing++;
+            Debug.Log($"[NICK] nickname '{PlayerProfile.Nickname}' (saved='{PlayerPrefs.GetString("cw.nickname", "")}'), validate('{sample}')={PlayerProfile.Validate(sample) ?? "ok"}, validate('김')={PlayerProfile.Validate("김")}, validate('<b>x</b>')={PlayerProfile.Validate("<b>x</b>")}, IME {ime}, glyphs missing {missing}/{sample.Length} in {font.name}");
         }
 
         NetSession Net => Services.Get<NetSession>();
@@ -103,10 +126,40 @@ namespace CarWash.UI
             foreach (var b in _buttons) if (b != null) b.interactable = !busy;
         }
 
+        /// <summary>M4.9 G4: live hint under the nickname field (first run: asks for one).</summary>
+        void NickHint()
+        {
+            if (_nickHint == null || _nick == null) return;
+            var t = _nick.text;
+            if (string.IsNullOrEmpty(t)) { _nickHint.text = "처음이라면 닉네임을 정해 주세요 (2~12자, 한글·영문·숫자)"; _nickHint.color = new Color(1f, 0.85f, 0.5f); return; }
+            var err = PlayerProfile.Validate(t);
+            _nickHint.text = err ?? $"{PlayerProfile.Length(PlayerProfile.Clean(t))}/{PlayerProfile.MaxLen}자 — 이름표·결산에 이 이름이 보여요";
+            _nickHint.color = err != null ? new Color(1f, 0.55f, 0.45f) : new Color(0.6f, 1f, 0.7f);
+        }
+
+        /// <summary>Saves the typed nickname; false (+ message, field focused) when it is missing or invalid.</summary>
+        bool NickOk()
+        {
+            var t = _nick != null ? _nick.text : "";
+            if (string.IsNullOrEmpty(t) && PlayerProfile.HasNickname) return true; // command-line temporary name
+            if (PlayerProfile.Clean(t) == PlayerProfile.Nickname) return true;      // unchanged (also keeps a -nick test name unsaved)
+            var err = PlayerProfile.Validate(t);
+            if (err != null)
+            {
+                _status.text = "먼저 닉네임을 정해 주세요 — " + err;
+                ShowAdvanced(false);
+                _nick.Select(); _nick.ActivateInputField();
+                return false;
+            }
+            PlayerProfile.Nickname = t;
+            return true;
+        }
+
         bool CanStart()
         {
             if (_busy) return false;
             if (Net == null) { _status.text = "Bootstrap 씬에서 시작해 주세요"; return false; }
+            if (!NickOk()) return false;
             return true;
         }
 

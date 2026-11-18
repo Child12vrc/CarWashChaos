@@ -39,11 +39,45 @@ namespace CarWash.Player
 
         /// <summary>M4.8: every spawned player on this peer (driver NPC gaze etc.).</summary>
         public static readonly System.Collections.Generic.List<PlayerNet> All = new System.Collections.Generic.List<PlayerNet>();
-        public override void OnNetworkDespawn() { All.Remove(this); base.OnNetworkDespawn(); }
+
+        /// <summary>M4.9 G4: the nickname (owner writes its PlayerProfile name once on spawn; display only).</summary>
+        public readonly NetworkVariable<Unity.Collections.FixedString64Bytes> Nick = new NetworkVariable<Unity.Collections.FixedString64Bytes>(
+            default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        /// <summary>Nickname, or the colour name until it arrives. Markup characters are stripped (names are typed by players).</summary>
+        public string DisplayName
+        {
+            get
+            {
+                var n = Nick.Value.ToString();
+                if (string.IsNullOrWhiteSpace(n)) return ColorNames[Mathf.Max(0, ColorIndex.Value) % ColorNames.Length];
+                return n.Replace("<", "").Replace(">", "");
+            }
+        }
+        /// <summary>M4.9 G4: a remote player's nickname arrived (= joined) / a remote player left. Every peer.</summary>
+        public static event System.Action<PlayerNet> Joined;
+        public static event System.Action<string> Left;
+        bool _announced;
+
+        public override void OnNetworkDespawn()
+        {
+            All.Remove(this);
+            if (_announced && !IsOwner && NetworkManager != null && !NetworkManager.ShutdownInProgress) Left?.Invoke(DisplayName);
+            base.OnNetworkDespawn();
+        }
+
+        void NickChanged(Unity.Collections.FixedString64Bytes was, Unity.Collections.FixedString64Bytes now)
+        {
+            if (IsOwner || _announced || now.Length == 0) return;
+            _announced = true;
+            Joined?.Invoke(this);
+        }
 
         public override void OnNetworkSpawn()
         {
             if (!All.Contains(this)) All.Add(this);
+            Nick.OnValueChanged += NickChanged;
+            if (IsOwner) Nick.Value = new Unity.Collections.FixedString64Bytes(Core.PlayerProfile.Nickname);
+            else if (Nick.Value.Length > 0) _announced = true; // already here when we joined: no "joined" notice
             if (IsOwner && SpawnPos.Value != Vector3.zero)
             {
                 if ((transform.position - SpawnPos.Value).sqrMagnitude > 0.25f)

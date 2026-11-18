@@ -58,7 +58,7 @@ namespace CarWash.UI
                 int ci = Mathf.Max(0, p.ColorIndex.Value) % PlayerNet.Colors.Length;
                 _rows[i].swatch.color = PlayerNet.Colors[ci];
                 var ap = p.GetComponent<PlayerAppearance>();
-                _rows[i].label.text = $"{PlayerNet.ColorNames[ci]}{(p == me ? " (나)" : "")} · {(ap != null ? ap.CurrentName : "-")} — {(p.Ready.Value ? "준비 완료" : "준비 중")}";
+                _rows[i].label.text = $"{p.DisplayName}{(p == me ? " (나)" : "")} · {(ap != null ? ap.CurrentName : "-")} — {(p.Ready.Value ? "준비 완료" : "준비 중")}";
                 _rows[i].label.color = p.Ready.Value ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 1f, 1f, 0.8f);
             }
             if (me != null && Keyboard.current != null && Cursor.lockState == CursorLockMode.Locked)

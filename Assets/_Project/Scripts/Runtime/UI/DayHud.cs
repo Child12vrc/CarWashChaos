@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using CarWash.Core;
 using CarWash.Day;
 using CarWash.Economy;
@@ -21,7 +22,7 @@ namespace CarWash.UI
         Image _clockIcon;
         readonly Image[] _stars = new Image[5];
         Image _summary;
-        Text _summaryTitle, _summaryBody, _summaryHint;
+        Text _summaryTitle, _summaryBody, _summaryHint, _summaryCrew;
         readonly List<(Image img, float until)> _toasts = new List<(Image, float)>();
         DayManager _bound;
 
@@ -59,8 +60,9 @@ namespace CarWash.UI
             _summary = UiFactory.FramePanel("Summary", root, new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(720, 560), new Color(0.1f, 0.15f, 0.3f, 0.95f));
             var txt = _skin != null ? _skin.panelText : Color.white;
             _summaryTitle = UiFactory.Label("Title", _summary.transform, "", 44, new Vector2(0.5f, 1f), new Vector2(0, -60), new Vector2(640, 60), color: txt);
-            _summaryBody = UiFactory.Label("Body", _summary.transform, "", 28, new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(600, 340), TextAnchor.MiddleLeft, txt);
+            _summaryBody = UiFactory.Label("Body", _summary.transform, "", 28, new Vector2(0.5f, 0.5f), new Vector2(0, -18), new Vector2(600, 330), TextAnchor.MiddleLeft, txt);
             _summaryBody.lineSpacing = 1.15f;
+            _summaryCrew = UiFactory.Label("Crew", _summary.transform, "", 22, new Vector2(0.5f, 1f), new Vector2(0, -108), new Vector2(660, 30), color: new Color(0.75f, 0.85f, 1f)); // M4.9 G4
             _summaryHint = UiFactory.Label("Hint", _summary.transform, "", 28, new Vector2(0.5f, 0f), new Vector2(0, 52), new Vector2(640, 40), color: new Color(1f, 0.85f, 0.3f));
             _summary.gameObject.SetActive(false);
         }
@@ -168,6 +170,7 @@ namespace CarWash.UI
         void FillSummary(DayManager dm, GameState st)
         {
             var s = dm.Summary.Value;
+            _summaryCrew.text = "함께한 사람  " + string.Join(" · ", Player.PlayerNet.All.Where(p => p != null).OrderBy(p => p.OwnerClientId).Select(p => p.DisplayName));
             if (st == GameState.GameOver)
             {
                 _summaryTitle.text = "파산!";
@@ -200,13 +203,21 @@ namespace CarWash.UI
         {
             Critters.CritterBase.Revealed += OnCritterRevealed;
             Critters.CritterBase.Caged += OnCritterCaged;
+            Player.PlayerNet.Joined += OnPlayerJoined;
+            Player.PlayerNet.Left += OnPlayerLeft;
         }
 
         void OnDisable()
         {
             Critters.CritterBase.Revealed -= OnCritterRevealed;
             Critters.CritterBase.Caged -= OnCritterCaged;
+            Player.PlayerNet.Joined -= OnPlayerJoined;
+            Player.PlayerNet.Left -= OnPlayerLeft;
         }
+
+        // M4.9 G4: join / leave notices with the nickname
+        void OnPlayerJoined(Player.PlayerNet p) => Toast($"{p.DisplayName} 님이 들어왔어요", new Color(0.6f, 0.9f, 1f));
+        void OnPlayerLeft(string name) => Toast($"{name} 님이 나갔어요", new Color(1f, 0.75f, 0.6f));
 
         // DESIGN-GAP: the reveal "sting" is visual only (pop + toast) until SFX exist (T6.x audio)
         void OnCritterRevealed(Critters.CritterBase c) => Toast($"앗! {c.DisplayName} 등장!", new Color(1f, 0.8f, 0.4f));

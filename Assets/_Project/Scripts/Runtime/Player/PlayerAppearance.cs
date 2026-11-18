@@ -130,7 +130,7 @@ namespace CarWash.Player
         {
             if (_tag == null) return;
             int ci = _net != null ? Mathf.Max(0, _net.ColorIndex.Value) % PlayerNet.Colors.Length : 0;
-            _tagText.text = PlayerNet.ColorNames[ci];
+            _tagText.text = _net != null ? _net.DisplayName : PlayerNet.ColorNames[ci];
             _tagText.color = PlayerNet.Colors[ci];
             // follow the hips while ragdolled / carried so the tag stays over the body
             var rag = GetComponent<PlayerRagdoll>();

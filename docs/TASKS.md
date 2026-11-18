@@ -93,7 +93,7 @@ Rule: do tasks in order unless marked (parallel). One task ≈ one agent session
 - [x] G1 Day → night with the business day (sun path morning → noon → sunset → night; sky / fog / ambient / post colour); at night street lamps, bay lights, signs and car headlights on (no baked GI, limited light count); stars; time from DayManager's synced values (no extra traffic); bays stay bright enough to wash.
 - [x] G2 Moving clouds (sky shader noise or dome / billboards), tinted by time of day.
 - [ ] G3 Wardrobe: the personal locker opens a wardrobe — camera moves in front of my character (mirror / preview), pick 1 of 12 looks + player colour while seeing it; remove Z / X / C keys and the lobby look text; same preview in the Esc menu; remembered (PlayerPrefs) + synced.
-- [ ] G4 Nickname: main-menu input (required on first run, Korean IME, 2–12 chars, remembered) → name tags, summary, join / leave notices; verify Korean IME + no missing glyphs.
+- [x] G4 Nickname: main-menu input (required on first run, Korean IME, 2–12 chars, remembered) → name tags, summary, join / leave notices; verify Korean IME + no missing glyphs.
 - [ ] G5 UI rework: one top status bar — money $ / today's income / rent (remaining + reached colour) · reputation stars + number · clock / time left; bay cards with customer patience gauge, current clean % and target %; +$ / −$ popups; short text labels on every icon at first; remove clutter; keep the UI scale slider; check at 1920×1080, 1280×720, 2560×1440.
 - [ ] G6 Patience timers over cars (billboard ring shrinking clockwise + seconds, white → yellow → red, blink + angry emoji + warning sound at 10 s, '떠남! -평판' popup), queue + bay cars, small when far / edge arrows when off-screen, same value on the bay card; synced as server start time + limit only; audit the patience rules (too-early / unexplained leaving) + one line in tutorial / help.
 - [x] G7 Bay lights + switch: ceiling fixtures (emissive LED bars) + real lights, a wall switch (E, click sound hook, shows its state), NetworkVariable (toggle only); on by default at night (G1); 1–2 lights per bay, shadows only where needed; clearly darker when off.
@@ -253,3 +253,23 @@ M4.9 G1 + G2 + G7 (2026-11-19):
   - Dev flag `-time HH.H` pins the clock and logs `[DAYNIGHT]`; at 20:30, 24/24 night lights and 3 bay switches are on.
   - Performance, 4P LAN with uncapped fps (all 4 instances on one PC): host 95.5 fps (p50 9.8 ms) at noon vs 90.3 fps (p50 10.4 ms) at night; network unchanged.
   - EditMode M49Tests: 4 new tests, 186 green.
+
+M4.9 G4 (2026-11-19):
+- Main menu: a nickname field at the top of the menu panel (`Core.PlayerProfile`, PlayerPrefs "cw.nickname").
+  - Rules: 2–12 characters; 한글, Latin letters, digits, space and _-. only; no markup.
+  - A live hint under the field asks for a name on first run, shows the count, or shows the error.
+  - Hosting or joining is blocked (and the field gets focus) until the name is valid.
+- Network: `PlayerNet.Nick` is a FixedString64Bytes NetworkVariable that the owner writes once on spawn. 12 Korean characters are 36 bytes. Display strips '<' and '>'.
+- Where the name shows:
+  - name tags (above players);
+  - lobby rows;
+  - the grab prompt for a downed teammate;
+  - the summary line '함께한 사람 A · B';
+  - join and leave toasts ('N 님이 들어왔어요 / 나갔어요'), on the first nickname arrival and on despawn; no toast for players who were already there.
+- Command-line runs: auto starts use `-nick NAME`, or a temporary unsaved "손님NN" name, so tests never block.
+- Checks:
+  - 2-player run with `-nick 세차왕 / -nick 김철수`: the lobby shows both names, the host gets '김철수 님이 들어왔어요', the summary shows '함께한 사람 세차왕 · 김철수', and the full loop PASSes.
+  - Korean IME under the Input System: `Input.imeCompositionMode` works ("ok, mode On"); the legacy InputField handles composition.
+  - Glyphs: 0/15 missing for '세차왕김철수abc123_-.' in the UI font.
+  - 13 new EditMode tests (validation cases, 12 Korean characters fit FixedString64).
+- Fix: a `-nick` test name was saved to the shared PlayerPrefs. NickOk now saves only a changed name, and the stray value was removed.
