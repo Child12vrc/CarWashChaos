@@ -47,8 +47,22 @@ namespace CarWash.Vehicles
             if (d == null || _trashPrefabs.Length == 0 || v.Doors.Count == 0) return;
             int sideDoors = 0;
             foreach (var door in v.Doors) if (!door.IsTrunk) sideDoors++;
+            var spots = v.TrashSpots;
             for (int i = 0; i < d.trashCount; i++)
             {
+                if (spots.Count > 0)
+                {
+                    // M4.6 D3: on the procedural / delivered interior (seat or floor spot), revealed by the door on that side
+                    var spot = spots[i % spots.Count];
+                    var sl = v.transform.InverseTransformPoint(spot.position) + new Vector3(0f, 0.04f * (i / spots.Count), 0f);
+                    int di = NearestSideDoor(v, spot.position);
+                    var tp = Instantiate(_trashPrefabs[Random.Range(0, _trashPrefabs.Length)], v.transform.TransformPoint(sl), v.transform.rotation * Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
+                    var ti = tp.GetComponent<TrashItem>();
+                    ti.ServerAttach(v, sl, di);
+                    tp.Spawn(true);
+                    v.Trash.Add(ti);
+                    continue;
+                }
                 int doorIndex = i % Mathf.Max(1, sideDoors);
                 var door = v.Doors[doorIndex];
                 // just outside the door panel, at seat height; revealed when the door opens
@@ -61,6 +75,17 @@ namespace CarWash.Vehicles
                 t.Spawn(true);
                 v.Trash.Add(item);
             }
+        }
+        static int NearestSideDoor(Vehicle v, Vector3 p)
+        {
+            int best = 0; float bd = float.MaxValue;
+            for (int k = 0; k < v.Doors.Count; k++)
+            {
+                if (v.Doors[k].IsTrunk) continue;
+                float d = (v.Doors[k].transform.position - p).sqrMagnitude;
+                if (d < bd) { bd = d; best = k; }
+            }
+            return best;
         }
     }
 }

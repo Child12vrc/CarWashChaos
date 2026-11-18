@@ -24,6 +24,9 @@ namespace CarWash.Vehicles
         [SerializeField] private DataRegistry _data;
         [SerializeField] private string _dataId;
         [SerializeField] private Transform _interior, _surprise, _driver;
+        [Tooltip("M4.6 D3: where interior trash lies (seats / floor of the interior), side by side with the door that reveals it")]
+        [SerializeField] private Transform[] _trashSpots = Array.Empty<Transform>();
+        public IReadOnlyList<Transform> TrashSpots => _trashSpots;
         /// <summary>GLB vehicles: body-coloured parts outside the dirt body (doors, trunk, mirrors) — renderer + material slot.</summary>
         [SerializeField] private Renderer[] _paintRenderers = Array.Empty<Renderer>();
         [SerializeField] private int[] _paintSlots = Array.Empty<int>();

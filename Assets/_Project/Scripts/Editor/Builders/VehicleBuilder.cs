@@ -52,6 +52,7 @@ namespace CarWash.Editor
 
             DirtPainter painter;
             Transform interior, surprise, driver;
+            var cabin = new VehicleInteriorBuilder.Cabin();
             float w, minZ, maxZ, maxY;
             VehicleGlbBuilder.Parts glb = null;
             string glbPath = VehicleGlbBuilder.GlbFor(d.id); // only the exact id's model (V01/V02/V03 now); others stay graybox
@@ -61,6 +62,14 @@ namespace CarWash.Editor
                 painter = glb.Painter;
                 interior = glb.Interior; surprise = glb.Surprise; driver = glb.Driver;
                 w = glb.BodyBounds.size.x; minZ = glb.Bounds.min.z; maxZ = glb.Bounds.max.z; maxY = glb.Bounds.max.y;
+                // M4.6 D3: cabin = the glass box (belt line → roof, windscreen → rear window) inside the body
+                var glass = root.transform.Find("Model/Glass");
+                var gb = glass != null ? GlbKit.LocalBounds(glass.gameObject, root.transform) : new Bounds(glb.BodyBounds.center + Vector3.up * 0.3f, glb.BodyBounds.size * 0.6f);
+                var bb = glb.BodyBounds;
+                cabin.halfW = Mathf.Min(gb.size.x, bb.size.x) * 0.5f - 0.1f;
+                cabin.beltY = gb.min.y; cabin.roofY = gb.max.y;
+                cabin.floorY = Mathf.Max(bb.min.y + 0.25f, gb.min.y - 0.75f);
+                cabin.rearZ = gb.min.z + 0.15f; cabin.frontZ = gb.max.z - 0.25f;
             }
             else
             {
@@ -77,10 +86,13 @@ namespace CarWash.Editor
                 Door(root.transform, "Trunk", new Vector3(0, maxY * 0.72f, minZ - 0.04f), new Vector3(w * 0.8f, 0.5f, 0.06f), new Vector3(0, -0.25f, 0), new Vector3(-80f, 0, 0), "트렁크", doorMat);
 
                 interior = Socket(root.transform, "Socket_Interior", new Vector3(0, doorY, doorZ - 0.5f));
+                cabin.halfW = w * 0.5f - 0.12f; cabin.floorY = doorY - 0.3f; cabin.beltY = doorY + 0.35f; cabin.roofY = maxY - 0.05f;
+                cabin.frontZ = doorZ + 0.55f; cabin.rearZ = Mathf.Max(minZ + 0.4f, doorZ - 1.4f);
                 surprise = Socket(root.transform, "Socket_Surprise", new Vector3(0, maxY + 0.2f, 0));
                 driver = Socket(root.transform, "Socket_Driver", new Vector3(-w * 0.25f, doorY + 0.3f, doorZ - 0.3f));
             }
 
+            var trashSpots = VehicleInteriorBuilder.Build(root.transform, d.id, cabin); // M4.6 D3
             var sync = root.AddComponent<DirtNetSync>();
             SceneBuilder.Set(sync, "_painter", painter);
             SceneBuilder.Set(sync, "_data", DataBuilder.LoadRegistry());
@@ -92,6 +104,7 @@ namespace CarWash.Editor
             SceneBuilder.Set(v, "_interior", interior);
             SceneBuilder.Set(v, "_surprise", surprise);
             SceneBuilder.Set(v, "_driver", driver);
+            PrefabBuilder.SetArray(v, "_trashSpots", trashSpots);
             var vso = new SerializedObject(v); vso.FindProperty("_dataId").stringValue = d.id;
             if (glb != null)
             {
