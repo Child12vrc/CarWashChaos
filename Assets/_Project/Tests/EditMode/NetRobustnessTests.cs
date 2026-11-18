@@ -92,10 +92,10 @@ namespace CarWash.Tests
 
         [Test] public void DisconnectReasons_AreKorean()
         {
-            Assert.AreEqual("호스트가 게임을 종료했습니다.", NetSession.FriendlyReason("[Disconnect Event][Client-1][TransportClientId-4294967296][ClosedByRemote] Connection was closed by remote endpoint."));
+            Assert.AreEqual("방장이 게임을 종료했습니다.", NetSession.FriendlyReason("[Disconnect Event][Client-1][TransportClientId-4294967296][ClosedByRemote] Connection was closed by remote endpoint."));
             StringAssert.Contains("시간 초과", NetSession.FriendlyReason("[Disconnect Event][Client-2][Timeout] Connection timed out"));
             Assert.AreEqual("서버가 가득 찼습니다 (최대 4명)", NetSession.FriendlyReason("서버가 가득 찼습니다 (최대 4명)"));
-            Assert.AreEqual("호스트와의 연결이 끊어졌습니다.", NetSession.FriendlyReason(null));
+            Assert.AreEqual("방장과의 연결이 끊어졌습니다.", NetSession.FriendlyReason(null));
             StringAssert.Contains("접속할 수 없습니다", NetSession.FriendlyReason("MaxConnectionAttempts reached"));
         }
 
