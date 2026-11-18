@@ -53,10 +53,10 @@ namespace CarWash.UI
             _steps = new[]
             {
                 new Step { title = "1/5  움직여 보기", text = "W A S D 로 이동, 마우스로 둘러보기.\nShift 달리기 · Space 점프 · Ctrl 앉기", done = () => Me != null && Flat(Me.transform.position - _start) > 4f },
-                new Step { title = "2/5  고압 세척기 집기", text = "베이 1 왼쪽 벽 가운데의 노란 세척기를 보고 [E].\n호스가 닿는 곳까지만 들고 다닐 수 있어요.", done = () => Me != null && Me.GetComponent<PlayerTools>().Equipped is PressureWasher },
+                new Step { title = "2/5  고압 세척기 집기", text = "차고지 1 왼쪽 벽 가운데의 노란 세척기를 보고 [E].\n호스가 닿는 곳까지만 들고 다닐 수 있어요.", done = () => Me != null && Me.GetComponent<PlayerTools>().Equipped is PressureWasher },
                 new Step { title = "3/5  영업 시작", text = "대기실에서 모두 [R] 준비 →\n사무실 벽 일정판을 보고 [E] 영업 시작.", done = () => DayManager.Instance != null && DayManager.Instance.State.Value == GameState.Day },
-                new Step { title = "4/5  세차하기", text = "차가 베이에 들어오면 마우스 왼쪽으로 물을 뿌려요.\n오른쪽 클릭: 노즐 넓게/좁게. 베이 카드에 청결도 %.", done = () => _sprayTime > 3f },
-                new Step { title = "5/5  정산하기", text = "다 씻었으면 베이 안쪽 벽 버튼을 보고 [E]\n\"세차 완료! 정산하기\" → 돈을 받아요.", done = () => EconomyState.Instance != null && _money0 >= 0 && EconomyState.Instance.Money.Value > _money0 },
+                new Step { title = "4/5  세차하기", text = "차가 차고지에 들어오면 마우스 왼쪽으로 물을 뿌려요.\n오른쪽 클릭: 물줄기 넓게/좁게. 오른쪽 차고지 정보창에 청결도 %.", done = () => _sprayTime > 3f },
+                new Step { title = "5/5  정산하기", text = "다 씻었으면 차고지 안쪽 벽 버튼을 보고 [E]\n\"세차 완료! 정산하기\" → 돈을 받아요.", done = () => EconomyState.Instance != null && _money0 >= 0 && EconomyState.Instance.Money.Value > _money0 },
             };
         }
 
@@ -137,14 +137,14 @@ namespace CarWash.UI
                 var p = car.Dirt.Painter;
                 if (tool is PressureWasher && p.GreasePct > 0.03f && p.MudPct < 0.05f) { ShowHint("grease", "기름때가 안 지워져요?", "검은 기름때는 거품 대포(분홍)로 먼저 덮은 뒤\n세척기로 쏘면 지워져요.", 7f); return; }
                 if (p.SpotsPct > 0.03f && p.MudPct < 0.02f && !(tool is Towel)) { ShowHint("spots", "물자국이 남았어요", "물자국은 수건으로: 수건을 들고 차를 보며\n마우스를 좌우로 문질러요.", 7f); return; }
-                if (car.State.Value == VehicleState.Washing && car.Dirt.CleanPct.Value >= 0.9f) { ShowHint("pay", "거의 다 됐어요!", "베이 안쪽 벽 버튼 [E] → 세차 완료! 정산하기.\n청결도가 높을수록 돈을 더 받아요.", 7f); return; }
+                if (car.State.Value == VehicleState.Washing && car.Dirt.CleanPct.Value >= 0.9f) { ShowHint("pay", "거의 다 됐어요!", "차고지 안쪽 벽 버튼 [E] → 세차 완료! 정산하기.\n청결도가 높을수록 돈을 더 받아요.", 7f); return; }
             }
             foreach (var c in CritterBase.All)
                 if (c != null && c.State.Value == CritterState.Stunned && (c.transform.position - me.transform.position).sqrMagnitude < 64f)
                 { ShowHint("stunned", "동물이 기절했어요", "[E]로 붙잡거나 뜰채(마우스 왼쪽)로 담아서\n사무실 옆 '동물 보호소' 우리에 넣어요.", 7f); return; }
             var hose = tool != null ? tool.GetComponent<HoseTether>() : null;
             if (hose != null && Flat(me.transform.position - hose.Anchor.Value) > hose.Length - 0.3f)
-            { ShowHint("hose", "호스 끝이에요", "세척기 호스는 8 m. 다른 도구로 바꾸려면 숫자키,\n빈 손은 빈 슬롯 숫자키.", 6f); return; }
+            { ShowHint("hose", "호스 끝이에요", "세척기 호스는 8 m. 다른 도구로 바꾸려면 숫자키,\n빈손은 빈 칸 숫자키.", 6f); return; }
         }
 
         static Vehicle NearestCar(PlayerNet me, float range)

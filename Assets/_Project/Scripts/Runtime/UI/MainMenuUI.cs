@@ -40,7 +40,7 @@ namespace CarWash.UI
             _main = UiFactory.Rect("Main", Root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject;
             var m = _main.transform;
             UiFactory.FramePanel("MenuPanel", m, c, new Vector2(0, -90), new Vector2(720, 520), new Color(0.12f, 0.17f, 0.3f, 0.9f));
-            var bHost = UiFactory.Button("Host", m, "호스트 (참가 코드 발급)", c, new Vector2(0, 110), new Vector2(560, 84), HostRelay);
+            var bHost = UiFactory.Button("Host", m, "방 만들기 (참가 코드 발급)", c, new Vector2(0, 110), new Vector2(560, 84), HostRelay);
             UiFactory.Label("CodeHint", m, "친구에게 받은 참가 코드", 22, c, new Vector2(-120, 30), new Vector2(320, 30), color: new Color(0.75f, 0.85f, 1f));
             _code = UiFactory.Input("Code", m, "", c, new Vector2(-120, -20), new Vector2(320, 74));
             _code.characterLimit = 12;
@@ -55,7 +55,7 @@ namespace CarWash.UI
             var a = _advanced.transform;
             UiFactory.FramePanel("AdvPanel", a, c, new Vector2(0, -90), new Vector2(820, 560), new Color(0.12f, 0.17f, 0.3f, 0.92f));
             UiFactory.Label("AdvTitle", a, "고급 — IP로 플레이 (같은 공유기 / 포트 포워딩)", 26, c, new Vector2(0, 150), new Vector2(780, 40), color: new Color(0.75f, 0.85f, 1f));
-            var bIpHost = UiFactory.Button("IpHost", a, "IP로 호스트", c, new Vector2(0, 85), new Vector2(560, 74), HostIp);
+            var bIpHost = UiFactory.Button("IpHost", a, "IP로 방 만들기", c, new Vector2(0, 85), new Vector2(560, 74), HostIp);
             _myIp = UiFactory.Label("MyIp", a, "", 24, c, new Vector2(0, 25), new Vector2(780, 36), color: new Color(1f, 0.9f, 0.55f));
             _ip = UiFactory.Input("Ip", a, "127.0.0.1", c, new Vector2(-120, -50), new Vector2(340, 70));
             var bIpJoin = UiFactory.Button("IpJoin", a, "IP로 참가", c, new Vector2(180, -50), new Vector2(220, 70), JoinIp);
@@ -139,7 +139,7 @@ namespace CarWash.UI
         void HostIp()
         {
             if (!CanStart()) return;
-            if (!Net.Host()) { _status.text = "호스트 시작 실패 (포트 사용 중?)"; return; }
+            if (!Net.Host()) { _status.text = "방을 만들지 못했어요 (다른 프로그램이 같은 포트를 쓰는 중일 수 있어요)"; return; }
             EnterLot();
         }
 

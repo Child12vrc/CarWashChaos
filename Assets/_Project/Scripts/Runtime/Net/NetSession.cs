@@ -108,19 +108,19 @@ namespace CarWash.Net
         /// <summary>NGO/UTP disconnect text → what the player reads (EditMode tested).</summary>
         public static string FriendlyReason(string raw)
         {
-            if (string.IsNullOrEmpty(raw)) return "호스트와의 연결이 끊어졌습니다.";
+            if (string.IsNullOrEmpty(raw)) return "방장과의 연결이 끊어졌습니다.";
             if (raw.Contains("최대") || raw.Contains("가득")) return raw;                       // our own approval message
-            if (raw.Contains("ClosedByRemote")) return "호스트가 게임을 종료했습니다.";
-            if (raw.Contains("Timeout") || raw.Contains("timed out")) return "호스트 응답이 없습니다 (연결 시간 초과).";
-            if (raw.Contains("MaxConnectionAttempts") || raw.Contains("Failed to connect")) return "호스트에 접속할 수 없습니다. 주소를 확인해 주세요.";
-            return "호스트와의 연결이 끊어졌습니다.";
+            if (raw.Contains("ClosedByRemote")) return "방장이 게임을 종료했습니다.";
+            if (raw.Contains("Timeout") || raw.Contains("timed out")) return "방장 응답이 없습니다 (연결 시간 초과).";
+            if (raw.Contains("MaxConnectionAttempts") || raw.Contains("Failed to connect")) return "방에 접속할 수 없습니다. 주소를 확인해 주세요.";
+            return "방장과의 연결이 끊어졌습니다.";
         }
 
         void Approve(NetworkManager.ConnectionApprovalRequest req, NetworkManager.ConnectionApprovalResponse res)
         {
             bool full = _manager.ConnectedClientsIds.Count >= MaxPlayers;
             res.Approved = !full;
-            res.Reason = full ? "서버가 가득 찼습니다 (최대 4명)" : null;
+            res.Reason = full ? "방이 가득 찼습니다 (최대 4명)" : null;
             res.CreatePlayerObject = false; // PlayerSpawner spawns players once the game scene is loaded
         }
 
@@ -162,7 +162,7 @@ namespace CarWash.Net
             try
             {
                 string code = await RelayConnector.PrepareHost(Utp, MaxPlayers);
-                if (!_manager.StartHost()) return "호스트를 시작하지 못했습니다.";
+                if (!_manager.StartHost()) return "방을 만들지 못했습니다.";
                 Mode = ConnectMode.Relay; JoinCode = code; IpAddress = null;
                 return null;
             }

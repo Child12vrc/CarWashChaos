@@ -35,7 +35,7 @@ namespace CarWash.UI
         Vehicle[] _vehicles = new Vehicle[0];
         float _nextScan;
 
-        /// <summary>Dev check: text of card i ("베이 1 세차 중 | 세단 | 77% | 0:42").</summary>
+        /// <summary>Dev check: text of card i ("차고지 1 세차 중 | 세단 | 77% | 0:42").</summary>
         public string CardText(int i) => i < _cards.Count && _cards[i].root.gameObject.activeSelf
             ? $"{_cards[i].title.text} {_cards[i].status.text} | {_cards[i].carName.text} | {_cards[i].cleanText.text} | {_cards[i].timeText.text}" : null;
         public int VisiblePatienceBars { get; private set; }
@@ -68,7 +68,7 @@ namespace CarWash.UI
             // ui_card is a light card → dark text (same navy as button labels); flat fallback stays white-on-dark
             bool light = _skin != null && _skin.card != null;
             var txt = light ? _skin.buttonText : Color.white;
-            c.title = UiFactory.Label("Title", c.root.transform, $"베이 {i + 1}", 24, tl, new Vector2(70, -26), new Vector2(110, 30), TextAnchor.MiddleLeft, txt);
+            c.title = UiFactory.Label("Title", c.root.transform, $"차고지 {i + 1}", 24, tl, new Vector2(70, -26), new Vector2(110, 30), TextAnchor.MiddleLeft, txt);
             c.status = UiFactory.Label("Status", c.root.transform, "", 22, new Vector2(1f, 1f), new Vector2(-90, -26), new Vector2(160, 30), TextAnchor.MiddleRight,
                 light ? new Color(0.85f, 0.4f, 0.05f) : new Color(1f, 0.85f, 0.3f));
             // everything below the title only shows while a car is in the bay

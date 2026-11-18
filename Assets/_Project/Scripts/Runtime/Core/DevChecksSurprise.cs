@@ -59,7 +59,7 @@ namespace CarWash.Core
             }
             CritterBase.Revealed -= OnReveal;
             DevAutopilot.Log($"surprises seen on client: {reveals.Count} → {string.Join(" | ", reveals)} ({Time.time - t0:0}s)");
-            var bossToast = UI.Hud.Instance?.Day?.ToastLog.FirstOrDefault(t => t.Contains("보스"));
+            var bossToast = UI.Hud.Instance?.Day?.ToastLog.FirstOrDefault(t => t.Contains("특별 손님"));
             DevAutopilot.Log($"boss intro toast: '{bossToast}'");
             input.scripted = false;
         }

@@ -28,7 +28,7 @@ namespace CarWash.Net
         static async Task SignIn()
         {
             if (!ProjectLinked)
-                throw new RelayError("이 빌드는 Unity 온라인 서비스(Relay)에 연결되어 있지 않습니다. 고급 → IP로 플레이를 사용해 주세요.");
+                throw new RelayError("이 버전은 참가 코드 기능을 쓸 수 없습니다. 고급 → IP로 플레이를 써 주세요.");
             try
             {
                 if (UnityServices.State != ServicesInitializationState.Initialized)
@@ -61,7 +61,7 @@ namespace CarWash.Net
             catch (Exception e)
             {
                 Debug.LogWarning("[NET] relay host failed: " + e);
-                throw new RelayError("코드를 발급하지 못했습니다. Relay가 켜져 있는지, 인터넷 연결을 확인해 주세요.", e);
+                throw new RelayError("참가 코드를 발급하지 못했습니다. 인터넷 연결을 확인해 주세요.", e);
             }
         }
 

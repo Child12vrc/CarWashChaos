@@ -44,12 +44,12 @@ namespace CarWash.UI
             var dm = DayManager.Instance;
             var eco = EconomyState.Instance;
             int players = Object.FindObjectsByType<PlayerNet>(FindObjectsSortMode.None).Length;
-            string role = nm == null ? "오프라인" : nm.IsHost ? "호스트" : nm.IsServer ? "서버" : "클라이언트";
+            string role = nm == null ? "오프라인" : nm.IsServer ? "방장" : "참가자";
             ulong rtt = 0;
             if (nm != null && nm.IsClient && !nm.IsServer && nm.NetworkConfig.NetworkTransport != null)
                 rtt = nm.NetworkConfig.NetworkTransport.GetCurrentRtt(NetworkManager.ServerClientId);
             var s = new System.Text.StringBuilder();
-            s.AppendLine($"[F3] FPS {_fps:0}   {role}   RTT {rtt} ms");
+            s.AppendLine($"[F3] 프레임 {_fps:0}   {role}   지연 {rtt} ms");
             s.AppendLine($"플레이어 {players}명   상태 {(dm != null ? dm.State.Value.ToString() : "-")}");
             if (dm != null) s.AppendLine($"W{dm.Week.Value} D{dm.DayNum.Value}  {dm.Phase.Value}  남은 {dm.TimeLeft:0}s  임대료 ${dm.CurrentRent}");
             if (eco != null)

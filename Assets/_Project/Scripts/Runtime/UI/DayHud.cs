@@ -145,7 +145,7 @@ namespace CarWash.UI
                 case GameState.Day:
                     if (dm.Phase.Value == DayPhase.Open) { _clock.text = $"{head}  {Mmss(dm.TimeLeft)}"; _clock.color = dm.TimeLeft < 30f ? new Color(1f, 0.8f, 0.4f) : Color.white; }
                     else { _clock.text = $"{head}  마감 {Mmss(dm.OvertimeLeft)}"; _clock.color = new Color(1f, 0.6f, 0.5f); }
-                    _info.text = dm.Phase.Value == DayPhase.Open ? $"오늘 임대료 ${dm.CurrentRent}  ·  세차가 끝나면 베이 버튼 [E] 정산" : "영업 종료 — 남은 차만 마무리하세요";
+                    _info.text = dm.Phase.Value == DayPhase.Open ? $"오늘 임대료 ${dm.CurrentRent}  ·  세차가 끝나면 차고지 버튼 [E] 정산" : "영업 종료 — 남은 차만 마무리하세요";
                     break;
                 case GameState.Lobby:
                     _clock.text = head + "  준비 중"; _clock.color = Color.white;
@@ -170,7 +170,7 @@ namespace CarWash.UI
             if (st == GameState.GameOver)
             {
                 _summaryTitle.text = "파산!";
-                _summaryBody.text = $"임대료 ${s.rent}를 낼 돈이 없습니다 (보유 ${s.moneyEnd}).\n\n{s.week}주차 1일차부터 다시 시작합니다.\n돈과 평판은 처음으로 돌아가고,\n열어 둔 베이는 그대로 유지됩니다.";
+                _summaryBody.text = $"임대료 ${s.rent}를 낼 돈이 없습니다 (보유 ${s.moneyEnd}).\n\n{s.week}주차 1일차부터 다시 시작합니다.\n돈과 평판은 처음으로 돌아가고,\n열어 둔 차고지는 그대로 유지됩니다.";
                 _summaryHint.text = "[Enter] 1일차부터 다시 도전";
                 return;
             }
@@ -220,8 +220,8 @@ namespace CarWash.UI
         {
             var reg = Services.Get<Data.DataRegistry>();
             var d = reg != null ? reg.Get<Data.VehicleData>(vehicleId) : null;
-            string name = d != null ? d.displayName.Replace("보스: ", "") : vehicleId;
-            Toast($"보스 손님 등장! {name} (기본 ${(d != null ? d.basePay : 0)})", new Color(1f, 0.6f, 0.9f));
+            string name = d != null ? d.displayName.Replace("특별 손님: ", "") : vehicleId;
+            Toast($"특별 손님 등장! {name} (기본 ${(d != null ? d.basePay : 0)})", new Color(1f, 0.6f, 0.9f));
         }
 
         void OnDestroy() { if (_bound != null) { _bound.Paid -= OnPaid; _bound.BossArrived -= OnBoss; } }
