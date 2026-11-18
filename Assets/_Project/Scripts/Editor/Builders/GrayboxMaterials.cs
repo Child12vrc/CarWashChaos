@@ -141,12 +141,40 @@ namespace CarWash.Editor
             return m;
         }
 
+        /// <summary>
+        /// M4.7 E1: material on CarWash/GroundStochastic (hex-tiled, macro-varied, detail + distance-blended; world-space XZ UVs on
+        /// top faces). tileMeters = metres per texture repeat; macro = brightness variation ±; smoothScale multiplies the mask's
+        /// smoothness (wet concrete a bit shinier).
+        /// </summary>
+        public static Material Ground(string name, Color tint, Texture2D albedo, Texture2D normal, Texture2D mask, float tileMeters, float macro = 0.14f, float smoothScale = 1f)
+        {
+            var m = Get(name, tint);
+            var sh = Shader.Find("CarWash/GroundStochastic");
+            if (sh == null || albedo == null) return m;
+            if (m.shader != sh) m.shader = sh;
+            m.SetColor("_BaseColor", tint);
+            m.SetTexture("_BaseMap", albedo);
+            if (normal != null) m.SetTexture("_BumpMap", normal);
+            if (mask != null) m.SetTexture("_MaskMap", mask);
+            m.SetFloat("_Tile", tileMeters);
+            m.SetFloat("_MacroStrength", macro);
+            m.SetFloat("_SmoothnessScale", smoothScale);
+            m.enableInstancing = true;
+            TileMeters.Remove(m); // world-space UVs: no per-box UV mesh needed
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
         /// <summary>URP Lit with a seamless texture; boxes using it get UVs in metres / tileMeters (no stretching).</summary>
         public static Material Textured(string name, Color tint, string texFile, float tileMeters, float smoothness = 0.2f)
         {
             // M4.7 A1: a delivered PolyHaven set wins over the old single texture + generated normal map
             if (PolyHavenFor.TryGetValue(texFile, out var set) && HasSet(set))
             {
+                // M4.7 E1: ground sets go on the stochastic ground shader (no visible tiling)
+                if (set == "asphalt_02" || set == "concrete_floor_02")
+                    return Ground(name, tint, AssetDatabase.LoadAssetAtPath<Texture2D>(PhFile(set, "diff")), AssetDatabase.LoadAssetAtPath<Texture2D>(PhFile(set, "nor_gl")), PbrMask(set), tileMeters,
+                        set == "concrete_floor_02" ? 0.10f : 0.14f, set == "concrete_floor_02" ? 1.25f : 1f);
                 bool bayBlue = set == "box_profile_metal_sheet" && tint == Color.white; // bay walls: grey sheet tinted the lot's blue
                 if (bayBlue) tint = new Color(0.36f, 0.58f, 0.92f);
                 var pm = Get(name, tint, smoothness);

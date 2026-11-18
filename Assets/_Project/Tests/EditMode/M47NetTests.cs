@@ -74,6 +74,11 @@ namespace CarWash.Tests
             var m = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>($"{CarWash.Editor.GrayboxMaterials.Dir}/{material}.mat");
             Assert.IsNotNull(m, material);
             StringAssert.Contains(set, UnityEditor.AssetDatabase.GetAssetPath(m.GetTexture("_BumpMap")), "PolyHaven normal map");
+            if (m.shader.name == "CarWash/GroundStochastic") // M4.7 E1: ground sets on the stochastic shader
+            {
+                StringAssert.Contains(set + "_mask", UnityEditor.AssetDatabase.GetAssetPath(m.GetTexture("_MaskMap")), "ARM → mask");
+                return;
+            }
             StringAssert.Contains(set + "_mask", UnityEditor.AssetDatabase.GetAssetPath(m.GetTexture("_MetallicGlossMap")), "ARM → metallic/smoothness mask");
             Assert.IsTrue(m.IsKeywordEnabled("_METALLICSPECGLOSSMAP") && m.IsKeywordEnabled("_OCCLUSIONMAP") && m.IsKeywordEnabled("_NORMALMAP"));
         }
@@ -89,6 +94,51 @@ namespace CarWash.Tests
             Assert.AreEqual(a.b, r.r, 0.01f, "R = metallic");
             Assert.AreEqual(a.r, r.g, 0.01f, "G = AO");
             Assert.AreEqual(1f - a.g, r.a, 0.01f, "A = 1 - roughness");
+        }
+    }
+}
+
+namespace CarWash.Tests
+{
+    /// <summary>M4.7 E: the environment pass keeps every route open and stays cheap.</summary>
+    public class M47EnvTests
+    {
+        [Test]
+        public void Dressing_OffRoutes_TwoDrawCalls_ManyDecals()
+        {
+            var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/_Project/Scenes/SudsyLot.unity", UnityEditor.SceneManagement.OpenSceneMode.Additive);
+            try
+            {
+                GameObject dressing = null;
+                foreach (var go in scene.GetRootGameObjects()) { var t = go.transform.Find("Dressing"); if (t != null) dressing = t.gameObject; }
+                Assert.IsNotNull(dressing, "Environment/Dressing built");
+                var cols = dressing.transform.Find("DressingColliders");
+                Assert.Greater(cols.childCount, 5);
+                foreach (Transform c in cols)
+                {
+                    Assert.IsFalse(CarWash.Editor.EnvDressingBuilder.InCarPath(c.position, 0.3f), "collider on a car route at " + c.position);
+                    Assert.IsTrue(CarWash.Editor.EnvDressingBuilder.Clear(c.position, 0.3f), "collider near an interaction point / spawn at " + c.position);
+                    Assert.IsTrue(CarWash.Core.PlayArea.Contains(c.position), "inside the play area");
+                }
+                var renderers = dressing.GetComponentsInChildren<MeshRenderer>();
+                Assert.AreEqual(2, renderers.Length, "props + grass = one combined mesh each");
+                foreach (var r in renderers) Assert.IsNull(r.GetComponent<Collider>(), "decoration meshes have no colliders");
+                int decals = 0; foreach (var c in dressing.GetComponentsInChildren<Component>()) if (c != null && c.GetType().Name == "DecalProjector") decals++;
+                Assert.GreaterOrEqual(decals, 60);
+            }
+            finally { UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
+        public void GroundMaterials_UseStochasticShader()
+        {
+            foreach (var n in new[] { "Asphalt", "Concrete", "Road", "Grass" })
+            {
+                var m = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>($"{CarWash.Editor.GrayboxMaterials.Dir}/{n}.mat");
+                Assert.IsNotNull(m, n);
+                Assert.AreEqual("CarWash/GroundStochastic", m.shader.name, n);
+                Assert.IsNotNull(m.GetTexture("_BaseMap"), n);
+            }
         }
     }
 }

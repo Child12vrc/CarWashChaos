@@ -121,10 +121,10 @@ namespace CarWash.Editor
             Box(root, "GroundW", new Vector3((-38f - R) / 2f, -0.5f, -1f), new Vector3(R - 38f, 1f, 42f), g);
             Box(root, "GroundE", new Vector3((38f + R) / 2f, -0.5f, -1f), new Vector3(R - 38f, 1f, 42f), g);
             // sidewalk south of the road (inside the play area) + curb line
-            var walk = Lit("Sidewalk", new Color(0.72f, 0.72f, 0.7f));
+            var walk = GrayboxMaterials.Textured("Sidewalk", new Color(1.05f, 1.05f, 1.02f), "tex_concrete_wet.png", 3f); // M4.7 E1: stochastic concrete
             Box(root, "SidewalkS", new Vector3(0f, 0.012f, -20.6f), new Vector3(86f, 0.02f, 2.6f), walk); // flat: players walk on the lot ground under it
             // parking lot + park surfaces
-            var lotM = Lit("ParkingAsphalt", new Color(0.35f, 0.36f, 0.38f));
+            var lotM = GrayboxMaterials.Textured("ParkingAsphalt", new Color(0.7f, 0.72f, 0.75f), "tex_asphalt.png", 4f); // M4.7 E1
             Box(root, "ParkingLot", new Vector3(ParkingLot.center.x, 0.01f, ParkingLot.center.y), new Vector3(ParkingLot.width, 0.02f, ParkingLot.height), lotM);
             var line = Lit("ParkingLine", new Color(0.92f, 0.92f, 0.9f));
             for (int i = 0; i < 7; i++)
@@ -132,7 +132,8 @@ namespace CarWash.Editor
                 Box(root, "PLine" + i, new Vector3(ParkingLot.xMin + 1.5f + i * 2.6f, 0.025f, ParkingLot.yMin + 3f), new Vector3(0.12f, 0.01f, 5f), line);
                 Box(root, "PLineB" + i, new Vector3(ParkingLot.xMin + 1.5f + i * 2.6f, 0.025f, ParkingLot.yMax - 3f), new Vector3(0.12f, 0.01f, 5f), line);
             }
-            var grass = Lit("Grass", new Color(0.36f, 0.55f, 0.3f));
+            var gt = GroundTextures.Grass(); // M4.7 E1: generated tileable grass on the stochastic ground shader
+            var grass = GrayboxMaterials.Ground("Grass", Color.white, gt.albedo, gt.normal, gt.mask, 2.5f, 0.2f);
             Box(root, "ParkGrass", new Vector3(Park.center.x, 0.02f, Park.center.y), new Vector3(Park.width, 0.04f, Park.height), grass);
         }
 

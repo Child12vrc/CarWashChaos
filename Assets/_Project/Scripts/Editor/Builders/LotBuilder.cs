@@ -74,6 +74,7 @@ namespace CarWash.Editor
 
             EnvironmentBuilder.Build(env, bays); // P6: sky, skyline, post, signs, physic materials
             SceneryBuilder.Build(env);            // map completeness: city around the lot + invisible play-area walls
+            EnvDressingBuilder.Build(env);        // M4.7 E2/E3: decals + set dressing (combined meshes, off every route)
             var lotPaths = BuildPaths(bays);
             BuildCustomers(lotPaths);
             BuildSpawner();

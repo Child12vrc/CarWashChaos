@@ -90,6 +90,15 @@ namespace CarWash.Core
             _lastRecvTime = Time.unscaledTime;
             Application.logMessageReceived += OnLog;
             Rescan();
+            // M4.7 E: -env-off = A/B control in the same build: no dressing / decals, ground back on URP Lit
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-env-off") >= 0)
+            {
+                var dress = GameObject.Find("Dressing"); if (dress != null) dress.SetActive(false);
+                var lit = Shader.Find("Universal Render Pipeline/Lit");
+                foreach (var r in FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
+                    foreach (var m in r.sharedMaterials) if (m != null && m.shader.name == "CarWash/GroundStochastic" && lit != null) m.shader = lit;
+                Label += " env-off";
+            }
             // -profilecapture N: also write a Unity Profiler binary log of N frames (dev builds) for the editor to break down
             int pi = Array.IndexOf(Environment.GetCommandLineArgs(), "-profilecapture");
             if (pi >= 0 && Debug.isDebugBuild) StartCoroutine(Capture(pi + 1 < Environment.GetCommandLineArgs().Length && int.TryParse(Environment.GetCommandLineArgs()[pi + 1], out int pf) ? pf : 600));
