@@ -93,6 +93,15 @@ namespace CarWash.Editor
             }
 
             var trashSpots = VehicleInteriorBuilder.Build(root.transform, d.id, cabin); // M4.6 D3
+            // M4.8 F4: a customer behind the wheel (local, posed in code; the 12 Quaternius looks)
+            var seatT = root.transform.Find("Interior/DriverSeat"); var wheelT = root.transform.Find("Interior/SteeringWheel");
+            if (seatT != null && wheelT != null)
+            {
+                var drv = root.AddComponent<CustomerDriver>();
+                SceneBuilder.Set(drv, "_seat", seatT); SceneBuilder.Set(drv, "_wheel", wheelT);
+                var looks = PlayerLooks.Catalog.Select(c => AssetDatabase.LoadAssetAtPath<GameObject>(PlayerLooks.PathOf(c.id))).Where(g => g != null).Cast<Object>().ToArray();
+                PrefabBuilder.SetArray(drv, "_looks", looks);
+            }
             var sync = root.AddComponent<DirtNetSync>();
             SceneBuilder.Set(sync, "_painter", painter);
             SceneBuilder.Set(sync, "_data", DataBuilder.LoadRegistry());

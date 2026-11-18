@@ -37,8 +37,13 @@ namespace CarWash.Player
         /// the spawn transform sometimes did not reach the owning client, which then started at the origin (inside closed bay 2).</summary>
         public readonly NetworkVariable<Vector3> SpawnPos = new NetworkVariable<Vector3>();
 
+        /// <summary>M4.8: every spawned player on this peer (driver NPC gaze etc.).</summary>
+        public static readonly System.Collections.Generic.List<PlayerNet> All = new System.Collections.Generic.List<PlayerNet>();
+        public override void OnNetworkDespawn() { All.Remove(this); base.OnNetworkDespawn(); }
+
         public override void OnNetworkSpawn()
         {
+            if (!All.Contains(this)) All.Add(this);
             if (IsOwner && SpawnPos.Value != Vector3.zero)
             {
                 if ((transform.position - SpawnPos.Value).sqrMagnitude > 0.25f)

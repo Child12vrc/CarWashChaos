@@ -123,6 +123,11 @@ namespace CarWash.Tools
             // M4.8 F1 / F2: foam clumps where the foam cannon lands on a car; foam runoff where water hits a foamed car
             _foamFxT -= 0.05f;
             var car = hitCol != null ? hitCol.GetComponentInParent<Dirt.DirtNetSync>() : null;
+            if (car != null)
+            {
+                var drv = car.GetComponentInParent<Vehicles.CustomerDriver>(); // M4.8 F4: water in the driver's face → annoyed
+                if (drv != null && drv.Head != null && (drv.Head.position - p).sqrMagnitude < 1f) drv.Splashed();
+            }
             if (car != null && _foamFxT <= 0f)
             {
                 _isFoamCannon ??= GetComponentInParent<FoamCannon>() != null;

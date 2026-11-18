@@ -83,6 +83,11 @@ namespace CarWash.Editor
             float frontSeatZ = dashZ - 0.75f;
             foreach (float sx in new[] { -1f, 1f })
                 Seat(g, sx < 0 ? "SeatDriver" : "SeatPassenger", new Vector3(sx * c.halfW * 0.48f, c.floorY, frontSeatZ), Mathf.Min(0.52f, c.halfW * 0.8f), seatH, fabric);
+            // M4.8 F4: where the customer sits (cushion top, facing forward) — CustomerDriver puts a character here
+            var seat = new GameObject("DriverSeat") { layer = Layers.Vehicle }.transform; seat.SetParent(g, false);
+            seat.localPosition = new Vector3(driverX, c.floorY + seatH, frontSeatZ - 0.04f);
+            var roof = new GameObject("Roof") { layer = Layers.Vehicle }.transform; roof.SetParent(seat, false);
+            roof.localPosition = new Vector3(0f, c.roofY - (c.floorY + seatH) - 0.05f, 0f); // headliner: the driver's head stays under it
             Box(g, "Console", new Vector3(0, c.floorY + seatH * 0.6f, frontSeatZ + 0.25f), new Vector3(0.2f, seatH * 1.1f, 0.7f), plastic);
             // rear bench when the cabin is long enough
             if (frontSeatZ - c.rearZ > 0.9f)
@@ -127,7 +132,6 @@ namespace CarWash.Editor
             var pts = new List<Vector3>
             {
                 new Vector3(c.halfW * 0.48f, seatTop, frontSeatZ),             // passenger seat
-                new Vector3(-c.halfW * 0.45f, c.floorY + 0.05f, frontSeatZ + 0.45f), // driver footwell
                 new Vector3(c.halfW * 0.45f, c.floorY + 0.05f, frontSeatZ + 0.45f),  // passenger footwell
             };
             if (frontSeatZ - c.rearZ > 0.9f)

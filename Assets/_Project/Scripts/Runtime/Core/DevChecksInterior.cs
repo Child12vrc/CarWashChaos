@@ -54,6 +54,21 @@ namespace CarWash.Core
             Log($"{car.DataId}: interior={(interior != null)} parts={rends.Length} trash {inside}/{trash.Length} inside the cabin " +
                 string.Join(" ", trash.Select(t => car.transform.InverseTransformPoint(t.transform.position).ToString("F2"))) + $" → {(interior != null && inside == trash.Length ? "OK" : "FAIL")}");
 
+            // M4.8 F4: the customer behind the wheel
+            var drv = car.GetComponent<CustomerDriver>();
+            var dm2 = drv != null ? drv.transform.Find("Interior/DriverSeat/Driver") : null;
+            var an = dm2 != null ? dm2.GetComponent<Animator>() : null;
+            var wheelT = car.transform.Find("Interior/SteeringWheel");
+            if (an != null && wheelT != null)
+            {
+                float lh = Vector3.Distance(an.GetBoneTransform(HumanBodyBones.LeftHand).position, wheelT.position), rh = Vector3.Distance(an.GetBoneTransform(HumanBodyBones.RightHand).position, wheelT.position);
+                var head = an.GetBoneTransform(HumanBodyBones.Head).position;
+                var seatT = dm2.parent; var roofT = seatT.Find("Roof");
+                float headTop = seatT.InverseTransformPoint(head).y + 0.22f * dm2.localScale.y;
+                Log($"{car.DataId}: driver scale {dm2.localScale.y:0.00}, head top {headTop:0.00} vs roof {(roofT != null ? roofT.localPosition.y : -1f):0.00} above the cushion, hips {seatT.InverseTransformPoint(an.GetBoneTransform(HumanBodyBones.Hips).position).ToString("F2")}, visible={dm2.GetComponentInChildren<SkinnedMeshRenderer>().isVisible}");
+                Log($"{car.DataId}: driver {dm2.GetComponentInChildren<SkinnedMeshRenderer>()?.sharedMesh?.name} hands→wheel L {lh:0.00} R {rh:0.00} m, head {car.transform.InverseTransformPoint(head).ToString("F2")} (car local), drivers in scene {CustomerDriver.Count} → {(lh < 0.3f && rh < 0.3f ? "OK" : "CHECK")}");
+            }
+            else Log($"{car.DataId}: FAIL no driver (component={(drv != null)})");
             // open the driver door and look in
             var door = car.GetComponentsInChildren<VehicleDoor>().FirstOrDefault(d => d.name.Contains("Door_L")) ?? car.GetComponentsInChildren<VehicleDoor>().FirstOrDefault(d => !d.IsTrunk);
             if (door != null)
@@ -71,6 +86,17 @@ namespace CarWash.Core
                 yield return new WaitForSeconds(0.4f);
                 ScreenCapture.CaptureScreenshot($"autotest_interior_{car.DataId}_door.png");
                 yield return null;
+                if (an != null)
+                {
+                    // close-up of the driver through the open door
+                    var hd = an.GetBoneTransform(HumanBodyBones.Head).position;
+                    me.Motor.Teleport(new Vector3(dc.x, 0.05f, dc.z) + outward * 0.9f + car.transform.forward * 0.3f);
+                    yield return new WaitForSeconds(0.4f);
+                    me.Look.LookAt(hd - Vector3.up * 0.25f);
+                    yield return new WaitForSeconds(0.4f);
+                    ScreenCapture.CaptureScreenshot($"autotest_interior_{car.DataId}_driver.png");
+                    yield return null;
+                }
                 Log($"{car.DataId}: driver door open={door.Open.Value}, trash visible={trash.Count(t => t.GetComponentInChildren<Renderer>() != null && t.GetComponentInChildren<Renderer>().enabled)}/{trash.Length}");
             }
             // through the windscreen
