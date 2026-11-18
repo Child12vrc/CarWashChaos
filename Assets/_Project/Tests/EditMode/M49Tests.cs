@@ -76,6 +76,25 @@ namespace CarWash.Tests
             });
         }
 
+        [Test]
+        public void StaffLockers_OpenTheWardrobe_LocallyOnTheInteractLayer()
+        {
+            WithLot(roots =>
+            {
+                var lockers = roots.SelectMany(r => r.GetComponentsInChildren<Player.WardrobeLocker>(true)).ToArray();
+                Assert.AreEqual(4, lockers.Length);
+                foreach (var l in lockers)
+                {
+                    Assert.AreEqual(Core.Layers.Interactable, l.gameObject.layer);
+                    Assert.IsTrue(l.GetComponent<BoxCollider>().isTrigger, "the locker box itself stays solid");
+                    Assert.IsInstanceOf<Player.ILocalInteractable>(l);
+                }
+            });
+            // the lobby no longer takes Z / X / C for looks / colours
+            var lobby = System.IO.File.ReadAllText("Assets/_Project/Scripts/Runtime/UI/LobbyPanel.cs");
+            StringAssert.DoesNotContain("zKey", lobby); StringAssert.DoesNotContain("cKey", lobby); StringAssert.DoesNotContain("[Z]", lobby);
+        }
+
         [TestCase("김철수", true)]
         [TestCase("세차왕", true)]
         [TestCase("Bob", true)]

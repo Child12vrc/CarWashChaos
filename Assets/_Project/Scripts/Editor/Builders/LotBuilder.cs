@@ -49,7 +49,16 @@ namespace CarWash.Editor
             GrayboxMaterials.Box(env, "ShopTerminal", OfficeCenter + new Vector3(2.5f, 0.6f, 3.3f), new Vector3(0.8f, 1.2f, 0.5f), M.panel);
             GrayboxMaterials.Box(env, "DayBoard", OfficeCenter + new Vector3(-1.5f, 1.6f, 3.05f), new Vector3(2.4f, 1.2f, 0.1f), M.board);
             for (int i = 0; i < 4; i++)
-                GrayboxMaterials.Box(env, "Locker" + i, LockerArea + new Vector3(-1.5f + i, 1f, -2.6f), new Vector3(0.8f, 2f, 0.5f), M.wall);
+            {
+                var locker = GrayboxMaterials.Box(env, "Locker" + i, LockerArea + new Vector3(-1.5f + i, 1f, -2.6f), new Vector3(0.8f, 2f, 0.5f), M.wall);
+                // M4.9 G3: [E] opens the wardrobe (a trigger on the Interactable layer in front of the door; the box stays solid)
+                var face = new GameObject("WardrobeDoor") { layer = Layers.Interactable };
+                face.transform.SetParent(locker.transform, false);
+                face.transform.localPosition = new Vector3(0f, 0f, 0.6f); face.transform.localScale = new Vector3(1f, 1f, 0.2f);
+                var trig = face.AddComponent<BoxCollider>(); trig.isTrigger = true;
+                face.AddComponent<Player.WardrobeLocker>();
+                GrayboxMaterials.Box(locker.transform, "Handle", new Vector3(0.32f, 0f, 0.52f), new Vector3(0.05f, 0.12f, 0.06f), GrayboxMaterials.Get("Panel", new Color(0.25f, 0.3f, 0.4f)), collider: false);
+            }
             VacuumStation(env, M.panel);
             BuildCage(env, M);
             GrayboxMaterials.Box(env, "FenceN", new Vector3(0, 1f, 18.5f), new Vector3(56, 2f, 0.2f), M.brick);

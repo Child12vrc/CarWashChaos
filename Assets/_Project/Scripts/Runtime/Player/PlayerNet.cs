@@ -89,6 +89,7 @@ namespace CarWash.Player
             ColorIndex.OnValueChanged += (_, v) => ApplyColor(v);
             if (IsServer && ColorIndex.Value < 0) ColorIndex.Value = PickFreeColor();
             ApplyColor(ColorIndex.Value);
+            if (IsOwner && PlayerPrefs.HasKey(SavedColorKey)) SetColorRpc(PlayerPrefs.GetInt(SavedColorKey)); // M4.9 G3: my saved colour (if free)
             // P1: remote copies draw the body smoothed toward the networked root
             if (!IsOwner && _bodyRenderers.Length > 0)
             {
@@ -136,6 +137,18 @@ namespace CarWash.Player
 
         public void RequestToggleReady() => ToggleReadyRpc();
         public void RequestNextColor() => NextColorRpc();
+        /// <summary>M4.9 G3 owner (wardrobe): a specific colour if nobody else wears it; remembered (PlayerPrefs "cw.color").</summary>
+        public void RequestColor(int c) { if (c < 0 || c >= Colors.Length) return; PlayerPrefs.SetInt(SavedColorKey, c); PlayerPrefs.Save(); SetColorRpc(c); }
+        public const string SavedColorKey = "cw.color";
+        /// <summary>True when another player already wears colour <paramref name="c"/>.</summary>
+        public bool ColorTaken(int c) { foreach (var o in All) if (o != null && o != this && o.ColorIndex.Value == c) return true; return false; }
+
+        [Rpc(SendTo.Server)]
+        void SetColorRpc(int c, RpcParams p = default)
+        {
+            if (p.Receive.SenderClientId != OwnerClientId || c < 0 || c >= Colors.Length || ColorTaken(c)) return;
+            ColorIndex.Value = c;
+        }
 
         [Rpc(SendTo.Server)]
         void ToggleReadyRpc(RpcParams p = default)

@@ -57,6 +57,8 @@ namespace CarWash.Player
             if (IsServer && Look.Value < 0) Look.Value = PickDefault();
             Apply(Look.Value);
             if (!IsOwner) BuildTag();
+            // M4.9 G3: my saved look (if any) once the server picked a default
+            if (IsOwner) { int saved = IndexOf(PlayerPrefs.GetString(SavedLookKey, "")); if (saved >= 0) SetRpc(saved); }
         }
 
         // ---------------- server ----------------
@@ -85,6 +87,25 @@ namespace CarWash.Player
             var rag = GetComponent<PlayerRagdoll>();
             if (rag != null && rag.ControlsBody) return;
             Look.Value = ((Look.Value + (dir >= 0 ? 1 : -1)) % _looks.Length + _looks.Length) % _looks.Length;
+        }
+
+        /// <summary>M4.9 G3 owner (wardrobe): pick a look directly; remembered locally (PlayerPrefs "cw.look" = look id).</summary>
+        public void RequestSet(int index)
+        {
+            if (index < 0 || index >= _looks.Length) return;
+            PlayerPrefs.SetString(SavedLookKey, _looks[index].id); PlayerPrefs.Save();
+            SetRpc(index);
+        }
+        public const string SavedLookKey = "cw.look";
+        public LookEntry EntryAt(int i) => i >= 0 && i < _looks.Length ? _looks[i] : null;
+
+        [Rpc(SendTo.Server)]
+        void SetRpc(int index, RpcParams p = default)
+        {
+            if (p.Receive.SenderClientId != OwnerClientId || index < 0 || index >= _looks.Length) return;
+            var rag = GetComponent<PlayerRagdoll>();
+            if (rag != null && rag.ControlsBody) return; // not while knocked down / carried
+            Look.Value = index;
         }
 
         /// <summary>Server, dev checks: set a look directly.</summary>

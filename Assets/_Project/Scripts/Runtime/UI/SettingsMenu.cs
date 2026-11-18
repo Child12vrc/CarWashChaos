@@ -60,6 +60,7 @@ namespace CarWash.UI
             _unstuckLabel = UiFactory.Label("UnstuckCd", p, "", 20, bottom, new Vector2(-230, 108), new Vector2(460, 28), TextAnchor.MiddleLeft, new Color(1f, 0.85f, 0.4f));
             UiFactory.Button("Leave", p, "나가기", bottom, new Vector2(0, 60), new Vector2(240, 64), Leave);
             UiFactory.Button("Close", p, "닫기", bottom, new Vector2(300, 60), new Vector2(240, 64), () => SetOpen(false));
+            UiFactory.Button("Wardrobe", p, "옷장 (외형·색)", new Vector2(1f, 1f), new Vector2(-150, -52), new Vector2(240, 56), () => { SetOpen(false); WardrobeUI.Open(); }); // M4.9 G3
             _status = UiFactory.Label("Status", p, "", 22, bottom, new Vector2(0, 118), new Vector2(900, 30), color: new Color(0.7f, 1f, 0.7f));
             ShowTab(0);
             _panel.gameObject.SetActive(false);

@@ -92,7 +92,7 @@ Rule: do tasks in order unless marked (parallel). One task ≈ one agent session
 ## M4.9 World, customisation, UI, layout (2026-11-19) — then v0.7 (Relay) + zip + push
 - [x] G1 Day → night with the business day (sun path morning → noon → sunset → night; sky / fog / ambient / post colour); at night street lamps, bay lights, signs and car headlights on (no baked GI, limited light count); stars; time from DayManager's synced values (no extra traffic); bays stay bright enough to wash.
 - [x] G2 Moving clouds (sky shader noise or dome / billboards), tinted by time of day.
-- [ ] G3 Wardrobe: the personal locker opens a wardrobe — camera moves in front of my character (mirror / preview), pick 1 of 12 looks + player colour while seeing it; remove Z / X / C keys and the lobby look text; same preview in the Esc menu; remembered (PlayerPrefs) + synced.
+- [x] G3 Wardrobe: the personal locker opens a wardrobe — camera moves in front of my character (mirror / preview), pick 1 of 12 looks + player colour while seeing it; remove Z / X / C keys and the lobby look text; same preview in the Esc menu; remembered (PlayerPrefs) + synced.
 - [x] G4 Nickname: main-menu input (required on first run, Korean IME, 2–12 chars, remembered) → name tags, summary, join / leave notices; verify Korean IME + no missing glyphs.
 - [ ] G5 UI rework: one top status bar — money $ / today's income / rent (remaining + reached colour) · reputation stars + number · clock / time left; bay cards with customer patience gauge, current clean % and target %; +$ / −$ popups; short text labels on every icon at first; remove clutter; keep the UI scale slider; check at 1920×1080, 1280×720, 2560×1440.
 - [ ] G6 Patience timers over cars (billboard ring shrinking clockwise + seconds, white → yellow → red, blink + angry emoji + warning sound at 10 s, '떠남! -평판' popup), queue + bay cars, small when far / edge arrows when off-screen, same value on the bay card; synced as server start time + limit only; audit the patience rules (too-early / unexplained leaving) + one line in tutorial / help.
@@ -273,3 +273,25 @@ M4.9 G4 (2026-11-19):
   - Glyphs: 0/15 missing for '세차왕김철수abc123_-.' in the UI font.
   - 13 new EditMode tests (validation cases, 12 Korean characters fit FixedString64).
 - Fix: a `-nick` test name was saved to the shared PlayerPrefs. NickOk now saves only a changed name, and the stray value was removed.
+
+M4.9 G3 (2026-11-19):
+- How it opens:
+  - The 4 staff lockers got a trigger on the Interactable layer with `Player.WardrobeLocker`; the box stays solid.
+  - [E] opens the wardrobe locally through the new `ILocalInteractable` path in PlayerInteractor (no network round trip).
+  - It also opens from Esc → '옷장 (외형·색)' (top-right of the settings panel). Esc closes the wardrobe first.
+- `UI.WardrobeUI` screen:
+  - Left 62 %: a live preview from a "studio" camera 500 m above the lot (own lights, layer 30). It shows a copy of the look model with joints, physics and scripts stripped, the idle Animator kept, and the player colour on its outline. It turns slowly; drag with the mouse to rotate.
+  - Right: 12 look buttons (✔ and yellow text on the selected one) and 4 colour buttons; a colour another player wears is greyed '· 사용 중' and refused with a message.
+  - Other HUD canvases are hidden while it is open.
+- Sync and storage:
+  - A look change goes to the server with `PlayerAppearance.RequestSet`, allowed in any state but not while knocked down or carried. The colour uses `PlayerNet.RequestColor`. Both are the existing NetworkVariables.
+  - Remembered in PlayerPrefs "cw.look" (look id) / "cw.color"; re-requested on spawn and applied if the colour is free.
+- Lobby: the Z / X / C keys and the look text in the rows are removed. The hint now reads '[R] 준비 · 옷 갈아입기: 사물함 [E] / Esc → 옷장'.
+- Check: 2-player `-autotest-wardrobe` → 5/5 OK.
+  - Locker prompt → open, cursor free.
+  - Look 작업복(여) → 펑크(여): the server value arrived in 0.05 s, the preview matches, saved 'Female_Punk'.
+  - The host's colour is refused; a free colour is applied.
+  - Close relocks the cursor; Esc menu → wardrobe → settings closed.
+  - The test deletes its prefs afterwards.
+  - Screenshots: the full character fits.
+  - EditMode: the lockers test plus a source check that the lobby no longer reads Z / X / C.

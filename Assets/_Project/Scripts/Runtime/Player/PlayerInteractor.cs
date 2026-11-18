@@ -27,7 +27,8 @@ namespace CarWash.Player
         {
             if (!IsSpawned || !IsOwner) return;
             FindTarget();
-            if (_input.InteractPressed && TargetObject != null)
+            if (_input.InteractPressed && Target is ILocalInteractable local) local.InteractLocal(_self); // M4.9 G3 (wardrobe)
+            else if (_input.InteractPressed && TargetObject != null)
             {
                 bool aimedNb = Target is NetworkBehaviour;
                 InteractRpc(TargetObject, aimedNb, aimedNb ? new NetworkBehaviourReference((NetworkBehaviour)Target) : default);
@@ -45,6 +46,7 @@ namespace CarWash.Player
                 if (_hits[i].distance >= best) continue;
                 var it = _hits[i].collider.GetComponentInParent<IInteractable>();
                 if (it == null || !it.CanInteract(_self)) continue;
+                if (it is ILocalInteractable) { best = _hits[i].distance; Target = it; TargetObject = null; continue; }
                 var no = (it as Component)?.GetComponentInParent<NetworkObject>();
                 if (no == null) continue;
                 best = _hits[i].distance; Target = it; TargetObject = no;

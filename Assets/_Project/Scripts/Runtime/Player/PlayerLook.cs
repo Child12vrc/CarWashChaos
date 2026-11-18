@@ -86,8 +86,9 @@ namespace CarWash.Player
             }
             if (!IsSpawned) return;
 
-            if (_input.PausePressed) UI.SettingsMenu.Toggle();   // P2: Esc = settings / pause menu (unlocks the cursor)
-            else if (!UI.SettingsMenu.IsOpen && Cursor.lockState != CursorLockMode.Locked && Input_ClickedToRelock()) SetCursorLocked(true);
+            if (_input.PausePressed && UI.WardrobeUI.IsOpen) UI.WardrobeUI.Close(); // M4.9 G3: Esc closes the wardrobe first
+            else if (_input.PausePressed) UI.SettingsMenu.Toggle();   // P2: Esc = settings / pause menu (unlocks the cursor)
+            else if (!UI.SettingsMenu.IsOpen && !UI.WardrobeUI.IsOpen && Cursor.lockState != CursorLockMode.Locked && Input_ClickedToRelock()) SetCursorLocked(true);
 
             var settings = Services.Get<Settings>();
             float sens = _data.balance.player.lookSensitivity * (settings != null ? settings.Sensitivity : 1f);
