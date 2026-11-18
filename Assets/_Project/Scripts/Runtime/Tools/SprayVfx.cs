@@ -20,6 +20,8 @@ namespace CarWash.Tools
         [SerializeField] private float _speed = 22f;
         [SerializeField] private float _pitch = 1f;
 
+        [Tooltip("M4.6 D7: wet patch / puddle decals where the water lands (null = no wetting, e.g. the foam cannon)")]
+        [SerializeField] private Material _wetDecal, _puddleDecal;
         ParticleSystem _stream, _mist, _splash;
         AudioSource _audio;
         bool _on;
@@ -98,12 +100,12 @@ namespace CarWash.Tools
             var dir = holder != null ? holder.Look.Head.forward : nozzle.forward;
             var origin = holder != null ? holder.Look.Head.position : nozzle.position;
             int n = Physics.RaycastNonAlloc(origin, dir, _hits, range, Layers.SprayMask, QueryTriggerInteraction.Ignore);
-            float best = float.MaxValue; Vector3 p = Vector3.zero, normal = Vector3.up;
+            float best = float.MaxValue; Vector3 p = Vector3.zero, normal = Vector3.up; Collider hitCol = null;
             for (int i = 0; i < n; i++)
             {
                 if (holder != null && _hits[i].collider.transform.IsChildOf(holder.transform)) continue;
                 if (Vehicles.VehicleHull.Is(_hits[i].collider)) continue; // splash on the exact GLB body
-                if (_hits[i].distance < best) { best = _hits[i].distance; p = _hits[i].point; normal = _hits[i].normal; }
+                if (_hits[i].distance < best) { best = _hits[i].distance; p = _hits[i].point; normal = _hits[i].normal; hitCol = _hits[i].collider; }
             }
             // GLB: the stream leaves Socket_Nozzle and converges on the aim point (crosshair hit), not parallel to the aim ray
             var aim = best == float.MaxValue ? origin + dir * range : p;
@@ -114,6 +116,7 @@ namespace CarWash.Tools
             _splashT += Time.deltaTime;
             if (_splashT < 0.05f) return;
             _splashT = 0f;
+            WaterFx.Hit(hitCol, p, normal, 0.05f, _wetDecal, _puddleDecal); // M4.6 D7 (washer only: foam has no wet decals)
             _splash.transform.SetPositionAndRotation(p + normal * 0.05f, Quaternion.LookRotation(normal));
             _splash.Emit(1);
             var ep = new ParticleSystem.EmitParams { position = p + normal * 0.1f, applyShapeToPosition = false, velocity = normal * 0.6f };

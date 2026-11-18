@@ -11,6 +11,9 @@ Shader "CarWash/VehicleDirt"
         [NoScaleOffset] _DirtInit ("Dirt Init", 2D) = "black" {}
         [NoScaleOffset] _CleanAcc ("Clean Acc", 2D) = "black" {}
         [NoScaleOffset] _FoamMask ("Foam", 2D) = "black" {}
+        _DustScale ("Dust noise scale (1/m)", Float) = 9
+        _DustBump ("Dust bump", Float) = 6
+        _Sparkle ("Fresh-clean sparkle", Range(0, 1)) = 1
     }
     SubShader
     {
@@ -25,18 +28,22 @@ Shader "CarWash/VehicleDirt"
             #pragma fragment frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fog
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             TEXTURE2D(_DirtInit); SAMPLER(sampler_DirtInit);
             TEXTURE2D(_CleanAcc);
+            float4 _CleanAcc_TexelSize;
             TEXTURE2D(_FoamMask);
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor, _MudCol, _GreaseCol, _SpotCol;
+                half _DustScale, _DustBump, _Sparkle;
             CBUFFER_END
 
-            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv2 : TEXCOORD1; };
-            struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float3 normalWS : TEXCOORD1; float2 uv2 : TEXCOORD2; };
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float4 tangentOS : TANGENT; float2 uv2 : TEXCOORD1; };
+            struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float3 normalWS : TEXCOORD1; float2 uv2 : TEXCOORD2; float3 positionOS : TEXCOORD3; float fog : TEXCOORD4; };
 
             Varyings vert(Attributes i)
             {
@@ -44,10 +51,22 @@ Shader "CarWash/VehicleDirt"
                 VertexPositionInputs p = GetVertexPositionInputs(i.positionOS.xyz);
                 o.positionCS = p.positionCS;
                 o.positionWS = p.positionWS;
+                o.positionOS = i.positionOS.xyz;
                 o.normalWS = TransformObjectToWorldNormal(i.normalOS);
                 o.uv2 = i.uv2;
+                o.fog = ComputeFogFactor(p.positionCS.z);
                 return o;
             }
+
+            // value noise in object space (sticks to the car while it drives)
+            float hash13(float3 p) { p = frac(p * 0.1031); p += dot(p, p.zyx + 31.32); return frac((p.x + p.y) * p.z); }
+            float vnoise(float3 p)
+            {
+                float3 i = floor(p), f = frac(p); f = f * f * (3.0 - 2.0 * f);
+                return lerp(lerp(lerp(hash13(i), hash13(i + float3(1,0,0)), f.x), lerp(hash13(i + float3(0,1,0)), hash13(i + float3(1,1,0)), f.x), f.y),
+                            lerp(lerp(hash13(i + float3(0,0,1)), hash13(i + float3(1,0,1)), f.x), lerp(hash13(i + float3(0,1,1)), hash13(i + float3(1,1,1)), f.x), f.y), f.z);
+            }
+            float fbm(float3 p) { return vnoise(p) * 0.5 + vnoise(p * 2.07) * 0.3 + vnoise(p * 4.3) * 0.2; }
 
             half4 frag(Varyings i) : SV_Target
             {
@@ -57,26 +76,69 @@ Shader "CarWash/VehicleDirt"
                 float mud = saturate(init.r - cl.r);
                 float grease = saturate(init.g - cl.g);
                 float spots = saturate(cl.b - cl.a);
+                // M4.6 D6: soft dirt mask from the UV2 dirt map; the dust itself is noisy, rough and bumpy
+                float3 q = i.positionOS * _DustScale;
+                float n1 = fbm(q), n2 = fbm(q * 3.1 + 7.0);
+                float dirtMask = smoothstep(0.02, 0.55, max(mud, grease * 0.9));
+                float dusty = dirtMask * lerp(0.75, 1.15, n1);
 
                 half3 albedo = _BaseColor.rgb;
-                albedo = lerp(albedo, _MudCol.rgb, mud * 0.92);
-                albedo = lerp(albedo, _GreaseCol.rgb, grease * 0.85);
-                albedo = lerp(albedo, _SpotCol.rgb, spots * 0.75);
+                half3 mudTone = _MudCol.rgb * lerp(0.7, 1.2, n2);
+                albedo = lerp(albedo, mudTone, saturate(mud * 1.05) * lerp(0.8, 1.0, n1));
+                albedo = lerp(albedo, _GreaseCol.rgb * lerp(0.8, 1.2, n2), saturate(grease) * 0.85);
+                // freshly washed = still wet (water spots appear where the spray just hit, the towel dries them):
+                // darker, glossier; dried spots leave a faint chalky tint
+                // wet film = local average of the remaining water spots (5 taps) → smooth, not the 2.5 cm spot cells
+                float2 tx = _CleanAcc_TexelSize.xy * 3.0;
+                float4 c1 = SAMPLE_TEXTURE2D(_CleanAcc, sampler_DirtInit, i.uv2 + float2(tx.x, 0));
+                float4 c2 = SAMPLE_TEXTURE2D(_CleanAcc, sampler_DirtInit, i.uv2 - float2(tx.x, 0));
+                float4 c3 = SAMPLE_TEXTURE2D(_CleanAcc, sampler_DirtInit, i.uv2 + float2(0, tx.y));
+                float4 c4 = SAMPLE_TEXTURE2D(_CleanAcc, sampler_DirtInit, i.uv2 - float2(0, tx.y));
+                float spotsAvg = (spots + saturate(c1.b - c1.a) + saturate(c2.b - c2.a) + saturate(c3.b - c3.a) + saturate(c4.b - c4.a)) * 0.2;
+                float wet = saturate(spotsAvg * 3.0);
+                albedo = lerp(albedo, albedo * 0.82, wet * (1 - dirtMask));
+                albedo = lerp(albedo, _SpotCol.rgb, spots * 0.25 * (1 - wet));
                 albedo = lerp(albedo, half3(1, 1, 1), foam * 0.85);
-                float smoothness = lerp(0.8, 0.1, max(mud, grease));
 
+                // normal: dust bumps (noise gradient) only where dirty
                 float3 n = normalize(i.normalWS);
-                Light light = GetMainLight(TransformWorldToShadowCoord(i.positionWS));
-                float ndl = saturate(dot(n, light.direction));
-                float3 v = normalize(GetWorldSpaceViewDir(i.positionWS));
-                float3 h = normalize(light.direction + v);
-                float spec = pow(saturate(dot(n, h)), exp2(10.0 * smoothness + 1.0)) * smoothness;
-                half3 ambient = SampleSH(n);
-                half atten = light.shadowAttenuation * light.distanceAttenuation;
-                half3 col = albedo * (ambient + light.color * ndl * atten) + light.color * spec * atten;
-                return half4(col, 1);
+                float e = 0.03;
+                float3 g = float3(fbm(q + float3(e, 0, 0)) - n1, fbm(q + float3(0, e, 0)) - n1, fbm(q + float3(0, 0, e)) - n1) / e;
+                float3 gWS = TransformObjectToWorldDir(g, false);
+                n = normalize(n - (gWS - n * dot(gWS, n)) * _DustBump * dusty * 0.02);
+
+                float clean = 1 - dirtMask;
+                float smooth = lerp(0.08 + 0.1 * n2, 0.86, clean);          // matte dust → polished paint
+                smooth = lerp(smooth, 0.97, wet * clean);                   // wet film: mirror-like
+                smooth = lerp(smooth, 0.35, foam);
+
+                InputData input = (InputData)0;
+                input.positionWS = i.positionWS;
+                input.normalWS = n;
+                input.viewDirectionWS = GetWorldSpaceNormalizeViewDir(i.positionWS);
+                input.shadowCoord = TransformWorldToShadowCoord(i.positionWS);
+                input.fogCoord = i.fog;
+                input.bakedGI = SampleSH(n);
+                input.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(i.positionCS);
+                input.shadowMask = half4(1, 1, 1, 1);
+
+                SurfaceData s = (SurfaceData)0;
+                s.albedo = albedo;
+                s.metallic = 0.08 * clean;
+                s.smoothness = smooth;
+                s.occlusion = lerp(1.0, 0.75 + 0.25 * n1, dirtMask);
+                s.alpha = 1;
+                // fresh-clean sparkle: tiny glints twinkling on the wet, clean paint
+                float3 cell = floor(i.positionOS * 60.0);
+                float glint = step(0.985, hash13(cell + floor(_Time.y * 3.0))) * wet * clean * _Sparkle;
+                s.emission = glint * half3(1.6, 1.6, 1.7) * saturate(dot(n, input.viewDirectionWS) * 2);
+
+                half4 col = UniversalFragmentPBR(input, s);
+                col.rgb = MixFog(col.rgb, i.fog);
+                return half4(col.rgb, 1);
             }
             ENDHLSL
+
         }
 
         UsePass "Universal Render Pipeline/Lit/ShadowCaster"

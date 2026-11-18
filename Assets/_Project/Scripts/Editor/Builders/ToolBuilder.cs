@@ -29,6 +29,12 @@ namespace CarWash.Editor
                 splash = "fx_splash_sheet", splashColor = Color.white, splashSize = 0.8f, sheet = true, pitch = 1f,
             }, null);
             AddHose(washer);
+            // M4.6 D7: the washer wets what it hits (floor / wall decals, puddles); the foam cannon keeps its foam patches
+            var vfxW = washer.GetComponentInChildren<SprayVfx>();
+            // M4.6 D7: light props drift a little in the stream (was ~5.6 m per 2 s point blank → ×0.4)
+            var wso = new SerializedObject(washer.GetComponent<PressureWasher>()); wso.FindProperty("_propForceScale").floatValue = 0.4f; wso.ApplyModifiedPropertiesWithoutUndo();
+            SceneBuilder.Set(vfxW, "_wetDecal", WaterDecals.Wet());
+            SceneBuilder.Set(vfxW, "_puddleDecal", WaterDecals.Puddle());
             var foam = BuildTool<FoamCannon>("T02", "T02_FoamCannon", new Color(0.95f, 0.45f, 0.75f), 5f, GunShape);
             SetupSpray(foam, new VfxSpec
             {
