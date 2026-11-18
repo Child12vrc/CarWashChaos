@@ -98,7 +98,7 @@ Rule: do tasks in order unless marked (parallel). One task ≈ one agent session
 - [x] G6 Patience timers over cars (billboard ring shrinking clockwise + seconds, white → yellow → red, blink + angry emoji + warning sound at 10 s, '떠남! -평판' popup), queue + bay cars, small when far / edge arrows when off-screen, same value on the bay card; synced as server start time + limit only; audit the patience rules (too-early / unexplained leaving) + one line in tutorial / help.
 - [x] G7 Bay lights + switch: ceiling fixtures (emissive LED bars) + real lights, a wall switch (E, click sound hook, shows its state), NetworkVariable (toggle only); on by default at night (G1); 1–2 lights per bay, shadows only where needed; clearly darker when off.
 - [x] G9 Layout redesign as a Korean self-service car wash: 3 bays under one big canopy (dividers / curtains, big numbers 1·2·3, pay terminal + mode buttons per pillar, rotating ceiling boom arm, foam-brush holder, hose reel, centre drain grating); separate drying / vacuum area (canopy, vacuum pillars, mat rack + mat washer, air gun); entrance price board, info board, in / out arrows, no-entry + slow road markings; coin changer, vending machines, recycling bins, bench, parasol, CCTV, extinguisher, water tank / chemical drums, buckets, towel rack, slippery sign, hose reels, pipes, electrical box, AC units, planters, bicycle. Props as prefabs with simple procedural meshes first; list + sizes in ART_REQUESTS.md. Re-fit car paths, queue, spawns, bounds, tutorial spots, auto tests, GDD §11. First: a top-view layout proposal image for the user.
-- [ ] v0.7 release build (Relay verified) + zip + GitHub push.
+- [x] v0.7 release build (Relay verified) + zip + GitHub push.
 
 ## M5 Progression
 - [ ] T5.1 Shop terminal + U01-U10. AC: purchases persist across days, mults applied.
@@ -358,3 +358,5 @@ M4.9 G9 (2026-11-19):
   - NavMesh complete for both agents.
   - 2-player release loop PASS; screenshots by day and at night (25 night lights).
 - Kept: spawns, bounds, the tutorial text ('차고지 1 왼쪽 벽 가운데의 세척기' is still true), lockers and the office.
+
+v0.7 (2026-11-19, M4.9 G1–G9): Builds/Release/CarWashChaos_v0.7.zip (107 MB, README v0.7 with the new features; the Z/X/C keys were replaced by the wardrobe in the text). Relay verified with the verify exe pair (-host-relay / -joincode CC8LKL): full W1D1 loop PASS (wash 71 → 85 %, paid, summary on both; temporary nicknames 손님NN in the lobby rows). Network against the v0.6 baseline (4P Relay + 150/30/5, 45 s): host sends 23.7 KB/s (v0.6: 29.3), remote speed jitter 2.0–4.7 % on clients, 0 hitches, 0 snaps; about 66 fps on every instance (frame rate capped). Screenshots (layout sheets, night, wardrobe, rings, status bar at 2560, bay lights, summary with names) and the netload log are in Builds/Release/verify_screenshots/v0.7.
