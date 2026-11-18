@@ -37,6 +37,12 @@ namespace CarWash.Editor
         {
             var list = new List<PlayerAppearance.LookEntry>();
             var controller = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ControllerPath);
+            // M4.6 D8: HandIK needs the IK pass on the base layer
+            if (controller is UnityEditor.Animations.AnimatorController ac && ac.layers.Length > 0 && !ac.layers[0].iKPass)
+            {
+                var layers = ac.layers; layers[0].iKPass = true; ac.layers = layers;
+                EditorUtility.SetDirty(ac); AssetDatabase.SaveAssets();
+            }
             foreach (var (id, ko) in Catalog)
             {
                 var src = AssetDatabase.LoadAssetAtPath<GameObject>(PathOf(id));

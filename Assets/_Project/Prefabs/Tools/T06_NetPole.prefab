@@ -256,6 +256,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2285570846624122082}
+  - {fileID: 8483447821483187314}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &1266160373623793514
@@ -393,6 +394,7 @@ MonoBehaviour:
   _viewOffset: {x: 0.28, y: -0.42, z: 0.25}
   _thirdPersonOffset: {x: 0.25, y: -0.6, z: 0.25}
   _nozzle: {fileID: 3187767155587637273}
+  _offHand: {fileID: 8483447821483187314}
   _capture: {fileID: 3187767155587637273}
 --- !u!65 &6990493123730623497
 BoxCollider:
@@ -560,6 +562,37 @@ Transform:
   - {fileID: 2971618554141114094}
   - {fileID: 8210528682777430692}
   - {fileID: 3187767155587637273}
+  m_Father: {fileID: 7085285019639073829}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &6384670782349880082
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8483447821483187314}
+  m_Layer: 0
+  m_Name: Socket_OffHand
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8483447821483187314
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6384670782349880082}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.24}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
   m_Father: {fileID: 7085285019639073829}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8300272046106722138

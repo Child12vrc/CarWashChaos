@@ -44,7 +44,12 @@ namespace CarWash.Player
         Transform _tag;
         Text _tagText;
 
-        void Awake() => _net = GetComponent<PlayerNet>();
+        void Awake()
+        {
+            _net = GetComponent<PlayerNet>();
+            // M4.6 D8: hands on the held tool
+            foreach (var l in _looks) if (l.animator != null && !l.animator.TryGetComponent<HandIK>(out _)) l.animator.gameObject.AddComponent<HandIK>();
+        }
 
         public override void OnNetworkSpawn()
         {

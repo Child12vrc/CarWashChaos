@@ -127,6 +127,22 @@ namespace CarWash.Editor
                 nozzle.localPosition = new Vector3(0, 0.03f, 0.68f);
             }
             SceneBuilder.Set(tool, "_nozzle", nozzle);
+            // M4.6 D8: where the left hand holds the tool (the grip / right hand is the tool origin)
+            var off = root.transform.Find("Model/Socket_OffHand");
+            if (off == null)
+            {
+                off = new GameObject("Socket_OffHand").transform;
+                off.SetParent(root.transform, false);
+                off.localPosition = toolId switch
+                {
+                    "T01" => new Vector3(0f, 0.08f, 0.42f),
+                    "T02" => new Vector3(0f, -0.05f, 0.18f),
+                    "T03" => new Vector3(0.1f, 0.04f, 0.2f),
+                    "T06" => new Vector3(0f, 0f, 0.24f),
+                    _ => new Vector3(0f, 0.05f, 0.3f),
+                };
+            }
+            SceneBuilder.Set(tool, "_offHand", off);
             return root;
         }
 

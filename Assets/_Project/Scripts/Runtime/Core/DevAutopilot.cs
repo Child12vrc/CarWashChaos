@@ -55,6 +55,7 @@ namespace CarWash.Core
             if (observeOnly)
             {
                 if (NetworkManager.Singleton.IsServer) StartCoroutine(BoundsMode ? DevChecksBounds.HostIdle() : LooksMode ? DevLooksScenario.Run() : ModelsMode ? DevModelsScenario.Run() : GlbMode ? DevGlbScenario.Run() : ReleaseMode ? DevReleaseScenario.Run() : P1Mode ? DevP1Scenario.Run() : NetMode ? DevNetScenario.Run() : SurpriseMode ? DevSurpriseScenario.Run() : DayMode ? DevDayScenario.Run() : DevHostScenario.Run());
+                if (NetworkManager.Singleton.IsServer && ReleaseMode && DevChecksSwing.Requested) StartCoroutine(DevChecksSwing.HostObserve()); // M4.6 D8
                 yield break;
             }
             if (SpawnMode)
@@ -90,6 +91,7 @@ namespace CarWash.Core
             }
             if (ReleaseMode)
             {
+                if (DevChecksSwing.Requested) { yield return DevChecksSwing.Run(me); Log("DONE"); yield break; } // M4.6 D8
                 if (DevChecksWater.Requested) { yield return DevChecksWater.Run(me); Log("DONE"); yield break; } // M4.6 D6/D7
                 if (DevChecksInterior.Requested) { yield return DevChecksInterior.Run(me); Log("DONE"); yield break; } // M4.6 D3
                 if (DevChecksTutorial.Requested) StartCoroutine(DevChecksTutorial.Watch()); // M4.6 D1

@@ -173,8 +173,43 @@ namespace CarWash.Tools
             if (HolderPlayer == null || Stowed) return;
             var head = HolderPlayer.Look.Head;
             var off = HolderPlayer.IsOwner ? _viewOffset : _thirdPersonOffset;
-            transform.SetPositionAndRotation(head.TransformPoint(off), head.rotation);
+            var rot = head.rotation;
+            // M4.6 D8: spray stance (tool raised, a little recoil shake) and the swing arc, on every peer
+            float dt = Time.deltaTime;
+            _aim = Mathf.MoveTowards(_aim, Using.Value ? 1f : 0f, dt * 6f);
+            off += new Vector3(-0.04f, 0.07f, 0.05f) * _aim;
+            if (_aim > 0.5f) off += Random.insideUnitSphere * 0.004f;
+            if (_swingT >= 0f)
+            {
+                _swingT += dt / SwingTime;
+                float k = Mathf.Clamp01(_swingT);
+                float s = Mathf.Sin(k * Mathf.PI);
+                // wind-up to the right, sweep across to the left and down, settle back
+                SwingYaw = Mathf.Lerp(55f, -65f, Mathf.SmoothStep(0f, 1f, k));
+                var arc = Quaternion.Euler(25f * s, SwingYaw * s, -30f * s);
+                rot = rot * arc;
+                off += new Vector3(-0.12f * s, 0.1f * s, 0.12f * s);
+                if (_swingT >= 1f) { _swingT = -1f; SwingYaw = 0f; }
+            }
+            transform.SetPositionAndRotation(head.TransformPoint(off), rot);
             OnUseVisual(Using.Value);
         }
+
+        // ---------------- M4.6 D8: held in the hands + swing ----------------
+        public const float SwingTime = 0.35f;
+        [Tooltip("Where the second hand holds the tool (wand / pole / bottle); the grip is the tool's origin")]
+        [SerializeField] private Transform _offHand;
+        float _aim, _swingT = -1f;
+
+        /// <summary>Right-hand target = the tool origin (grip, ART_IMPORT: origin = handle).</summary>
+        public Transform Grip => transform;
+        /// <summary>Left-hand target (falls back to a point 30 cm ahead of the grip).</summary>
+        public Vector3 OffHandPosition => _offHand != null ? _offHand.position : transform.TransformPoint(new Vector3(0f, 0.05f, 0.3f));
+        public Quaternion OffHandRotation => _offHand != null ? _offHand.rotation : transform.rotation;
+        public bool Swinging => _swingT >= 0f;
+        /// <summary>Current swing yaw (dev checks / tests).</summary>
+        public float SwingYaw { get; private set; }
+        /// <summary>Every peer: play the swing arc (PlayerTools.SwingFxRpc).</summary>
+        public void PlaySwing() => _swingT = 0f;
     }
 }

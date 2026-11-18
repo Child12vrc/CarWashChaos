@@ -21,6 +21,11 @@ namespace CarWash.Player
         float _sendT;
         bool _wasUsing;
 
+        public override void OnNetworkSpawn()
+        {
+            if (IsOwner && _look != null && _look.Camera != null) _look.Camera.gameObject.AddComponent<FPHands>().Init(this); // M4.6 D8
+        }
+
         void Update()
         {
             if (!IsSpawned || !IsOwner) return;
@@ -45,7 +50,59 @@ namespace CarWash.Player
             if (_input.SlotPressed >= 0) SelectRpc(_input.SlotPressed);
             if (tool != null && handsFree && _input.AltPressed) AltRpc();
             if (tool != null && handsFree && _input.DropPressed) DropRpc();
+            // M4.6 D8: [Q] swing the held tool (server checks the cooldown and what it hits; everyone sees the arc)
+            if (tool != null && handsFree && _input.SwingPressed && Time.time >= _nextSwing)
+            {
+                _nextSwing = Time.time + SwingCooldown;
+                var ray = _look.AimRay;
+                SwingRpc(ray.origin, ray.direction);
+            }
         }
+
+        public const float SwingCooldown = 0.8f, SwingRange = 1.9f, SwingRadius = 0.45f;
+        float _nextSwing, _serverNextSwing;
+        /// <summary>Server, dev checks: what the last swing hit ("player c1", "critter C01", "prop Cone", "nothing").</summary>
+        public string LastSwingHit { get; private set; } = "";
+        static readonly RaycastHit[] SwingHits = new RaycastHit[16];
+
+        [Rpc(SendTo.Server)]
+        void SwingRpc(Vector3 origin, Vector3 dir)
+        {
+            var tool = Equipped;
+            if (tool == null || Time.time < _serverNextSwing) return;
+            _serverNextSwing = Time.time + SwingCooldown * 0.9f;
+            if ((origin - _look.Head.position).sqrMagnitude > 2.25f) origin = _look.Head.position;
+            dir = dir.normalized;
+            SwingFxRpc();
+            LastSwingHit = ServerSwingHit(origin, dir);
+            Debug.Log($"[SWING] client {OwnerClientId} swung {tool.ToolId} → {LastSwingHit}");
+        }
+
+        [Rpc(SendTo.Everyone)]
+        void SwingFxRpc() { Equipped?.PlaySwing(); }
+
+        /// <summary>Server: first thing in a 0.45 m sweep 1.9 m ahead — a player is knocked down, a critter stunned, a prop knocked away.</summary>
+        string ServerSwingHit(Vector3 origin, Vector3 dir)
+        {
+            int mask = (1 << Core.Layers.Player) | (1 << Core.Layers.Critter) | (1 << Core.Layers.Prop) | (1 << Core.Layers.Ragdoll);
+            int n = Physics.SphereCastNonAlloc(origin, SwingRadius, dir, SwingHits, SwingRange, mask, QueryTriggerInteraction.Collide);
+            System.Array.Sort(SwingHits, 0, n, Comparer);
+            for (int i = 0; i < n; i++)
+            {
+                var col = SwingHits[i].collider;
+                if (col.transform.IsChildOf(transform)) continue;
+                var flat = new Vector3(dir.x, 0f, dir.z).normalized;
+                var p = col.GetComponentInParent<PlayerNet>();
+                if (p != null && p != GetComponent<PlayerNet>()) { p.Motor.AddKnockback(flat * 11f + Vector3.up * 3.5f); return "player c" + p.OwnerClientId; }
+                var c = col.GetComponentInParent<Critters.CritterBase>();
+                if (c != null) { c.ServerAddWetness(c.MaxWetness.Value * 1.1f); return "critter " + c.CritterId + " → " + c.State.Value; }
+                var rb = col.attachedRigidbody;
+                if (rb != null && !rb.isKinematic) { rb.AddForce(flat * 6f + Vector3.up * 2.5f, ForceMode.VelocityChange); return "prop " + rb.name; }
+            }
+            return $"nothing ({n} hits, from {origin.ToString("F1")} dir {dir.ToString("F2")})";
+        }
+
+        static readonly System.Collections.Generic.Comparer<RaycastHit> Comparer = System.Collections.Generic.Comparer<RaycastHit>.Create((a, b) => a.distance.CompareTo(b.distance));
 
         // ---------------- server ----------------
         public void ServerEquip(ToolBase tool) => _inventory.ServerAdd(tool);

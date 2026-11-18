@@ -18,7 +18,9 @@ namespace CarWash.Player
         [Header("Scripted (tests / autopilot)")]
         public bool scripted;
         public Vector2 sMove, sLook;
-        public bool sSprint, sCrouch, sJump, sUse, sGrab, sInteract, sAlt, sDrop;
+        public bool sSprint, sCrouch, sJump, sUse, sGrab, sInteract, sAlt, sDrop, sSwing;
+        /// <summary>M4.6 D8: [Q] swing the held tool.</summary>
+        public bool SwingPressed;
         public int sSlot = -1;
 
         Controls _c;
@@ -63,6 +65,7 @@ namespace CarWash.Player
                 InteractPressed = sInteract; sInteract = false;
                 AltPressed = sAlt; sAlt = false;
                 DropPressed = sDrop; sDrop = false;
+                SwingPressed = sSwing; sSwing = false;
                 SlotPressed = sSlot; sSlot = -1;
                 PausePressed = DebugPressed = PingPressed = false;
                 return;
@@ -80,6 +83,7 @@ namespace CarWash.Player
             InteractPressed = p.Interact.WasPressedThisFrame();
             GrabHeld = p.Grab.IsPressed(); GrabPressed = p.Grab.WasPressedThisFrame(); GrabReleased = p.Grab.WasReleasedThisFrame();
             DropPressed = p.Drop.WasPressedThisFrame();
+            SwingPressed = locked && UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.qKey.wasPressedThisFrame;
             SlotPressed = p.Slot1.WasPressedThisFrame() ? 0 : p.Slot2.WasPressedThisFrame() ? 1 : p.Slot3.WasPressedThisFrame() ? 2 : p.Slot4.WasPressedThisFrame() ? 3 : -1;
             PausePressed = p.Pause.WasPressedThisFrame();
             DebugPressed = p.DebugOverlay.WasPressedThisFrame();
