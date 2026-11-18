@@ -22,7 +22,7 @@ namespace CarWash.UI
         public void Build(Transform root)
         {
             var tr = new Vector2(1f, 1f);
-            _panel = UiFactory.FramePanel("InviteCard", root, tr, new Vector2(-250, -125), new Vector2(460, 220), new Color(0.1f, 0.15f, 0.3f, 0.92f));
+            _panel = UiFactory.FramePanel("InviteCard", root, tr, new Vector2(-250, -235), new Vector2(460, 220), new Color(0.1f, 0.15f, 0.3f, 0.92f));
             var p = _panel.transform;
             var txt = UiFactory.Skin != null ? UiFactory.Skin.panelText : Color.white;
             _title = UiFactory.Label("Title", p, "", 24, new Vector2(0.5f, 1f), new Vector2(0, -34), new Vector2(420, 32), color: txt);

@@ -26,6 +26,7 @@ namespace CarWash.UI
         }
 
         readonly List<Card> _cards = new List<Card>();
+        float _target = 0.8f, _bonus = 0.95f;
         RectTransform _root;
         UiSkin _skin;
         DataRegistry _data;
@@ -76,6 +77,14 @@ namespace CarWash.UI
             c.carName = UiFactory.Label("CarName", t, "", 20, tl, new Vector2(190, -56), new Vector2(200, 26), TextAnchor.MiddleLeft, txt);
             Icon(t, "ico_clean", tl, new Vector2(106, -88), 26);
             c.cleanFill = UiFactory.Bar("CleanBar", t, tl, new Vector2(186, -88), new Vector2(120, 20));
+            // M4.9 G5: target lines on the clean bar — full pay (×1.0) and bonus (×1.3) thresholds
+            var th = _data != null ? _data.balance.economy.cleanThresholds : new[] { 0.6f, 0.8f, 0.95f };
+            _target = th.Length > 1 ? th[1] : 0.8f; _bonus = th.Length > 2 ? th[2] : 0.95f;
+            foreach (var f in new[] { _target, _bonus })
+            {
+                var mk = UiFactory.Panel("Target", t, tl, new Vector2(126 + 120 * f, -88), new Vector2(3, 26), f == _target ? new Color(0.1f, 0.1f, 0.15f, 0.9f) : new Color(1f, 0.85f, 0.2f, 0.95f));
+                mk.raycastTarget = false;
+            }
             c.cleanText = UiFactory.Label("CleanPct", t, "", 20, tl, new Vector2(282, -88), new Vector2(66, 26), TextAnchor.MiddleLeft, txt);
             Icon(t, "ico_timer", tl, new Vector2(106, -120), 26);
             c.timeFill = UiFactory.Bar("TimeBar", t, tl, new Vector2(186, -120), new Vector2(120, 20));
@@ -161,7 +170,7 @@ namespace CarWash.UI
                 if (!hasCar) continue;
                 var d = car.Data;
                 c.icon.sprite = _skin != null ? _skin.VehicleIcon(d) : null;
-                c.carName.text = d != null ? d.displayName : car.DataId;
+                c.carName.text = (d != null ? d.displayName : car.DataId) + $" · 목표 {Mathf.RoundToInt(_target * 100f)}%";
                 float clean = Mathf.Clamp01(car.Dirt.CleanPct.Value - car.TrashRemaining * trashPenalty);
                 var cc = clean < 0.6f ? UiFactory.BarRed : clean < 0.8f ? UiFactory.BarYellow : UiFactory.BarGreen;
                 UiFactory.SetBar(c.cleanFill, clean, cc);

@@ -18,7 +18,10 @@ namespace CarWash.UI
     {
         Transform _root;
         UiSkin _skin;
-        Text _money, _clock, _info;
+        Text _money, _clock, _info, _income, _rent, _repNum;
+        readonly List<GameObject> _captions = new List<GameObject>();
+        int _lastMoney = int.MinValue;
+        public string StatusText => _money == null ? null : $"{_money.text} | {_income.text} | {_rent.text} | {_repNum.text} | {_clock.text}";
         Image _clockIcon;
         readonly Image[] _stars = new Image[5];
         Image _summary;
@@ -37,23 +40,34 @@ namespace CarWash.UI
         {
             _root = root;
             _skin = UiFactory.Skin;
-            var tl = new Vector2(0f, 1f);
-            // money + reputation (top-left)
-            var bar = UiFactory.FramePanel("MoneyRep", root, tl, new Vector2(190, -62), new Vector2(340, 96), new Color(0, 0, 0, 0.45f));
-            Icon("MoneyIcon", bar.transform, "ico_money", new Vector2(0f, 0.5f), new Vector2(38, 14), 44);
-            _money = UiFactory.Label("Money", bar.transform, "$0", 34, new Vector2(0f, 0.5f), new Vector2(172, 14), new Vector2(200, 44), TextAnchor.MiddleLeft);
-            _money.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.7f);
-            for (int i = 0; i < 5; i++)
-            {
-                _stars[i] = Icon("Star" + i, bar.transform, "ico_rep_star", new Vector2(0f, 0.5f), new Vector2(36 + i * 34, -24), 32);
-            }
-            // week/day + clock (top-centre)
+            // M4.9 G5: ONE status bar along the top — money · today's income · rent (what is still missing / reached) ·
+            // reputation stars + number · clock (G1 hour) + time left. Captions under the icons during week 1.
             var top = new Vector2(0.5f, 1f);
-            var clockPanel = UiFactory.FramePanel("Clock", root, top, new Vector2(0, -50), new Vector2(460, 72), new Color(0, 0, 0, 0.45f));
-            _clockIcon = Icon("TimerIcon", clockPanel.transform, "ico_timer", new Vector2(0f, 0.5f), new Vector2(42, 0), 44);
-            _clock = UiFactory.Label("ClockText", clockPanel.transform, "", 30, new Vector2(0.5f, 0.5f), new Vector2(24, 0), new Vector2(380, 60));
-            _clock.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.7f);
-            _info = UiFactory.Label("DayInfo", root, "", 24, top, new Vector2(0, -108), new Vector2(900, 34), color: new Color(1f, 0.95f, 0.75f));
+            var bar = UiFactory.FramePanel("StatusBar", root, top, new Vector2(0, -40), new Vector2(1600, 68), new Color(0, 0, 0, 0.5f));
+            var bt = bar.transform; var mid = new Vector2(0.5f, 0.5f);
+            Text L(string n, string s, int size, float x, float w)
+            {
+                var t = UiFactory.Label(n, bt, s, size, mid, new Vector2(x, 0), new Vector2(w, 50), TextAnchor.MiddleLeft);
+                t.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.7f);
+                return t;
+            }
+            Icon("MoneyIcon", bt, "ico_money", mid, new Vector2(-735, 0), 44);
+            _money = L("Money", "$0", 34, -615, 170);
+            _income = L("Income", "", 26, -400, 230);
+            _rent = L("Rent", "", 24, -110, 330);
+            for (int i = 0; i < 5; i++) _stars[i] = Icon("Star" + i, bt, "ico_rep_star", mid, new Vector2(120 + i * 32, 0), 30);
+            _repNum = L("RepNum", "", 26, 305, 70);
+            _clockIcon = Icon("TimerIcon", bt, "ico_timer", mid, new Vector2(370, 0), 40);
+            _clock = L("ClockText", "", 24, 600, 410);
+            // week-1 captions under the bar ("what is this icon")
+            void Cap(string s, float x)
+            {
+                var c = UiFactory.Label("Cap_" + s, bt, s, 17, mid, new Vector2(x, -46), new Vector2(220, 24), color: new Color(1f, 1f, 1f, 0.85f));
+                c.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.8f);
+                _captions.Add(c.gameObject);
+            }
+            Cap("보유 돈", -660); Cap("오늘 번 돈", -400); Cap("임대료 (하루 끝에 냄)", -110); Cap("평판", 200); Cap("시각 · 남은 영업 시간", 520);
+            _info = UiFactory.Label("DayInfo", root, "", 24, top, new Vector2(0, -112), new Vector2(900, 34), color: new Color(1f, 0.95f, 0.75f));
             _info.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.8f);
 
             // summary panel (centre)
@@ -95,10 +109,39 @@ namespace CarWash.UI
             var d = reg != null ? reg.Get<Data.VehicleData>(n.vehicleId) : null;
             string name = d != null ? d.displayName : n.vehicleId;
             if (n.angry) WorldPopup.Show(n.position + Vector3.up * 2.2f, "떠남! -평판", new Color(1f, 0.45f, 0.4f)); // M4.9 G6
-            if (n.angry) Toast($"{name}: 기다리다 화나서 떠났어요! (평판 하락)", new Color(1f, 0.55f, 0.5f));
+            else if (n.refused) WorldPopup.Show(n.position + Vector3.up * 2.2f, "결제 거절! -평판", new Color(1f, 0.45f, 0.4f));
+            else WorldPopup.Show(n.position + Vector3.up * 2.2f, "+$" + n.amount, new Color(0.5f, 1f, 0.55f));
+            if (n.angry) Toast($"{name}: 기다리다 화나서 떠났어요!", new Color(1f, 0.55f, 0.5f));
             else if (n.refused) Toast($"{name}: 결제 거절! 청결 {Mathf.FloorToInt(n.clean * 100f)}% (평판 하락)", new Color(1f, 0.55f, 0.5f));
             else if (n.dryTip > 0) Toast($"{name}: +${n.amount}  (청결 {Mathf.FloorToInt(n.clean * 100f)}%) 물기까지 완벽! 팁 +${n.dryTip}", new Color(0.55f, 0.95f, 1f));
             else Toast($"{name}: +${n.amount}  (청결 {Mathf.FloorToInt(n.clean * 100f)}%)", new Color(0.6f, 1f, 0.6f));
+        }
+
+        // ---- M4.9 G5: +$ / -$ next to the money (rises + fades in 1.4 s)
+        readonly List<(Text t, float t0)> _moneyPops = new List<(Text, float)>();
+        public string LastMoneyPopup { get; private set; }
+
+        void MoneyPopup(int delta)
+        {
+            if (_money == null || delta == 0) return;
+            var t = UiFactory.Label("MoneyPop", _money.transform.parent, (delta > 0 ? "+$" : "-$") + Mathf.Abs(delta), 30,
+                new Vector2(0.5f, 0.5f), new Vector2(-560, -40), new Vector2(200, 40), TextAnchor.MiddleLeft, delta > 0 ? new Color(0.5f, 1f, 0.55f) : new Color(1f, 0.5f, 0.45f));
+            t.fontStyle = FontStyle.Bold;
+            t.gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.85f);
+            _moneyPops.Add((t, Time.time));
+            LastMoneyPopup = t.text;
+        }
+
+        void AnimateMoneyPops()
+        {
+            for (int i = _moneyPops.Count - 1; i >= 0; i--)
+            {
+                var (t, t0) = _moneyPops[i];
+                float k = (Time.time - t0) / 1.4f;
+                if (k >= 1f || t == null) { if (t != null) Destroy(t.gameObject); _moneyPops.RemoveAt(i); continue; }
+                t.rectTransform.anchoredPosition = new Vector2(-560, -40 - k * 30f - i * 4f);
+                var c = t.color; c.a = k < 0.65f ? 1f : 1f - (k - 0.65f) / 0.35f; t.color = c;
+            }
         }
 
         long _hudKey = long.MinValue;
@@ -107,6 +150,7 @@ namespace CarWash.UI
         void Update()
         {
             var dm = DayManager.Instance;
+            AnimateMoneyPops();
             if (dm != _bound)
             {
                 if (_bound != null) { _bound.Paid -= OnPaid; _bound.BossArrived -= OnBoss; }
@@ -121,20 +165,31 @@ namespace CarWash.UI
             var eco = EconomyState.Instance;
             bool show = dm != null && eco != null;
             _money.transform.parent.gameObject.SetActive(show);
-            _clock.transform.parent.gameObject.SetActive(show);
             _info.gameObject.SetActive(show);
             if (!show) { _summary.gameObject.SetActive(false); return; }
+
+            // money popups (+$ / -$) next to the money, from the replicated value — every peer, every source (pay, rent, bonus)
+            int money = eco.Money.Value;
+            if (_lastMoney != int.MinValue && money != _lastMoney) MoneyPopup(money - _lastMoney);
+            _lastMoney = money;
 
             // M4.7: strings are rebuilt only when what they show changes (the HUD was the game's biggest per-frame GC source)
             var st = dm.State.Value;
             float left = st == GameState.Day ? (dm.Phase.Value == DayPhase.Open ? dm.TimeLeft : dm.OvertimeLeft) : 0f;
-            long key = ((long)eco.Money.Value << 32) ^ ((long)dm.CurrentRent << 20) ^ ((long)(int)st << 16) ^ ((long)dm.Week.Value << 12)
-                       ^ ((long)dm.DayNum.Value << 8) ^ ((long)(int)dm.Phase.Value << 6) ^ ((long)Mathf.CeilToInt(left) << 40) ^ ((long)Mathf.RoundToInt(eco.Rep.Value * 2f) << 56);
+            int tenMin = Mathf.FloorToInt(Visual.DayNightCycle.Hour * 6f);
+            long key = ((long)money << 32) ^ ((long)dm.CurrentRent << 20) ^ ((long)(int)st << 16) ^ ((long)dm.Week.Value << 12)
+                       ^ ((long)dm.DayNum.Value << 8) ^ ((long)(int)dm.Phase.Value << 6) ^ ((long)Mathf.CeilToInt(left) << 40) ^ ((long)Mathf.RoundToInt(eco.Rep.Value * 10f) << 54)
+                       ^ ((long)dm.EarnedToday.Value << 24) ^ ((long)tenMin << 48);
             if (key == _hudKey && !(st == GameState.Summary || st == GameState.GameOver || st == GameState.WeekEnd)) return;
             _hudKey = key;
 
-            _money.text = "$" + eco.Money.Value;
-            _money.color = eco.Money.Value < dm.CurrentRent ? new Color(1f, 0.6f, 0.5f) : Color.white;
+            int rent = dm.CurrentRent;
+            _money.text = "$" + money;
+            _money.color = money < rent ? new Color(1f, 0.6f, 0.5f) : Color.white;
+            _income.text = $"오늘 +${dm.EarnedToday.Value}";
+            int missing = rent - money;
+            _rent.text = missing > 0 ? $"임대료 ${rent} · ${missing} 더 필요" : $"임대료 ${rent} · 낼 수 있어요 ✔";
+            _rent.color = missing > 0 ? new Color(1f, 0.75f, 0.4f) : new Color(0.55f, 1f, 0.6f);
             float rep = eco.Rep.Value;
             for (int i = 0; i < 5; i++)
             {
@@ -142,21 +197,25 @@ namespace CarWash.UI
                 var sp = _skin != null ? _skin.Icon(full ? "ico_rep_star" : "ico_rep_star_empty") : null;
                 if (sp != null) _stars[i].sprite = sp; else _stars[i].color = full ? new Color(1f, 0.85f, 0.3f) : new Color(1, 1, 1, 0.25f);
             }
+            _repNum.text = rep.ToString("0.0");
+            foreach (var c in _captions) c.SetActive(dm.Week.Value <= 1); // labels on the icons during the first week
 
-            string head = $"{dm.Week.Value}주차 {dm.DayNum.Value}일차";
+            string head = $"{dm.Week.Value}주 {dm.DayNum.Value}일"; // short: the bar has room for one line
+            int hh = Mathf.FloorToInt(Visual.DayNightCycle.Hour), mm = (tenMin % 6) * 10;
+            string clock = $"{hh:00}:{mm:00}";
             switch (st)
             {
                 case GameState.Day:
-                    if (dm.Phase.Value == DayPhase.Open) { _clock.text = $"{head}  {Mmss(dm.TimeLeft)}"; _clock.color = dm.TimeLeft < 30f ? new Color(1f, 0.8f, 0.4f) : Color.white; }
-                    else { _clock.text = $"{head}  마감 {Mmss(dm.OvertimeLeft)}"; _clock.color = new Color(1f, 0.6f, 0.5f); }
-                    _info.text = dm.Phase.Value == DayPhase.Open ? $"오늘 임대료 ${dm.CurrentRent}  ·  세차가 끝나면 차고지 버튼 [E] 정산" : "영업 종료 — 남은 차만 마무리하세요";
+                    if (dm.Phase.Value == DayPhase.Open) { _clock.text = $"{head} · {clock} · 남은 {Mmss(dm.TimeLeft)}"; _clock.color = dm.TimeLeft < 30f ? new Color(1f, 0.8f, 0.4f) : Color.white; }
+                    else { _clock.text = $"{head} · {clock} · 마감 {Mmss(dm.OvertimeLeft)}"; _clock.color = new Color(1f, 0.6f, 0.5f); }
+                    _info.text = dm.Phase.Value == DayPhase.Open ? "" : "영업 종료 — 남은 차만 마무리하세요";
                     break;
                 case GameState.Lobby:
-                    _clock.text = head + "  준비 중"; _clock.color = Color.white;
+                    _clock.text = $"{head} · {clock} · 준비 중"; _clock.color = Color.white;
                     _info.text = "사무실 일정판에서 [E] 영업 시작";
                     break;
                 default:
-                    _clock.text = head + "  영업 종료"; _clock.color = Color.white;
+                    _clock.text = $"{head} · {clock} · 영업 종료"; _clock.color = Color.white;
                     _info.text = "";
                     break;
             }

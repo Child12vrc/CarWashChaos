@@ -49,6 +49,8 @@ namespace CarWash.Day
         public readonly NetworkVariable<DaySummary> Summary = new NetworkVariable<DaySummary>();
         /// <summary>Queue patience in seconds (replicated for the patience bars).</summary>
         public readonly NetworkVariable<float> PatienceNet = new NetworkVariable<float>(45f);
+        /// <summary>M4.9 G5: money earned today (customers + tips + critter bonuses), for the status bar.</summary>
+        public readonly NetworkVariable<int> EarnedToday = new NetworkVariable<int>();
 
         /// <summary>Every peer: a customer paid / was refused / left angry.</summary>
         public event Action<PayNotice> Paid;
@@ -171,6 +173,7 @@ namespace CarWash.Day
             Economy.ServerAddMoney(r.pay);
             Economy.ServerAddRep(EconomyCalc.RepDelta(r, ctx.basePay, E));
             if (r.refused) _run.refused++; else { _run.served++; _run.earned += r.pay; _run.tips += r.tip; }
+            EarnedToday.Value = _run.earned + _run.bonus;
             Debug.Log($"[DAY] {v.DataId} W{Week.Value}D{DayNum.Value} {r} wash {ctx.elapsed:0}s/{ctx.timeLimit:0}s → money {Economy.Money.Value} rep {Economy.Rep.Value:0.00}");
             GameEvents.RaiseVehiclePaid(v, r.pay);
             PaidRpc(v.transform.position, v.DataId, r.pay, r.effectiveClean, r.refused, false, ctx.dried && !r.refused ? (int)System.Math.Round(ctx.basePay * E.dryTip) : 0);
@@ -197,7 +200,7 @@ namespace CarWash.Day
         {
             if (!IsServer) return;
             Economy.ServerAddMoney(bonus);
-            if (State.Value == GameState.Day) { _run.captured++; _run.bonus += bonus; }
+            if (State.Value == GameState.Day) { _run.captured++; _run.bonus += bonus; EarnedToday.Value = _run.earned + _run.bonus; }
             if (bonus > 0) CoinBurstRpc(c.transform.position + Vector3.up, bonus);
         }
 
@@ -301,6 +304,7 @@ namespace CarWash.Day
             _lane?.ServerClearAll();
             _washStart.Clear();
             _run = new DaySummary { week = Week.Value, day = DayNum.Value, moneyStart = Economy.Money.Value, repStart = Economy.Rep.Value };
+            EarnedToday.Value = 0;
             DayLengthNet.Value = DayLengthOverride > 0f ? DayLengthOverride : E.dayLength;
             DayStart.Value = Now;
             _nextArrival = Now + 2f;
