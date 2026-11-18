@@ -22,6 +22,7 @@ namespace CarWash.UI
             public Image root, icon, cleanFill, timeFill;
             public RectTransform info;
             public Text title, status, carName, cleanText, timeText;
+            public int lastClean = -1, lastSecs = int.MinValue; // M4.7: rebuild the strings only when the shown number changes
         }
 
         class PBar { public RectTransform root; public Image fill; }
@@ -169,7 +170,7 @@ namespace CarWash.UI
                     car.State.Value == VehicleState.Parking ? "주차 중" : car.State.Value == VehicleState.Washing ? "세차 중" : "검사 중";
                 bool hasCar = car != null;
                 c.info.gameObject.SetActive(hasCar);
-                c.cleanText.text = c.timeText.text = c.carName.text = "";
+                c.cleanText.text = c.timeText.text = c.carName.text = ""; c.lastClean = -1; c.lastSecs = int.MinValue;
                 if (!hasCar) continue;
                 var d = car.Data;
                 c.icon.sprite = _skin != null ? _skin.VehicleIcon(d) : null;
@@ -177,7 +178,8 @@ namespace CarWash.UI
                 float clean = Mathf.Clamp01(car.Dirt.CleanPct.Value - car.TrashRemaining * trashPenalty);
                 var cc = clean < 0.6f ? UiFactory.BarRed : clean < 0.8f ? UiFactory.BarYellow : UiFactory.BarGreen;
                 UiFactory.SetBar(c.cleanFill, clean, cc);
-                c.cleanText.text = Mathf.FloorToInt(clean * 100f) + "%";
+                int cp = Mathf.FloorToInt(clean * 100f);
+                if (cp != c.lastClean) { c.lastClean = cp; c.cleanText.text = cp + "%"; }
                 float limit = d != null ? d.timeLimit : 0f;
                 float el = car.State.Value == VehicleState.Washing ? car.PhaseElapsed : 0f;
                 if (limit > 0f)
@@ -185,7 +187,8 @@ namespace CarWash.UI
                     float left = limit - el;
                     var tc = el <= limit * 0.5f ? UiFactory.BarGreen : el <= limit ? UiFactory.BarYellow : UiFactory.BarRed;
                     UiFactory.SetBar(c.timeFill, left > 0f ? left / limit : 1f, tc);
-                    c.timeText.text = left >= 0f ? Mmss(left) : "+" + Mmss(-left);
+                    int secs = left >= 0f ? Mathf.CeilToInt(left) : -Mathf.CeilToInt(-left) - 1;
+                    if (secs != c.lastSecs) { c.lastSecs = secs; c.timeText.text = left >= 0f ? Mmss(left) : "+" + Mmss(-left); }
                 }
             }
 

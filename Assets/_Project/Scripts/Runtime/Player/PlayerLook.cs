@@ -23,6 +23,7 @@ namespace CarWash.Player
         float _yaw, _localPitch;
         public Camera Camera => _camera;
         public Transform Head => _head;
+        float _remotePitch;
         public float Pitch => IsOwner ? _localPitch : _pitch.Value;
         public static PlayerLook Local { get; private set; }
 
@@ -78,7 +79,9 @@ namespace CarWash.Player
         {
             if (IsSpawned && !IsOwner)
             {
-                _head.localRotation = Quaternion.Euler(_pitch.Value, 0f, 0f);
+                // M4.7 N2: smooth toward the synced pitch (it arrives in 30 Hz steps; the held tool and hand IK hang off the head)
+                _remotePitch = Mathf.Lerp(_remotePitch, _pitch.Value, 1f - Mathf.Exp(-18f * Time.deltaTime));
+                _head.localRotation = Quaternion.Euler(_remotePitch, 0f, 0f);
                 return;
             }
             if (!IsSpawned) return;

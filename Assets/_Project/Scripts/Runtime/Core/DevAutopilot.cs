@@ -47,7 +47,7 @@ namespace CarWash.Core
             yield return new WaitForSeconds(1.5f);
             var me = PlayerLook.Local.GetComponent<PlayerNet>();
             Log($"local player client={me.OwnerClientId} server={NetworkManager.Singleton.IsServer} color={me.ColorIndex.Value}");
-            StartCoroutine(Observe());
+            if (!DevChecksNetLoad.Requested) StartCoroutine(Observe()); // M4.7: no test log spam in the measurement
             if ((ReleaseMode || GlbMode || ModelsMode || LooksMode || BoundsMode) && NetworkManager.Singleton.IsServer) observeOnly = true; // P7: the hosting exe only observes
             // dev only: open all three bays so the vehicle test fills them in parallel (not in the release check)
             if (!ReleaseMode && !GlbMode && !ModelsMode && !LooksMode && !BoundsMode && !SpawnMode && NetworkManager.Singleton.IsServer && Vehicles.LotState.Instance != null) Vehicles.LotState.Instance.ServerSetOpenCount(3);
@@ -56,6 +56,12 @@ namespace CarWash.Core
             {
                 if (NetworkManager.Singleton.IsServer) StartCoroutine(BoundsMode ? DevChecksBounds.HostIdle() : LooksMode ? DevLooksScenario.Run() : ModelsMode ? DevModelsScenario.Run() : GlbMode ? DevGlbScenario.Run() : ReleaseMode ? DevReleaseScenario.Run() : P1Mode ? DevP1Scenario.Run() : NetMode ? DevNetScenario.Run() : SurpriseMode ? DevSurpriseScenario.Run() : DayMode ? DevDayScenario.Run() : DevHostScenario.Run());
                 if (NetworkManager.Singleton.IsServer && ReleaseMode && DevChecksSwing.Requested) StartCoroutine(DevChecksSwing.HostObserve()); // M4.6 D8
+                yield break;
+            }
+            if (DevChecksNetLoad.Requested) // M4.7 N1: every peer (host too) plays and records
+            {
+                yield return DevChecksNetLoad.Run(me);
+                Log("DONE");
                 yield break;
             }
             if (SpawnMode)

@@ -28,6 +28,7 @@ namespace CarWash.Player
 
         void Update()
         {
+            if (IsSpawned && IsServer) ServerUseWatchdog();
             if (!IsSpawned || !IsOwner) return;
             var tool = Equipped;
             bool handsFree = _grabber == null || _grabber.Held == null;
@@ -35,16 +36,17 @@ namespace CarWash.Player
             if (using_)
             {
                 _sendT += Time.deltaTime;
+                if (!_wasUsing) _burst++; // M4.7: a new spray burst (late unreliable packets of an older one are ignored)
                 if (_sendT >= 1f / _sendRate || !_wasUsing)
                 {
                     var ray = _look.AimRay;
                     float useDt = Mathf.Min(_sendT, 0.1f);
-                    UseRpc(ray.origin, ray.direction, useDt);
+                    UseRpc(ray.origin, ray.direction, useDt, _burst);
                     if (!IsServer) tool.OwnerPredict(ray.origin, ray.direction.normalized, Mathf.Clamp(useDt, 0.005f, 0.1f)); // P1: instant local paint
                     _sendT = 0f;
                 }
             }
-            else if (_wasUsing) StopRpc();
+            else if (_wasUsing) StopRpc(_burst);
             _wasUsing = using_;
 
             if (_input.SlotPressed >= 0) SelectRpc(_input.SlotPressed);
@@ -108,18 +110,36 @@ namespace CarWash.Player
         public void ServerEquip(ToolBase tool) => _inventory.ServerAdd(tool);
         public void ServerDrop() => _inventory.ServerDropSlot(_inventory.ActiveSlot.Value);
 
-        [Rpc(SendTo.Server)]
-        void UseRpc(Vector3 origin, Vector3 dir, float dt)
+        // M4.7 N2: continuous spray input is unreliable — under loss a lost packet must not hold back every reliable message
+        // queued behind it (Boss Room guidance). Bursts are numbered so a late packet can't restart a burst that the reliable
+        // StopRpc already ended; a server watchdog also stops Using after 0.5 s without input.
+        ushort _burst, _stoppedBurst;
+        float _lastUse;
+        public static bool NewerBurst(ushort a, ushort b) => (short)(a - b) > 0;
+
+        [Rpc(SendTo.Server, Delivery = RpcDelivery.Unreliable)]
+        void UseRpc(Vector3 origin, Vector3 dir, float dt, ushort burst)
         {
             var tool = Equipped;
-            if (tool == null) return;
+            if (tool == null || !NewerBurst(burst, _stoppedBurst)) return;
+            _lastUse = Time.time;
             if ((origin - _look.Head.position).sqrMagnitude > 2.25f) origin = _look.Head.position; // aim from own head
             if (!tool.Using.Value) tool.Using.Value = true;
             tool.ServerUse(origin, dir.normalized, Mathf.Clamp(dt, 0.005f, 0.1f));
         }
 
         [Rpc(SendTo.Server)]
-        void StopRpc() { if (Equipped != null) Equipped.Using.Value = false; }
+        void StopRpc(ushort burst)
+        {
+            if (!NewerBurst(_stoppedBurst, burst)) _stoppedBurst = burst;
+            if (Equipped != null) Equipped.Using.Value = false;
+        }
+
+        void ServerUseWatchdog()
+        {
+            var tool = Equipped;
+            if (tool != null && tool.Using.Value && Time.time - _lastUse > 0.5f) tool.Using.Value = false;
+        }
 
         [Rpc(SendTo.Server)]
         void AltRpc() { (Equipped as SprayTool)?.ServerToggleNozzle(); }

@@ -19,7 +19,7 @@ namespace CarWash.Net
         public const int MaxPlayers = 4;
         /// <summary>P1: detect a dead peer in 10 s instead of UTP's 30 s default.</summary>
         public const int DisconnectTimeoutMs = 10000, HeartbeatMs = 500;
-        public const int InterpolationBufferTicks = 3;
+        public const int InterpolationBufferTicks = 4; // M4.7: LegacyLerp over Relay + 5 % loss: 3 → host saw 13 % speed jitter on lossy uploaders, 5 → 7 %
 
         [SerializeField] private NetBackend _backend = NetBackend.Utp;
         [SerializeField] private NetworkManager _manager;
@@ -45,6 +45,11 @@ namespace CarWash.Net
             Unity.Netcode.Components.NetworkTransform.InterpolationBufferTickOffset = InterpolationBufferTicks;
             if (_manager == null) _manager = GetComponent<NetworkManager>();
             ParseArgs(Environment.GetCommandLineArgs());
+            Core.DevNtTuning.ApplyGlobal(_manager); // M4.7 N2 experiments (dev builds only)
+            // M4.7 N1: spawners set NetworkVariables before Spawn on purpose (the values go out with the spawn message), but NGO
+            // logs a warning + stack trace for each — a burst of ~10 every time a car arrives (measured 33/min on the host).
+            // NGO has an internal switch for exactly this warning.
+            try { typeof(NetworkVariableBase).GetField("IgnoreInitializeWarning", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?.SetValue(null, true); } catch { }
             _manager.OnClientConnectedCallback += id =>
             {
                 if (_manager.IsServer) Debug.Log($"[NET] client {id} connected ({_manager.ConnectedClientsIds.Count} peers)");

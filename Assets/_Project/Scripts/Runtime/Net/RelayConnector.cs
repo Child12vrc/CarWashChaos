@@ -52,8 +52,8 @@ namespace CarWash.Net
             await SignIn();
             try
             {
-                var alloc = await RelayService.Instance.CreateAllocationAsync(maxPlayers - 1);
-                string code = await RelayService.Instance.GetJoinCodeAsync(alloc.AllocationId);
+                var alloc = await Retry(() => RelayService.Instance.CreateAllocationAsync(maxPlayers - 1), "allocation");
+                string code = await Retry(() => RelayService.Instance.GetJoinCodeAsync(alloc.AllocationId), "join code");
                 utp.SetRelayServerData(alloc.ToRelayServerData(Protocol));
                 Debug.Log($"[NET] relay host allocation {alloc.AllocationId} region {alloc.Region}, join code {code}");
                 return code;
@@ -65,6 +65,28 @@ namespace CarWash.Net
             }
         }
 
+        /// <summary>M4.7: Relay's HTTP API sometimes answers 5xx / 429 / times out (seen in the 4-player test: 504 Gateway Timeout
+        /// on join). Those are retried twice (1 s, 2 s); a real "no such code" (4xx) fails at once.</summary>
+        public static async Task<T> Retry<T>(Func<Task<T>> call, string what)
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                try { return await call(); }
+                catch (Exception e) when (attempt < 3 && IsTransient(e))
+                {
+                    Debug.LogWarning($"[NET] relay {what}: transient error (attempt {attempt}), retrying: {e.Message}");
+                    await Task.Delay(1000 * attempt);
+                }
+            }
+        }
+
+        public static bool IsTransient(Exception e)
+        {
+            string m = e.ToString();
+            foreach (var s in new[] { "(500)", "(502)", "(503)", "(504)", "(429)", "Timeout", "timed out" }) if (m.Contains(s)) return true;
+            return false;
+        }
+
         /// <summary>Guest: resolve the join code and point the transport at the host's Relay server.</summary>
         public static async Task PrepareJoin(UnityTransport utp, string code)
         {
@@ -73,7 +95,7 @@ namespace CarWash.Net
             await SignIn();
             try
             {
-                var join = await RelayService.Instance.JoinAllocationAsync(code);
+                var join = await Retry(() => RelayService.Instance.JoinAllocationAsync(code), "join");
                 utp.SetRelayServerData(join.ToRelayServerData(Protocol));
                 Debug.Log($"[NET] relay join {code}: allocation {join.AllocationId} region {join.Region}");
             }

@@ -135,8 +135,10 @@ namespace CarWash.Editor
             foreach (var nt in prefab.GetComponentsInChildren<Unity.Netcode.Components.NetworkTransform>(true))
             {
                 nt.Interpolate = true;
-                nt.PositionInterpolationType = Unity.Netcode.Components.NetworkTransform.InterpolationTypes.SmoothDampening;
-                nt.RotationInterpolationType = Unity.Netcode.Components.NetworkTransform.InterpolationTypes.Lerp;
+                // M4.7 N2 (measured, docs/TASKS.md M4.7): LegacyLerp — remote speed jitter 45 % → 5-7 %, frozen frames 4-8 % → 0 on
+                // LAN and over Relay + 150 ms / 5 % loss; SmoothDampening / Lerp step at the 30 Hz tick (sample-time error)
+                nt.PositionInterpolationType = Unity.Netcode.Components.NetworkTransform.InterpolationTypes.LegacyLerp;
+                nt.RotationInterpolationType = Unity.Netcode.Components.NetworkTransform.InterpolationTypes.LegacyLerp;
                 // P1 measured: server-auth objects (cars, critters, props, tools) are smoothest with reliable deltas (jitter
                 // reorders packets; unreliable-sequenced drops the late ones); owner-auth players use unreliable deltas so a
                 // lost packet on a bad uplink never freezes them waiting for a resend.

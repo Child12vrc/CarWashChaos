@@ -51,9 +51,10 @@ namespace CarWash.Dirt
         }
 
         /// <summary>Server: paint + queue for clients. objectPos is in the body's object space.</summary>
-        public void ServerStroke(in DirtStroke s)
+        public void ServerStroke(in DirtStroke stroke)
         {
             if (!IsServer) return;
+            var s = stroke.Quantized(); // M4.7: paint exactly what the clients will decode
             _painter.AddStroke(s);
             if (_outbox.Count < 1024) _outbox.Add(s);
             if (_history.Count < MaxHistory) _history.Add((s, Time.time));

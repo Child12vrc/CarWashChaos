@@ -97,6 +97,7 @@ namespace CarWash.UI
             else Toast($"{name}: +${n.amount}  (청결 {Mathf.FloorToInt(n.clean * 100f)}%)", new Color(0.6f, 1f, 0.6f));
         }
 
+        long _hudKey = long.MinValue;
         static string Mmss(float s) { int i = Mathf.CeilToInt(s); return $"{i / 60}:{i % 60:00}"; }
 
         void Update()
@@ -120,6 +121,14 @@ namespace CarWash.UI
             _info.gameObject.SetActive(show);
             if (!show) { _summary.gameObject.SetActive(false); return; }
 
+            // M4.7: strings are rebuilt only when what they show changes (the HUD was the game's biggest per-frame GC source)
+            var st = dm.State.Value;
+            float left = st == GameState.Day ? (dm.Phase.Value == DayPhase.Open ? dm.TimeLeft : dm.OvertimeLeft) : 0f;
+            long key = ((long)eco.Money.Value << 32) ^ ((long)dm.CurrentRent << 20) ^ ((long)(int)st << 16) ^ ((long)dm.Week.Value << 12)
+                       ^ ((long)dm.DayNum.Value << 8) ^ ((long)(int)dm.Phase.Value << 6) ^ ((long)Mathf.CeilToInt(left) << 40) ^ ((long)Mathf.RoundToInt(eco.Rep.Value * 2f) << 56);
+            if (key == _hudKey && !(st == GameState.Summary || st == GameState.GameOver || st == GameState.WeekEnd)) return;
+            _hudKey = key;
+
             _money.text = "$" + eco.Money.Value;
             _money.color = eco.Money.Value < dm.CurrentRent ? new Color(1f, 0.6f, 0.5f) : Color.white;
             float rep = eco.Rep.Value;
@@ -130,7 +139,6 @@ namespace CarWash.UI
                 if (sp != null) _stars[i].sprite = sp; else _stars[i].color = full ? new Color(1f, 0.85f, 0.3f) : new Color(1, 1, 1, 0.25f);
             }
 
-            var st = dm.State.Value;
             string head = $"{dm.Week.Value}주차 {dm.DayNum.Value}일차";
             switch (st)
             {

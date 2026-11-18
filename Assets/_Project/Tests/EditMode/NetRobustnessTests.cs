@@ -54,7 +54,7 @@ namespace CarWash.Tests
             Assert.IsNull(NetSession.ParseNetSim(""));
         }
 
-        [Test] public void AllNetworkPrefabs_UseLerpInterpolationAndUnreliableDeltas()
+        [Test] public void AllNetworkPrefabs_UseLegacyLerpAndUnreliableOwnerDeltas()
         {
             var list = CarWash.Editor.PrefabBuilder.LoadList();
             Assert.NotNull(list);
@@ -64,7 +64,9 @@ namespace CarWash.Tests
                 {
                     n++;
                     Assert.IsTrue(nt.Interpolate, p.Prefab.name);
-                    Assert.AreEqual(Unity.Netcode.Components.NetworkTransform.InterpolationTypes.SmoothDampening, nt.PositionInterpolationType, p.Prefab.name);
+                    // M4.7 N2: LegacyLerp measured smoothest (remote speed jitter 45 % → 5-7 %, no frozen frames)
+                    Assert.AreEqual(Unity.Netcode.Components.NetworkTransform.InterpolationTypes.LegacyLerp, nt.PositionInterpolationType, p.Prefab.name);
+                    Assert.AreEqual(Unity.Netcode.Components.NetworkTransform.InterpolationTypes.LegacyLerp, nt.RotationInterpolationType, p.Prefab.name);
                     Assert.AreEqual(nt is CarWash.Net.OwnerNetworkTransform, nt.UseUnreliableDeltas, p.Prefab.name);
                 }
             Assert.Greater(n, 20);
