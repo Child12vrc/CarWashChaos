@@ -55,8 +55,9 @@ namespace CarWash.Editor
             // seat fabric colour varies a little per vehicle type
             var palette = new[] { new Color(0.25f, 0.27f, 0.32f), new Color(0.38f, 0.3f, 0.24f), new Color(0.22f, 0.24f, 0.22f), new Color(0.32f, 0.22f, 0.22f) };
             int pick = id.Sum(ch => ch) % palette.Length; // stable per id
-            var fabric = M("Seat" + pick, palette[pick]);
-            var carpet = M("Carpet", new Color(0.13f, 0.13f, 0.15f));
+            // M4.7 A1: seat fabric weave (fabric_pattern_05: normal + AO/roughness only, colour = tint) and a dirty carpet floor
+            var fabric = GrayboxMaterials.Pbr("Interior_Seat" + pick, palette[pick], "fabric_pattern_05", 0f, useAlbedo: false); // prefab content: plain cube UVs
+            var carpet = GrayboxMaterials.Pbr("Interior_Carpet", new Color(0.62f, 0.62f, 0.64f), "dirty_carpet", 0f);
             var plastic = M("Dash", new Color(0.09f, 0.09f, 0.1f), 0.35f);
             var trim = M("Trim", new Color(0.55f, 0.55f, 0.57f), 0.4f);
             float len = c.frontZ - c.rearZ, w = c.halfW * 2f;

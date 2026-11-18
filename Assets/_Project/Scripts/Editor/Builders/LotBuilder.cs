@@ -250,7 +250,7 @@ namespace CarWash.Editor
             public Material wall = GrayboxMaterials.Textured("BayWall", Color.white, "tex_metal_blue.png", 2f, 0.45f);
             public Material brick = GrayboxMaterials.Textured("Brick", Color.white, "tex_brick.png", 2f);
             public Material roof = GrayboxMaterials.Get("BayRoof", new Color(0.85f, 0.3f, 0.3f));
-            public Material shutter = GrayboxMaterials.Get("Shutter", new Color(0.7f, 0.7f, 0.72f));
+            public Material shutter = GrayboxMaterials.Pbr("Shutter", new Color(0.85f, 0.86f, 0.88f), "painted_metal_shutter", 3f); // M4.7 A1 (flat grey if not delivered)
             public Material office = GrayboxMaterials.Textured("Office", Color.white, "tex_brick.png", 2f);
             public Material panel = GrayboxMaterials.Get("Panel", new Color(0.25f, 0.3f, 0.4f));
             public Material board = GrayboxMaterials.Get("Board", new Color(0.15f, 0.35f, 0.2f));

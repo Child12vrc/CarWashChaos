@@ -85,9 +85,23 @@ namespace CarWash.Tests
             if (kind == CritterAnimator.Kind.Quadruped)
                 foreach (var leg in new[] { "_legFL", "_legFR", "_legBL", "_legBR", "_tail", "_head" })
                     Assert.IsNotNull(so.FindProperty(leg).objectReferenceValue, leg);
-            else if (kind == CritterAnimator.Kind.Slime) Assert.AreEqual(3, so.FindProperty("_drips").arraySize);
+            else if (kind == CritterAnimator.Kind.Slime) Assert.AreEqual(p.transform.Find("Visual/Body") != null ? 0 : 3, so.FindProperty("_drips").arraySize, "part-node slime: 3 drips; Hunyuan slime (M4.7 A2): none");
             // nothing animation-related is networked: only CritterBase's NetworkVariables + the root NetworkTransform
             Assert.AreEqual(1, p.GetComponentsInChildren<Unity.Netcode.Components.NetworkTransform>(true).Length);
+        }
+
+        [Test]
+        public void HunyuanSlimeIsUsed_WidthMatchesOldSlime_OnTheGround()
+        {
+            var p = Load("Critters/C03_MudSlime");
+            var body = p.transform.Find("Visual/Body");
+            Assert.IsNotNull(body, "M4.7 A2: C03_mud_slime_hy under a Body pivot");
+            var r = body.GetComponentInChildren<MeshRenderer>();
+            Assert.IsTrue(r.sharedMaterial.HasProperty("normalTexture") && r.sharedMaterial.GetTexture("normalTexture") != null, "PBR material kept");
+            var b = GlbKit.LocalBounds(body.GetChild(0).gameObject, p.transform);
+            Assert.AreEqual(CritterBuilder.HySlimeWidth, Mathf.Max(b.size.x, b.size.z), 0.02f, "same width as the part-node slime");
+            Assert.AreEqual(0f, b.min.y, 0.02f, "sits on the ground");
+            Assert.IsNotNull(p.GetComponent<SphereCollider>(), "gameplay sphere kept");
         }
 
         [TestCase("C01_Raccoon", 0.66f)]

@@ -19,6 +19,19 @@ namespace CarWash.Editor
                 m = new Material(Shader.Find("CarWash/VehicleDirt"));
                 AssetDatabase.CreateAsset(m, MaterialPath);
             }
+            // M4.7 A1: the dirty layer uses PolyHaven brown_mud_02 (albedo / normal / AO + roughness mask) when delivered
+            const string mud = "brown_mud_02", dir = GrayboxMaterials.PolyHavenDir + "/" + mud + "/" + mud;
+            bool on = GrayboxMaterials.HasSet(mud) && System.IO.File.Exists(dir + "_diff_1k.jpg");
+            if (on)
+            {
+                var probe = GrayboxMaterials.Get("_MudProbe", Color.white); // ApplyPbr sets the normal map's import type + builds the mask
+                GrayboxMaterials.ApplyPbr(probe, mud);
+                m.SetTexture("_MudTex", AssetDatabase.LoadAssetAtPath<Texture2D>(dir + "_diff_1k.jpg"));
+                m.SetTexture("_MudNrm", AssetDatabase.LoadAssetAtPath<Texture2D>(dir + "_nor_gl_1k.jpg"));
+                m.SetTexture("_MudMask", GrayboxMaterials.PbrMask(mud));
+            }
+            m.SetFloat("_MudTexOn", on ? 1f : 0f);
+            EditorUtility.SetDirty(m);
             return m;
         }
 

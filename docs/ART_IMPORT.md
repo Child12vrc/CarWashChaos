@@ -86,6 +86,21 @@ Surface textures are seamless (checked by half-offset). Signs: alpha-cut quads (
 | Critters/C02_bee.glb | 506 | 0.14 m single bee; Body, Head, Wing_L/R (pivot at wing root → flap), Stinger; swarm = instance several |
 | Critters/C01_raccoon_hy.glb | ~50k | Hunyuan3D, single mesh (1 node, no rig), PBR embedded (base 1024 jpg, normal 1024, MR 512), node X+90° (feet at y≈0 after it), 0.92 m standing pose, faces +Z. In game: scaled to 0.66 m, code animation on one pivot (hop / lean / waddle / squash, on its back when stunned); preferred over C01_raccoon.glb (part-node version kept as fallback); gameplay capsule unchanged |
 | Critters/C05_possum_hy.glb | ~50k | Hunyuan3D, same format as above, 0.70 m standing pose (long tail −Z), faces +Z. In game: scaled to 0.52 m, playing dead = lies on its side; preferred over C05_possum.glb (fallback) |
+| Critters/C03_mud_slime_hy.glb | ~50k | Hunyuan3D (2026-11-19), same format (node X+90 → upright), 0.85 × 0.78 × 0.87 m blob, eye toward +Z. In game: scaled to the part-node slime's width (0.81 m → ~0.73 m tall) under a "Body" pivot at the bottom centre (CritterAnimator.Slime squash / stretch; no eye / drip nodes); preferred over C03_mud_slime.glb (fallback). Gameplay sphere collider unchanged. Bees: generation failed → C02_bee.glb stays |
+
+
+## PBR texture sets (third-party, CC0 — Poly Haven, no attribution required) — `Art/ThirdParty/PolyHaven/<set>/`
+1k JPG: `<set>_diff_1k.jpg` albedo (sRGB), `<set>_nor_gl_1k.jpg` OpenGL normal (used as-is, import type set to Normal map), `<set>_arm_1k.jpg` R AO / G roughness / B metallic (linear). Licence: `Art/ThirdParty/PolyHaven/LICENSE_CC0_PolyHaven.txt`. The JPGs are only read: GrayboxMaterials.PbrMask packs ARM into `Art/Generated/PBR/<set>_mask.png` (R metallic, G AO, A smoothness = 1 − roughness) for URP Lit's _MetallicGlossMap + _OcclusionMap. A delivered set wins over the old single texture + generated normal (M4.6 D5).
+| Set | Used for |
+|---|---|
+| asphalt_02 | lot ground, roads, lanes (was tex_asphalt) |
+| concrete_floor_02 | bay floors, outer ground (was tex_concrete_wet) |
+| red_brick_03 | office, fences, city blocks (was tex_brick) |
+| box_profile_metal_sheet | bay walls (tinted blue) + city metal buildings (was tex_metal_blue) |
+| painted_metal_shutter | bay shutters (were flat grey) |
+| dirty_carpet | car interior floor (procedural interiors) |
+| fabric_pattern_05 | seats: normal + AO/roughness only, colour = the per-car seat tint |
+| brown_mud_02 | VehicleDirt mud layer: object-space triplanar albedo + normal + AO/smoothness where mud remains (_MudTexOn) |
 
 ## Player characters (third-party, CC0) — `Art/ThirdParty/Quaternius/Characters/`
 Source: Quaternius "Ultimate Modular Men Pack" (Feb 2022) + "Ultimate Modular Women Pack" (Apr 2022), **Humanoid Rig** versions, CC0 1.0 (LICENSE_CC0_Quaternius.txt). Low-poly stylized, vertex/flat colors, ~same scale as YBot (≈1.8 m; verify), Unity Humanoid avatar compatible.

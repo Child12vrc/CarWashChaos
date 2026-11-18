@@ -106,8 +106,43 @@ namespace CarWash.Editor
             return model;
         }
 
+        /// <summary>M4.7 A2: C03_mud_slime_hy (Hunyuan3D, one PBR mesh, node X+90 → upright, faces +Z) — scaled to the part-node
+        /// slime's in-game width (0.60 m × SlimeScale); a "Body" pivot at the bottom centre carries it so CritterAnimator.Slime
+        /// squashes / stretches it from the ground. No eye / drip nodes (the animator skips them). -1 if the file is missing.</summary>
+        public const float HySlimeWidth = 0.60f * SlimeScale;
+
+        static float GlbSlimeHy(Transform visual, GameObject root)
+        {
+            string path = GlbKit.Find("Critters", "C03_mud_slime_hy");
+            if (path == null) return -1f;
+            var body = new GameObject("Body") { layer = Layers.Critter }.transform;
+            body.SetParent(visual, false);
+            var model = GlbKit.Model(path, body, Layers.Critter, convert: false);
+            var raw = GlbKit.LocalBounds(model, body);
+            float s = HySlimeWidth / Mathf.Max(0.01f, Mathf.Max(raw.size.x, raw.size.z));
+            model.transform.localScale = Vector3.one * s;
+            var b = GlbKit.LocalBounds(model, body);
+            model.transform.localPosition = new Vector3(-b.center.x, -b.min.y, -b.center.z);
+            foreach (var r in model.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            var carry = new GameObject("Socket_Carry") { layer = Layers.Critter }.transform;
+            carry.SetParent(body, false);
+            carry.localPosition = new Vector3(0f, b.size.y * 0.55f, 0f);
+            var col = root.AddComponent<SphereCollider>();
+            col.radius = 0.4f; col.center = new Vector3(0, 0.3f, 0);
+            var anim = root.AddComponent<CritterAnimator>();
+            Kind(anim, CritterAnimator.Kind.Slime, 2.5f);
+            var so = new SerializedObject(anim);
+            so.FindProperty("_visual").objectReferenceValue = visual;
+            so.FindProperty("_body").objectReferenceValue = body;
+            so.FindProperty("_carry").objectReferenceValue = carry;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return b.size.y + 0.2f;
+        }
+
         static float GlbSlime(Transform visual, GameObject root)
         {
+            float hy = GlbSlimeHy(visual, root); // Hunyuan3D model first (art batch 2026-11-19); part-node model + graybox stay as fallbacks
+            if (hy > 0f) return hy;
             var model = GlbModel("C03_mud_slime", visual, SlimeScale);
             if (model == null) return Slime(visual, root);
             var col = root.AddComponent<SphereCollider>();

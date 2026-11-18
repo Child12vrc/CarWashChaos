@@ -46,3 +46,49 @@ namespace CarWash.Tests
         }
     }
 }
+
+namespace CarWash.Tests
+{
+    /// <summary>M4.7 A: user art wired (PolyHaven PBR sets, Hunyuan slime) without breaking prefab content.</summary>
+    public class M47ArtTests
+    {
+        [Test]
+        public void VehiclePrefabs_EveryRendererHasAMesh()
+        {
+            foreach (var guid in UnityEditor.AssetDatabase.FindAssets("t:Prefab", new[] { "Assets/_Project/Prefabs/Vehicles" }))
+            {
+                var p = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+                foreach (var mf in p.GetComponentsInChildren<MeshFilter>(true))
+                    Assert.IsNotNull(mf.sharedMesh, $"{p.name}/{mf.name}: mesh lost (per-box UV meshes must not be used in prefabs)");
+            }
+        }
+
+        [TestCase("Asphalt", "asphalt_02")]
+        [TestCase("Brick", "red_brick_03")]
+        [TestCase("BayWall", "box_profile_metal_sheet")]
+        [TestCase("Shutter", "painted_metal_shutter")]
+        [TestCase("Interior_Carpet", "dirty_carpet")]
+        public void PolyHavenSet_IsWired(string material, string set)
+        {
+            if (!CarWash.Editor.GrayboxMaterials.HasSet(set)) Assert.Ignore(set + " not delivered");
+            var m = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>($"{CarWash.Editor.GrayboxMaterials.Dir}/{material}.mat");
+            Assert.IsNotNull(m, material);
+            StringAssert.Contains(set, UnityEditor.AssetDatabase.GetAssetPath(m.GetTexture("_BumpMap")), "PolyHaven normal map");
+            StringAssert.Contains(set + "_mask", UnityEditor.AssetDatabase.GetAssetPath(m.GetTexture("_MetallicGlossMap")), "ARM → metallic/smoothness mask");
+            Assert.IsTrue(m.IsKeywordEnabled("_METALLICSPECGLOSSMAP") && m.IsKeywordEnabled("_OCCLUSIONMAP") && m.IsKeywordEnabled("_NORMALMAP"));
+        }
+
+        [Test]
+        public void PbrMask_PacksArmChannels()
+        {
+            if (!CarWash.Editor.GrayboxMaterials.HasSet("asphalt_02")) Assert.Ignore("not delivered");
+            var mask = CarWash.Editor.GrayboxMaterials.PbrMask("asphalt_02");
+            var arm = new Texture2D(2, 2); arm.LoadImage(System.IO.File.ReadAllBytes(CarWash.Editor.GrayboxMaterials.PolyHavenDir + "/asphalt_02/asphalt_02_arm_1k.jpg"));
+            var raw = new Texture2D(2, 2); raw.LoadImage(System.IO.File.ReadAllBytes(UnityEditor.AssetDatabase.GetAssetPath(mask)));
+            var a = arm.GetPixel(100, 200); var r = raw.GetPixel(100, 200);
+            Assert.AreEqual(a.b, r.r, 0.01f, "R = metallic");
+            Assert.AreEqual(a.r, r.g, 0.01f, "G = AO");
+            Assert.AreEqual(1f - a.g, r.a, 0.01f, "A = 1 - roughness");
+        }
+    }
+}

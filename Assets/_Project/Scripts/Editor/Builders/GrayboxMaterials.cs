@@ -44,9 +44,116 @@ namespace CarWash.Editor
         public const string EnvTex = "Assets/_Project/Art/Environment/Textures/";
         static readonly System.Collections.Generic.Dictionary<Material, float> TileMeters = new System.Collections.Generic.Dictionary<Material, float>();
 
+        // ---- M4.7 A1: PolyHaven CC0 PBR sets (user art, Art/ThirdParty/PolyHaven/<set>/<set>_{diff,nor_gl,arm}_1k.jpg) ----
+        public const string PolyHavenDir = "Assets/_Project/Art/ThirdParty/PolyHaven";
+        public const string PbrDir = "Assets/_Project/Art/Generated/PBR";
+        /// <summary>Old single textures → the PolyHaven set that replaces them (when delivered).</summary>
+        public static readonly System.Collections.Generic.Dictionary<string, string> PolyHavenFor = new System.Collections.Generic.Dictionary<string, string>
+        {
+            { "tex_asphalt.png", "asphalt_02" }, { "tex_concrete_wet.png", "concrete_floor_02" },
+            { "tex_brick.png", "red_brick_03" }, { "tex_metal_blue.png", "box_profile_metal_sheet" },
+        };
+
+        static string PhFile(string set, string map) => $"{PolyHavenDir}/{set}/{set}_{map}_1k.jpg";
+        public static bool HasSet(string set) => File.Exists(PhFile(set, "nor_gl")) && File.Exists(PhFile(set, "arm"));
+
+        /// <summary>
+        /// Puts a PolyHaven set on a URP Lit material: diff → _BaseMap (sRGB; skipped when useAlbedo is false, e.g. seat fabric
+        /// keeps a plain tint), nor_gl → _BumpMap as-is (OpenGL convention = Unity's), arm (R AO, G roughness, B metal) → a
+        /// generated mask (R metal, G AO, A smoothness = 1 − roughness) used as _MetallicGlossMap + _OcclusionMap.
+        /// The delivered JPGs are only read (the normal map's import type is set to NormalMap).
+        /// </summary>
+        public static bool ApplyPbr(Material m, string set, bool useAlbedo = true, float normalScale = 1f, bool greyAlbedo = false)
+        {
+            if (!HasSet(set)) return false;
+            if (useAlbedo && File.Exists(PhFile(set, "diff")))
+            {
+                var diff = greyAlbedo ? GreyAlbedo(set) : AssetDatabase.LoadAssetAtPath<Texture2D>(PhFile(set, "diff"));
+                m.SetTexture("_BaseMap", diff); m.mainTexture = diff;
+            }
+            else { m.SetTexture("_BaseMap", null); m.mainTexture = null; }
+            m.SetTextureScale("_BaseMap", Vector2.one);
+            string nrmPath = PhFile(set, "nor_gl");
+            if (AssetImporter.GetAtPath(nrmPath) is TextureImporter ti && ti.textureType != TextureImporterType.NormalMap)
+            { ti.textureType = TextureImporterType.NormalMap; ti.SaveAndReimport(); }
+            m.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(nrmPath)); m.SetFloat("_BumpScale", normalScale); m.EnableKeyword("_NORMALMAP");
+            var mask = PbrMask(set);
+            m.SetTexture("_MetallicGlossMap", mask); m.EnableKeyword("_METALLICSPECGLOSSMAP");
+            m.SetTexture("_OcclusionMap", mask); m.SetFloat("_OcclusionStrength", 1f); m.EnableKeyword("_OCCLUSIONMAP");
+            m.SetFloat("_Smoothness", 1f); // the map's alpha is the smoothness (URP multiplies it by this)
+            m.SetFloat("_Metallic", 1f);
+            EditorUtility.SetDirty(m);
+            return true;
+        }
+
+        /// <summary>Art/Generated/PBR/&lt;set&gt;_grey.png: the albedo as luminance, mean lifted to ~0.8 so a tint sets the colour
+        /// (M4.7: the bay walls keep their blue with the red box-profile sheet's ribs and rivets).</summary>
+        public static Texture2D GreyAlbedo(string set)
+        {
+            string src = PhFile(set, "diff"), dst = $"{PbrDir}/{set}_grey.png";
+            if (!File.Exists(dst) || File.GetLastWriteTimeUtc(dst) < File.GetLastWriteTimeUtc(src))
+            {
+                Directory.CreateDirectory(PbrDir);
+                var t = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                t.LoadImage(File.ReadAllBytes(src));
+                var px = t.GetPixels();
+                float mean = 0f; foreach (var c in px) mean += c.grayscale; mean /= Mathf.Max(1, px.Length);
+                float k = 0.8f / Mathf.Max(0.05f, mean);
+                for (int i = 0; i < px.Length; i++) { float g = Mathf.Clamp01(px[i].grayscale * k); px[i] = new Color(g, g, g, 1f); }
+                t.SetPixels(px); t.Apply();
+                File.WriteAllBytes(dst, t.EncodeToPNG());
+                Object.DestroyImmediate(t);
+                AssetDatabase.ImportAsset(dst, ImportAssetOptions.ForceUpdate);
+            }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(dst);
+        }
+
+        /// <summary>Art/Generated/PBR/&lt;set&gt;_mask.png from the ARM map (cached; rebuilt when the ARM file is newer).</summary>
+        public static Texture2D PbrMask(string set)
+        {
+            string src = PhFile(set, "arm"), dst = $"{PbrDir}/{set}_mask.png";
+            if (!File.Exists(dst) || File.GetLastWriteTimeUtc(dst) < File.GetLastWriteTimeUtc(src))
+            {
+                Directory.CreateDirectory(PbrDir);
+                var arm = new Texture2D(2, 2, TextureFormat.RGBA32, false, true);
+                arm.LoadImage(File.ReadAllBytes(src));
+                var px = arm.GetPixels32();
+                for (int i = 0; i < px.Length; i++) { var c = px[i]; px[i] = new Color32(c.b, c.r, 0, (byte)(255 - c.g)); }
+                var outTex = new Texture2D(arm.width, arm.height, TextureFormat.RGBA32, false, true);
+                outTex.SetPixels32(px); outTex.Apply();
+                File.WriteAllBytes(dst, outTex.EncodeToPNG());
+                Object.DestroyImmediate(arm); Object.DestroyImmediate(outTex);
+                AssetDatabase.ImportAsset(dst, ImportAssetOptions.ForceUpdate);
+            }
+            if (AssetImporter.GetAtPath(dst) is TextureImporter ti && (ti.sRGBTexture || ti.textureType != TextureImporterType.Default))
+            { ti.textureType = TextureImporterType.Default; ti.sRGBTexture = false; ti.SaveAndReimport(); }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(dst);
+        }
+
+        /// <summary>URP Lit + a PolyHaven set; boxes using it get UVs in metres / tileMeters (tileMeters ≤ 0: plain cube UVs —
+        /// required for PREFAB content: the per-box UV mesh is not an asset and would be lost when the prefab is saved). Falls
+        /// back to a flat colour.</summary>
+        public static Material Pbr(string name, Color tint, string set, float tileMeters, bool useAlbedo = true, float smoothness = 0.2f)
+        {
+            var m = Get(name, tint, smoothness);
+            if (!ApplyPbr(m, set, useAlbedo)) return m;
+            if (tileMeters > 0f) TileMeters[m] = tileMeters; else TileMeters.Remove(m);
+            return m;
+        }
+
         /// <summary>URP Lit with a seamless texture; boxes using it get UVs in metres / tileMeters (no stretching).</summary>
         public static Material Textured(string name, Color tint, string texFile, float tileMeters, float smoothness = 0.2f)
         {
+            // M4.7 A1: a delivered PolyHaven set wins over the old single texture + generated normal map
+            if (PolyHavenFor.TryGetValue(texFile, out var set) && HasSet(set))
+            {
+                bool bayBlue = set == "box_profile_metal_sheet" && tint == Color.white; // bay walls: grey sheet tinted the lot's blue
+                if (bayBlue) tint = new Color(0.36f, 0.58f, 0.92f);
+                var pm = Get(name, tint, smoothness);
+                ApplyPbr(pm, set, normalScale: set == "red_brick_03" ? 1.2f : 1f, greyAlbedo: bayBlue);
+                TileMeters[pm] = tileMeters;
+                return pm;
+            }
             var m = Get(name, tint, smoothness);
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(EnvTex + texFile);
             if (tex == null) return m;  // art not delivered → stays graybox
