@@ -43,9 +43,9 @@ namespace CarWash.UI
             for (int i = 0; i < _slots.Length; i++)
             {
                 bool skinned = _skin != null && _skin.slot != null;
-                _slots[i] = UiFactory.Panel("Slot" + (i + 1), Root, new Vector2(0.5f, 0f), new Vector2((i - 1.5f) * 120f, 80f), new Vector2(104, 104), skinned ? Color.white : new Color(0, 0, 0, 0.45f));
+                _slots[i] = UiFactory.Panel("Slot" + (i + 1), Root, new Vector2(0.5f, 0f), new Vector2((i - 1.5f) * 96f, 62f), new Vector2(84, 84), skinned ? Color.white : new Color(0, 0, 0, 0.45f));
                 if (skinned) { _slots[i].sprite = _skin.slot; _slots[i].type = Image.Type.Sliced; }
-                _slotIcons[i] = UiFactory.Panel("Icon", _slots[i].transform, new Vector2(0.5f, 0.5f), new Vector2(0, 2), new Vector2(76, 76), Color.white);
+                _slotIcons[i] = UiFactory.Panel("Icon", _slots[i].transform, new Vector2(0.5f, 0.5f), new Vector2(0, 2), new Vector2(60, 60), Color.white);
                 _slotIcons[i].preserveAspect = true; _slotIcons[i].raycastTarget = false;
                 _slotKeys[i] = UiFactory.Label("Key", _slots[i].transform, (i + 1).ToString(), 20, new Vector2(0f, 1f), new Vector2(16, -16), new Vector2(28, 28));
                 _slotKeys[i].gameObject.AddComponent<Outline>().effectColor = new Color(0, 0, 0, 0.8f);
@@ -67,6 +67,12 @@ namespace CarWash.UI
             DebugView.Build(Root);
             Menu = gameObject.AddComponent<SettingsMenu>();
             Menu.Build(Root);
+            Tutorial = gameObject.AddComponent<TutorialPanel>(); // M4.6 D1
+            Tutorial.Build(Root);
+            // M4.6 D2: one size knob for the whole HUD (Esc → 화면 → UI 크기); the scaler's reference resolution shrinks / grows it
+            _scaler = Root.GetComponent<CanvasScaler>();
+            var settings = Core.Services.Get<Core.Settings>();
+            if (settings != null) { settings.Changed += ApplyUiScale; ApplyUiScale(); }
         }
 
         public LobbyPanel Lobby { get; private set; }
@@ -74,6 +80,16 @@ namespace CarWash.UI
         public PingMarkers Pings { get; private set; }
         public DebugOverlay DebugView { get; private set; }
         public SettingsMenu Menu { get; private set; }
+        public TutorialPanel Tutorial { get; private set; }
+        CanvasScaler _scaler;
+
+        void ApplyUiScale()
+        {
+            var s = Core.Services.Get<Core.Settings>();
+            if (_scaler == null || s == null) return;
+            _scaler.referenceResolution = new Vector2(1920f, 1080f) / Mathf.Max(0.3f, s.UiScale);
+        }
+
 
         public DayHud Day { get; private set; }
         public BayCards Bays { get; private set; }
@@ -134,6 +150,7 @@ namespace CarWash.UI
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
+            var s = Core.Services.Get<Core.Settings>(); if (s != null) s.Changed -= ApplyUiScale;
         }
 
         void LateUpdate()

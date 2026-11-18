@@ -147,16 +147,19 @@ namespace CarWash.UI
         {
             UpdateCritterBars(PlayerLook.Local != null ? PlayerLook.Local.Camera : Camera.main);
             var dm = DayManager.Instance;
-            bool show = dm != null && (dm.State.Value == GameState.Day || dm.State.Value == GameState.Lobby);
+            // M4.6 D2: only while the lot is open for business (not in the lobby), only open bays, stacked from the top
+            bool show = dm != null && dm.State.Value == GameState.Day;
+            int shown = 0;
             if (Time.time >= _nextScan) { _nextScan = Time.time + 0.25f; _vehicles = FindObjectsByType<Vehicle>(FindObjectsSortMode.None); }
             float trashPenalty = _data != null ? _data.balance.dirt.trashPenalty : 0.02f;
 
             for (int i = 0; i < _cards.Count; i++)
             {
                 var c = _cards[i];
-                c.root.gameObject.SetActive(show);
-                if (!show) continue;
                 bool open = LotState.Instance == null || LotState.Instance.IsOpen(i);
+                c.root.gameObject.SetActive(show && open);
+                if (!show || !open) continue;
+                c.root.rectTransform.anchoredPosition = new Vector2(c.root.rectTransform.anchoredPosition.x, 190 - shown++ * 170);
                 Vehicle car = null;
                 foreach (var v in _vehicles)
                     if (v != null && v.IsSpawned && v.BayIndex.Value == i &&
