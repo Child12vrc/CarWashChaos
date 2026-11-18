@@ -38,6 +38,8 @@ namespace CarWash.Data
             public float[] cleanMults = { 0f, 0.6f, 1.0f, 1.3f };
             public float fastFinishFraction = 0.5f, fastMult = 1.2f, overtimePenaltyPerSec = 0.01f, minSpeedMult = 0.5f;
             public float waxTip = 0.2f, cleanSurpriseTip = 0.1f;
+            [UnityEngine.Tooltip("M4.8 F3: tip for drying the car with the towel (≥ dryMinClean clean, water spots ≤ dryMaxSpots)")]
+            public float dryTip = 0.15f, dryMinClean = 0.9f, dryMaxSpots = 0.03f;
             public int damagePerHit = 5; public float damageCap = 0.3f;
             public float repStart = 3f, repMax = 5f, repGain = 0.1f, repLoss = 0.3f;
             public float arrivalSlow = 30f, arrivalFast = 12f;

@@ -16,6 +16,8 @@ namespace CarWash.Day
         public Vector3 position;
         public string vehicleId;
         public int amount;
+        /// <summary>M4.8 F3: part of the pay that was the towel-drying tip (0 = not dried).</summary>
+        public int dryTip;
         public float clean;
         public bool refused, angry;
     }
@@ -162,6 +164,7 @@ namespace CarWash.Day
                 elapsed = finishedAt - start,
                 timeLimit = d != null ? d.timeLimit : 0f,
                 surpriseHandledClean = v.GetComponent<SurpriseTrigger>() is SurpriseTrigger st && st.HandledClean,
+                dried = IsDried(v),
                 // waxed (wax tool later) / damageHits (thrown-prop hits, later) default to none
             };
             var r = EconomyCalc.CalcPay(ctx, E, _data.balance.dirt.trashPenalty);
@@ -170,7 +173,14 @@ namespace CarWash.Day
             if (r.refused) _run.refused++; else { _run.served++; _run.earned += r.pay; _run.tips += r.tip; }
             Debug.Log($"[DAY] {v.DataId} W{Week.Value}D{DayNum.Value} {r} wash {ctx.elapsed:0}s/{ctx.timeLimit:0}s → money {Economy.Money.Value} rep {Economy.Rep.Value:0.00}");
             GameEvents.RaiseVehiclePaid(v, r.pay);
-            PaidRpc(v.transform.position, v.DataId, r.pay, r.effectiveClean, r.refused, false);
+            PaidRpc(v.transform.position, v.DataId, r.pay, r.effectiveClean, r.refused, false, ctx.dried && !r.refused ? (int)System.Math.Round(ctx.basePay * E.dryTip) : 0);
+        }
+
+        /// <summary>M4.8 F3: clean enough and the water spots towelled off (server readback of the dirt map).</summary>
+        bool IsDried(Vehicle v)
+        {
+            var p = v.Dirt != null ? v.Dirt.Painter : null;
+            return p != null && v.Dirt.CleanPct.Value >= E.dryMinClean && p.SpotsPct <= E.dryMaxSpots;
         }
 
         void OnAngry(Vehicle v)
@@ -179,7 +189,7 @@ namespace CarWash.Day
             _run.angry++;
             Economy.ServerAddRep(EconomyCalc.RepAngry(E));
             Debug.Log($"[DAY] {v.DataId} left the queue angry → rep {Economy.Rep.Value:0.00}");
-            PaidRpc(v.transform.position, v.DataId, 0, 0f, false, true);
+            PaidRpc(v.transform.position, v.DataId, 0, 0f, false, true, 0);
         }
 
         /// <summary>Server: a critter went into the Animal Control cage (+captureBonus, any game state).</summary>
@@ -195,10 +205,10 @@ namespace CarWash.Day
         void CoinBurstRpc(Vector3 pos, int amount) => CoinBurst(pos, amount);
 
         [Rpc(SendTo.Everyone)]
-        void PaidRpc(Vector3 pos, string vehicleId, int amount, float clean, bool refused, bool angry)
+        void PaidRpc(Vector3 pos, string vehicleId, int amount, float clean, bool refused, bool angry, int dryTip)
         {
             if (amount > 0) CoinBurst(pos + Vector3.up * 1.6f, amount);
-            Paid?.Invoke(new PayNotice { position = pos, vehicleId = vehicleId, amount = amount, clean = clean, refused = refused, angry = angry });
+            Paid?.Invoke(new PayNotice { position = pos, vehicleId = vehicleId, amount = amount, clean = clean, refused = refused, angry = angry, dryTip = dryTip });
         }
 
         void CoinBurst(Vector3 pos, int amount)

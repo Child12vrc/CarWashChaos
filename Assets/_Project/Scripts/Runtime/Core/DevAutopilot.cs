@@ -58,6 +58,12 @@ namespace CarWash.Core
                 if (NetworkManager.Singleton.IsServer && ReleaseMode && DevChecksSwing.Requested) StartCoroutine(DevChecksSwing.HostObserve()); // M4.6 D8
                 yield break;
             }
+            if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-autotest-foam") >= 0 && !NetworkManager.Singleton.IsServer) // M4.8 F1-F3
+            {
+                yield return DevChecksFoam.Run(me);
+                Log("DONE");
+                yield break;
+            }
             if (DevChecksF5.Requested && !NetworkManager.Singleton.IsServer) // M4.8 F5/F6: swing / grab / throw players + critters
             {
                 yield return DevChecksF5.Run(me);

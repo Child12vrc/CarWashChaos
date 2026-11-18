@@ -25,8 +25,25 @@ namespace CarWash.Core
             yield return SpraySide(me, input, c, 4f);
             DevAutopilot.Log($"washer WITHOUT foam: grease {g0 * 100f:0.0}%→{p.GreasePct * 100f:0.0}%  mud {m0 * 100f:0.0}%→{p.MudPct * 100f:0.0}%");
 
+            me.Motor.Teleport(c + new Vector3(-2.4f, 0.05f, 0f));
+            yield return new WaitForSeconds(0.3f);
+            me.Look.LookAt(c + Vector3.up * 0.7f);
+            yield return new WaitForSeconds(0.4f);
+            ScreenCapture.CaptureScreenshot("autotest_f1_before.png");
             yield return Equip<FoamCannon>(me);
-            yield return SpraySide(me, input, c, 3f);
+            yield return SpraySide(me, input, c, 3.5f, shot: "autotest_f1_foam_thick.png");
+            // M4.8 F1: thick foam shells + clumps — close-up
+            me.Motor.Teleport(c + new Vector3(-2.4f, 0.05f, 0f));
+            yield return new WaitForSeconds(0.3f);
+            me.Look.LookAt(c + Vector3.up * 0.7f);
+            yield return new WaitForSeconds(0.4f);
+            ScreenCapture.CaptureScreenshot("autotest_f1_far.png");
+            var br = p.GetComponent<Renderer>();
+            DevAutopilot.Log($"F1 debug2: body enabled={br.enabled} visible={br.isVisible} active={br.gameObject.activeInHierarchy} layer={br.gameObject.layer} cull mask has it={((me.Look.Camera.cullingMask >> br.gameObject.layer) & 1) == 1}");
+            yield return new WaitForSeconds(1f);
+            ScreenCapture.CaptureScreenshot("autotest_f1_foam_thick_b.png");
+            DevAutopilot.Log($"F1 debug: car root {c.ToString("F1")} body {p.transform.position.ToString("F1")} bounds {p.GetComponent<Renderer>().bounds.center.ToString("F1")} me {me.transform.position.ToString("F1")} cam fwd {me.Look.Camera.transform.forward.ToString("F2")}");
+            DevAutopilot.Log($"F1 foam: shells drawn={p.ShellsOn} (materials {p.GetComponent<Renderer>().sharedMaterials.Length}), clumps {FoamFx.Clumps}");
             // floor foam: spray the ground in front of the car
             me.Motor.Teleport(c + new Vector3(0f, 0.05f, -6.5f));
             yield return new WaitForSeconds(0.2f);
@@ -52,13 +69,27 @@ namespace CarWash.Core
 
             yield return Equip<PressureWasher>(me);
             float g1 = p.GreasePct;
-            yield return SpraySide(me, input, c, 4f);
+            int r0 = FoamFx.Runoffs, patches0 = WaterFx.ActivePatches;
+            yield return SpraySide(me, input, c, 1.8f, shot: "autotest_f2_rinse.png");
+            me.Motor.Teleport(c + new Vector3(-2.4f, 0.05f, 0f));
+            yield return new WaitForSeconds(0.3f);
+            me.Look.LookAt(c + Vector3.up * 0.6f + Vector3.forward * 0.3f);
+            yield return new WaitForSeconds(0.3f);
+            ScreenCapture.CaptureScreenshot("autotest_f2_far.png");
+            DevAutopilot.Log($"F2 rinse: foam runoff bursts {FoamFx.Runoffs - r0}, floor patches {patches0}→{WaterFx.ActivePatches}");
+            yield return SpraySide(me, input, c, 2.4f);
             DevAutopilot.Log($"washer AFTER foam: grease {g1 * 100f:0.0}%→{p.GreasePct * 100f:0.0}%, spots appeared {p.SpotsPct * 100f:0.0}% (clean {p.CleanPct * 100f:0.0}%)");
 
             yield return Equip<Towel>(me);
             float s0 = p.SpotsPct;
-            yield return SpraySide(me, input, c, 6f, wipe: true, distance: 1.4f);
+            yield return SpraySide(me, input, c, 6f, wipe: true, distance: 1.4f, shot: "autotest_f3_polish.png");
             DevAutopilot.Log($"towel: spots {s0 * 100f:0.0}%→{p.SpotsPct * 100f:0.0}% (clean {p.CleanPct * 100f:0.0}%), server clean {car.CleanPct.Value * 100f:0.0}%");
+            me.Motor.Teleport(c + new Vector3(-2.4f, 0.05f, 0f));
+            yield return new WaitForSeconds(0.3f);
+            me.Look.LookAt(c + Vector3.up * 0.6f);
+            yield return new WaitForSeconds(0.4f);
+            ScreenCapture.CaptureScreenshot("autotest_f3_far.png");
+            DevAutopilot.Log($"F3 towel: spots now {p.SpotsPct * 100f:0.0}% → drying tip at ≤ 3 % (and ≥ 90 % clean): {(p.SpotsPct <= 0.03f && p.CleanPct >= 0.9f ? "earned" : "not yet")}");
             input.scripted = false;
         }
 
@@ -95,7 +126,7 @@ namespace CarWash.Core
         }
 
         /// <summary>Stand on the car's left side and sweep the side panel.</summary>
-        static IEnumerator SpraySide(PlayerNet me, PlayerInputReader input, Vector3 c, float seconds, bool wipe = false, float distance = 2.4f)
+        static IEnumerator SpraySide(PlayerNet me, PlayerInputReader input, Vector3 c, float seconds, bool wipe = false, float distance = 2.4f, string shot = null)
         {
             me.Motor.Teleport(c + new Vector3(-distance, 0.05f, 0f));
             yield return new WaitForSeconds(0.25f);
@@ -104,6 +135,7 @@ namespace CarWash.Core
             {
                 me.Look.LookAt(c + new Vector3(-0.95f, 0.55f + Mathf.PingPong(t * 0.8f, 0.6f), Mathf.Sin(t * 1.9f) * 2.1f));
                 input.sLook = wipe ? new Vector2(Mathf.Sin(t * 25f) * 12f, 0f) : Vector2.zero;
+                if (shot != null && t > seconds * 0.85f) { me.Look.LookAt(c + new Vector3(-0.95f, 0.75f, 0.4f)); input.sUse = false; ScreenCapture.CaptureScreenshot(shot); shot = null; }
                 yield return null;
             }
             input.sUse = false; input.sLook = Vector2.zero;

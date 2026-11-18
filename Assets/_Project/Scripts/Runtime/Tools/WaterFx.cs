@@ -18,7 +18,7 @@ namespace CarWash.Tools
         public const float PatchDry = 18f, PuddleDry = 45f, PuddleAfter = 1.5f;
         const int MaxPatches = 48;
 
-        class Patch { public DecalProjector d; public Vector3 p; public float wet, soak; public bool puddle; }
+        class Patch { public DecalProjector d; public Vector3 p; public float wet, soak; public bool puddle; public Material mat; }
 
         static WaterFx _i;
         readonly List<Patch> _patches = new List<Patch>();
@@ -49,29 +49,29 @@ namespace CarWash.Tools
                 return;
             }
             if (wet == null) return;
-            Get(wet, puddle).Surface(p, n, dt);
+            Get(wet, puddle).Surface(p, n, dt, wet); // M4.8: the patch keeps the material it was made with (water / floor foam)
         }
 
-        void Surface(Vector3 p, Vector3 n, float dt)
+        void Surface(Vector3 p, Vector3 n, float dt, Material mat)
         {
             Patch best = null; float bd = 0.7f * 0.7f;
-            foreach (var x in _patches) { float d = (x.p - p).sqrMagnitude; if (d < bd) { bd = d; best = x; } }
+            foreach (var x in _patches) { if (x.mat != mat) continue; float d = (x.p - p).sqrMagnitude; if (d < bd) { bd = d; best = x; } }
             if (best == null)
             {
                 if (_patches.Count >= MaxPatches) { var old = _patches[0]; foreach (var x in _patches) if (x.wet < old.wet) old = x; Remove(old); }
                 var go = new GameObject("WetPatch");
                 go.transform.SetParent(transform, false);
                 var d = go.AddComponent<DecalProjector>();
-                d.material = _wet;
+                d.material = mat;
                 d.size = new Vector3(1.1f, 1.1f, 0.6f);
                 d.pivot = Vector3.zero;
                 go.transform.SetPositionAndRotation(p + n * 0.2f, Quaternion.LookRotation(-n) * Quaternion.Euler(0, 0, Random.Range(0f, 360f)));
-                best = new Patch { d = d, p = p };
+                best = new Patch { d = d, p = p, mat = mat };
                 _patches.Add(best);
             }
             best.wet = 1f;
             best.soak += dt;
-            if (!best.puddle && best.soak > PuddleAfter && n.y > 0.7f && _puddle != null)
+            if (!best.puddle && mat == _wet && best.soak > PuddleAfter && n.y > 0.7f && _puddle != null)
             {
                 best.puddle = true;
                 best.d.material = _puddle;
@@ -145,6 +145,78 @@ namespace CarWash.Tools
                     _r[i].SetPropertyBlock(_mpb, m);
                 }
             }
+        }
+    }
+}
+
+namespace CarWash.Tools
+{
+    /// <summary>
+    /// M4.8 F1 / F2 foam visuals, local on every peer (each peer computes its own spray impact, nothing networked):
+    ///  - Clump: the foam cannon leaves a few sticky white blobs on the car that creep down and fade;
+    ///  - Runoff: water hitting a foamed car rinses foam off — drips fall to the floor and a white foam patch (decal) spreads
+    ///    there, fading like the wet patches (it shares WaterFx's patch list, so it merges with the water on the floor).
+    /// </summary>
+    public static class FoamFx
+    {
+        static ParticleSystem _blobs, _drips;
+        static Material _blobMat; // the foam cannon's splash material (always seen first: foam must be on the car)
+        static float _patchT;
+        public static int Clumps { get; private set; }
+        public static int Runoffs { get; private set; }
+
+        static ParticleSystem Make(string name, Material mat, float gravity, float life, float sizeMin, float sizeMax, int max)
+        {
+            var go = new GameObject(name);
+            Object.DontDestroyOnLoad(go);
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.loop = false; main.playOnAwake = false; main.maxParticles = max;
+            main.startLifetime = life; main.startSize = new ParticleSystem.MinMaxCurve(sizeMin, sizeMax);
+            main.startColor = new Color(0.97f, 0.98f, 1f, 0.95f); main.gravityModifier = gravity;
+            main.simulationSpace = ParticleSystemSimulationSpace.World; main.startSpeed = 0f;
+            var em = ps.emission; em.enabled = false;
+            var shape = ps.shape; shape.enabled = false;
+            var col = ps.colorOverLifetime; col.enabled = true;
+            var g = new Gradient(); g.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) }, new[] { new GradientAlphaKey(0.95f, 0f), new GradientAlphaKey(0.9f, 0.7f), new GradientAlphaKey(0f, 1f) });
+            col.color = g;
+            var sz = ps.sizeOverLifetime; sz.enabled = true; sz.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0.6f));
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.sharedMaterial = mat; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ps.Play();
+            return ps;
+        }
+
+        /// <summary>Foam cannon hit a car at p (normal n).</summary>
+        public static void Clump(Vector3 p, Vector3 n, Material mat)
+        {
+            if (mat == null) return;
+            _blobMat = mat;
+            if (_blobs == null) _blobs = Make("FoamBlobs", mat, 0.012f, 7f, 0.07f, 0.17f, 400);
+            for (int i = 0; i < 2; i++)
+            {
+                var ep = new ParticleSystem.EmitParams { position = p + n * 0.04f + Random.insideUnitSphere * 0.08f, applyShapeToPosition = false, velocity = Vector3.down * Random.Range(0.01f, 0.05f) };
+                _blobs.Emit(ep, 1);
+            }
+            Clumps++;
+        }
+
+        /// <summary>Water hit a foamed car at p: foam drips off and lands as a floor patch.</summary>
+        public static void Runoff(Vector3 p, Vector3 n, Material mat, Material floorFoam)
+        {
+            if (_blobMat != null) mat = _blobMat;
+            if (mat == null) return;
+            if (_drips == null) _drips = Make("FoamDrips", mat, 0.55f, 1.4f, 0.06f, 0.13f, 300);
+            var ep = new ParticleSystem.EmitParams { position = p + n * 0.05f, applyShapeToPosition = false, velocity = n * 0.4f + Random.insideUnitSphere * 0.3f };
+            _drips.Emit(ep, 2);
+            Runoffs++;
+            _patchT -= Time.deltaTime;
+            if (_patchT > 0f || floorFoam == null) return;
+            _patchT = 0.35f;
+            var below = p + n * 0.6f; below.y += 0.3f;
+            if (Physics.Raycast(below, Vector3.down, out var hit, 4f, Core.Layers.GroundMask & ~(1 << Core.Layers.Vehicle), QueryTriggerInteraction.Ignore))
+                WaterFx.Hit(hit.collider, hit.point, hit.normal, 0.3f, floorFoam, null);
         }
     }
 }

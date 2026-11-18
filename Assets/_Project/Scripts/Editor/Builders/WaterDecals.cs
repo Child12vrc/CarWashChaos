@@ -16,6 +16,8 @@ namespace CarWash.Editor
 
         public static Material Wet() => Mat("VFX_wet_patch", Tex("fx_wet_blob2", new Color(0.05f, 0.06f, 0.08f), 0.72f, 0.3f, 7), 0.6f);
         public static Material Puddle() => Mat("VFX_puddle", Tex("fx_puddle2", new Color(0.03f, 0.05f, 0.08f), 0.9f, 0.1f, 11), 0.95f);
+        /// <summary>M4.8 F2: white bubbly patch where foam rinsed off a car lands on the floor.</summary>
+        public static Material FloorFoam() => Mat("VFX_foam_floor", Tex("fx_foam_floor", new Color(0.95f, 0.96f, 0.98f), 0.85f, 0.35f, 19), 0.3f);
 
         static Material Mat(string name, Texture2D tex, float normalBlend)
         {

@@ -14,6 +14,8 @@ namespace CarWash.Economy
         public int trashLeft;
         public float elapsed, timeLimit;
         public bool waxed, surpriseHandledClean;
+        /// <summary>M4.8 F3: washed AND towel-dried (water spots ≤ the dry threshold) → drying tip.</summary>
+        public bool dried;
         public int damageHits;
     }
 
@@ -60,7 +62,7 @@ namespace CarWash.Economy
             r.cleanMult = CleanMult(r.effectiveClean, e);
             if (r.cleanMult <= 0f) { r.refused = true; return r; }
             r.speedMult = SpeedMult(c.elapsed, c.timeLimit, e);
-            float tip = (c.waxed ? e.waxTip : 0f) + (c.surpriseHandledClean ? e.cleanSurpriseTip : 0f);
+            float tip = (c.waxed ? e.waxTip : 0f) + (c.surpriseHandledClean ? e.cleanSurpriseTip : 0f) + (c.dried ? e.dryTip : 0f);
             r.tip = (int)Math.Round(c.basePay * tip, MidpointRounding.AwayFromZero);
             // DESIGN-GAP: GDD "cap 30%" has no base; we cap the damage at 30% of base pay.
             int cap = (int)Math.Round(c.basePay * e.damageCap, MidpointRounding.AwayFromZero);

@@ -35,6 +35,7 @@ namespace CarWash.Editor
             var wso = new SerializedObject(washer.GetComponent<PressureWasher>()); wso.FindProperty("_propForceScale").floatValue = 0.4f; wso.ApplyModifiedPropertiesWithoutUndo();
             SceneBuilder.Set(vfxW, "_wetDecal", WaterDecals.Wet());
             SceneBuilder.Set(vfxW, "_puddleDecal", WaterDecals.Puddle());
+            SceneBuilder.Set(vfxW, "_foamDecal", WaterDecals.FloorFoam()); // M4.8 F2
             var foam = BuildTool<FoamCannon>("T02", "T02_FoamCannon", new Color(0.95f, 0.45f, 0.75f), 5f, GunShape);
             SetupSpray(foam, new VfxSpec
             {

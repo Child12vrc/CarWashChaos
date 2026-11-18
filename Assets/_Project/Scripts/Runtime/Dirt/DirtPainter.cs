@@ -22,6 +22,14 @@ namespace CarWash.Dirt
         [SerializeField] private MeshFilter _body;
         [SerializeField] private Renderer _renderer;
         [SerializeField] private Color _baseColor = new Color(0.15f, 0.4f, 0.85f);
+        [Tooltip("M4.8 F1: foam shell material (CarWash/FoamShell, GPU instanced) — drawn as N instanced shells of the body only while foam is on it")]
+        [SerializeField] private Material _foamShell;
+        public const int ShellCount = 6;
+        readonly Matrix4x4[] _shellM = new Matrix4x4[ShellCount];
+        bool _shellsOn;
+        /// <summary>Foam is on this car right now (shells drawn, rinse runoff possible).</summary>
+        public bool FoamActive => Time.time - _lastFoamTime < FoamDuration + 1f;
+        public bool ShellsOn => _shellsOn;
 
         public float CleanPct { get; private set; } = 1f;
         public float MudPct { get; private set; }
@@ -118,6 +126,7 @@ namespace CarWash.Dirt
             if (_clean == null) return;
             bool any = _pending.Count > 0;
             bool foamActive = Time.time - _lastFoamTime < FoamDuration + 1f;
+            SetShells(foamActive);
             if (any || foamActive)
             {
                 _cmd.SetGlobalFloat(IdFlip, FlipSign);
@@ -165,6 +174,8 @@ namespace CarWash.Dirt
                         mpb.SetFloat("_SpotsFraction", SpotsFraction);
                         _cmd.SetRenderTarget(_clean);
                         DrawUnwrap(0, mpb);
+                        _cmd.SetRenderTarget(_foam);                // M4.8 F2: the same water strokes rinse the foam
+                        DrawUnwrap(5, mpb);
                     }
                     else if (type == StrokeType.ReDirt) { _cmd.SetRenderTarget(_clean); DrawUnwrap(1, mpb); }
                     else { _cmd.SetRenderTarget(_foam); DrawUnwrap(2, mpb); }
@@ -172,6 +183,20 @@ namespace CarWash.Dirt
                 }
             }
             return mpbIndex;
+        }
+
+        /// <summary>M4.8 F1: draw the foam shells only while there is foam (no cost on a dry car).</summary>
+        void SetShells(bool on)
+        {
+            // M4.8 F1: one instanced draw of ShellCount copies of the body (the shader takes the shell index from the instance
+            // id). Extra materials on the body renderer itself made the GPU Resident Drawer skip the whole car.
+            _shellsOn = on && _foamShell != null && _renderer != null && _renderer.isVisible;
+            if (!_shellsOn) return;
+            var m = _body.transform.localToWorldMatrix;
+            for (int i = 0; i < ShellCount; i++) _shellM[i] = m;
+            var b = _renderer.bounds; b.Expand(0.4f);
+            var rp = new RenderParams(_foamShell) { matProps = _rendererMpb, worldBounds = b, layer = _renderer.gameObject.layer, shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off, receiveShadows = true };
+            Graphics.RenderMeshInstanced(rp, _body.sharedMesh, 0, _shellM, ShellCount);
         }
 
         MaterialPropertyBlock Mpb(int i)

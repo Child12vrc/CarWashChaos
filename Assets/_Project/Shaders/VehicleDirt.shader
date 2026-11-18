@@ -138,6 +138,9 @@ Shader "CarWash/VehicleDirt"
                 float clean = 1 - dirtMask;
                 float smooth = lerp(0.08 + 0.1 * n2, 0.86, clean);          // matte dust → polished paint
                 smooth = lerp(smooth, 0.97, wet * clean);                   // wet film: mirror-like
+                // M4.8 F3: towel-dried paint (cl.a = water spots wiped) is polished: high gloss + a slow twinkle
+                float polish = saturate(cl.a * 3.0) * clean * (1.0 - wet);
+                smooth = lerp(smooth, 0.95, polish);
                 smooth = lerp(smooth, mudMsk.a * 0.8, mudAmt * (1 - foam));
                 smooth = lerp(smooth, 0.35, foam);
 
@@ -159,7 +162,8 @@ Shader "CarWash/VehicleDirt"
                 s.alpha = 1;
                 // fresh-clean sparkle: tiny glints twinkling on the wet, clean paint
                 float3 cell = floor(i.positionOS * 60.0);
-                float glint = step(0.985, hash13(cell + floor(_Time.y * 3.0))) * wet * clean * _Sparkle;
+                float glint = step(0.985, hash13(cell + floor(_Time.y * 3.0))) * wet * clean * _Sparkle
+                            + step(0.993, hash13(floor(i.positionOS * 90.0) + floor(_Time.y * 1.5))) * polish * _Sparkle * 0.7;
                 s.emission = glint * half3(1.6, 1.6, 1.7) * saturate(dot(n, input.viewDirectionWS) * 2);
 
                 half4 col = UniversalFragmentPBR(input, s);

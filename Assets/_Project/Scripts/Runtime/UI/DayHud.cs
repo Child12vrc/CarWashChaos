@@ -94,6 +94,7 @@ namespace CarWash.UI
             string name = d != null ? d.displayName : n.vehicleId;
             if (n.angry) Toast($"{name}: 기다리다 화나서 떠났어요! (평판 하락)", new Color(1f, 0.55f, 0.5f));
             else if (n.refused) Toast($"{name}: 결제 거절! 청결 {Mathf.FloorToInt(n.clean * 100f)}% (평판 하락)", new Color(1f, 0.55f, 0.5f));
+            else if (n.dryTip > 0) Toast($"{name}: +${n.amount}  (청결 {Mathf.FloorToInt(n.clean * 100f)}%) 물기까지 완벽! 팁 +${n.dryTip}", new Color(0.55f, 0.95f, 1f));
             else Toast($"{name}: +${n.amount}  (청결 {Mathf.FloorToInt(n.clean * 100f)}%)", new Color(0.6f, 1f, 0.6f));
         }
 

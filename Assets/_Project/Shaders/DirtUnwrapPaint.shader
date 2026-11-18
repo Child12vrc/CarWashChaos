@@ -6,6 +6,7 @@
 // Pass 2 Foam   (Blend One One into _FoamMask)  : foam layer (needed to clean grease)
 // Pass 3 Init   (no blend into _DirtInit)        : procedural starting dirt + coverage alpha
 // Pass 4 Fade   (RevSub into _FoamMask)          : foam decays over time
+// Pass 5 Rinse  (RevSub into _FoamMask)          : M4.8 F2 water strokes wash the foam off
 Shader "Hidden/CarWash/DirtUnwrapPaint"
 {
     SubShader
@@ -110,6 +111,14 @@ Shader "Hidden/CarWash/DirtUnwrapPaint"
         }
 
         float4 fragFade(v2f i) : SV_Target { return float4(_FadeAmount, 0, 0, 0); }
+
+        // M4.8 F2: water rinses the foam where it hits (pressure washer strokes; the towel barely touches it)
+        float4 fragRinse(v2f i) : SV_Target
+        {
+            float a = 0;
+            for (int k = 0; k < _BrushCount; k++) a += (_BrushStr[k].r + _BrushStr[k].g) * 1.6 * brush(k, i.objPos);
+            return float4(a, 0, 0, 0);
+        }
         ENDCG
 
         Pass { Blend One One
@@ -140,6 +149,12 @@ Shader "Hidden/CarWash/DirtUnwrapPaint"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment fragFade
+            ENDCG }
+        Pass { BlendOp RevSub Blend One One ColorMask R
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment fragRinse
+            #pragma target 3.5
             ENDCG }
     }
 }

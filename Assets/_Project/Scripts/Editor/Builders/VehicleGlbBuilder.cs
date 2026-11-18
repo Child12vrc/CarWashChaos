@@ -71,6 +71,7 @@ namespace CarWash.Editor
             SceneBuilder.Set(painter, "_evalShader", Shader.Find("Hidden/CarWash/DirtEval"));
             SceneBuilder.Set(painter, "_body", bodyMf);
             SceneBuilder.Set(painter, "_renderer", bodyMr);
+            SceneBuilder.Set(painter, "_foamShell", DirtTestBuilder.FoamShellMaterial());
             p.Painter = painter;
             p.BodyBounds = mesh.bounds;
 

@@ -35,6 +35,20 @@ namespace CarWash.Editor
             return m;
         }
 
+        /// <summary>M4.8 F1: the instanced foam shell material every car body draws (6 instances) while foamed.</summary>
+        public static Material FoamShellMaterial()
+        {
+            const string path = "Assets/_Project/Art/Materials/FoamShell.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (m == null) { m = new Material(Shader.Find("CarWash/FoamShell")); AssetDatabase.CreateAsset(m, path); }
+            m.SetFloat("_ShellCount", Dirt.DirtPainter.ShellCount);
+            m.SetFloat("_FoamHeight", 0.1f); m.SetFloat("_BubbleScale", 34f); m.SetFloat("_Sag", 1.6f);
+            m.enableInstancing = true;
+            m.renderQueue = 2450;
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
         /// <summary>Creates a car GameObject (body with DirtPainter + wheels). Used by DirtTest and the vehicle prefabs.</summary>
         public static GameObject CreateCarVisual(string id, Transform parent, out DirtPainter painter, out MeshCollider bodyCollider)
         {
@@ -50,6 +64,7 @@ namespace CarWash.Editor
             SceneBuilder.Set(painter, "_evalShader", Shader.Find("Hidden/CarWash/DirtEval"));
             SceneBuilder.Set(painter, "_body", body.GetComponent<MeshFilter>());
             SceneBuilder.Set(painter, "_renderer", body.GetComponent<MeshRenderer>());
+            SceneBuilder.Set(painter, "_foamShell", FoamShellMaterial());
 
             var wheelMat = GrayboxMaterials.Get("Wheel", new Color(0.08f, 0.08f, 0.08f));
             foreach (var w in VehicleMeshBuilder.Wheels(id, out float r))

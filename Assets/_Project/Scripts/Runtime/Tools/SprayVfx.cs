@@ -25,7 +25,10 @@ namespace CarWash.Tools
         ParticleSystem _stream, _mist, _splash;
         AudioSource _audio;
         bool _on;
-        float _splashT;
+        float _splashT, _foamFxT;
+        [Tooltip("M4.8 F2: floor foam decal where rinsed-off foam lands (washer)")]
+        [SerializeField] private Material _foamDecal;
+        bool? _isFoamCannon;
         readonly RaycastHit[] _hits = new RaycastHit[8];
 
         void Awake()
@@ -117,6 +120,15 @@ namespace CarWash.Tools
             if (_splashT < 0.05f) return;
             _splashT = 0f;
             WaterFx.Hit(hitCol, p, normal, 0.05f, _wetDecal, _puddleDecal); // M4.6 D7 (washer only: foam has no wet decals)
+            // M4.8 F1 / F2: foam clumps where the foam cannon lands on a car; foam runoff where water hits a foamed car
+            _foamFxT -= 0.05f;
+            var car = hitCol != null ? hitCol.GetComponentInParent<Dirt.DirtNetSync>() : null;
+            if (car != null && _foamFxT <= 0f)
+            {
+                _isFoamCannon ??= GetComponentInParent<FoamCannon>() != null;
+                if (_isFoamCannon.Value) { FoamFx.Clump(p, normal, _splashMaterial); _foamFxT = 0.15f; }
+                else if (car.Painter != null && car.Painter.FoamActive) { FoamFx.Runoff(p, normal, _splashMaterial, _foamDecal); _foamFxT = 0.1f; }
+            }
             _splash.transform.SetPositionAndRotation(p + normal * 0.05f, Quaternion.LookRotation(normal));
             _splash.Emit(1);
             var ep = new ParticleSystem.EmitParams { position = p + normal * 0.1f, applyShapeToPosition = false, velocity = normal * 0.6f };
