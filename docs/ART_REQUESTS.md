@@ -46,7 +46,7 @@ panel_main (rounded rect, outline, soft inner shadow), btn_primary / btn_hover /
 DONE: upgrade icons U01-U10 + tool unlock icons (E1,E2). TODO: title logo art (text added in-engine), main menu background illustration, Steam capsule art (needs real text → handled separately).
 
 ## Batch F — 3D model upgrades (M4.6 D4, 2026-11-18) — sourced by the user (GPT / free CC0 assets), wired by the agent
-Ranked by how crude they look *in normal play* (what players stare at most first). Drop the file at the path, keep the node rules, and the builders pick it up on the next CI run (graybox / procedural stays as the fallback; nothing else needs changing).
+Ranked by how crude they look *in normal play* (what players stare at most first). Drop the file at the path with the node rules. **Already auto-wired** (picked up on the next CI run, graybox / procedural stays the fallback): #1 interiors, #7/#8 vehicles. **Wired by the agent when the file arrives** (the path / rules below are what it will expect): #2-#6, #9, #10 — tell the agent "모델 도착".
 
 | # | what | why it stands out | drop-in path & rules |
 |---|---|---|---|
