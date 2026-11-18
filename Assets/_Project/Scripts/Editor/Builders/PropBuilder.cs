@@ -168,6 +168,7 @@ namespace CarWash.Editor
             System.Func<Material, Material> tint = null;
             if (g.tint != Color.white) tint = m => GlbKit.Tinted(m, id, g.tint);
             var model = GlbKit.Model(path, go.transform, Layers.Prop, Vector3.zero, g.scale, tint);
+            if (g.file == "P_crate") UnfightCrate(model);
             var b = GlbKit.LocalBounds(model, go.transform);
             model.transform.localPosition = -b.center;
             b.center = Vector3.zero;
@@ -187,6 +188,19 @@ namespace CarWash.Editor
             so.FindProperty("_displayName").stringValue = nameKo;
             so.ApplyModifiedPropertiesWithoutUndo();
             return PrefabBuilder.Save(go, PathOf(id));
+        }
+
+        /// <summary>
+        /// M4.6 B5: in P_crate the slats, the diagonal braces and the corner posts all sit on the same outer planes → z-fighting
+        /// (flickering, "clipping" boards). Without touching the .glb: slats 1.5 % in, braces 1.2 % out, posts stay — every face
+        /// now has its own depth. Collider bounds are taken afterwards, so the box still wraps the whole visual.
+        /// </summary>
+        static void UnfightCrate(GameObject model)
+        {
+            void Scale(string node, float s) { var t = GlbKit.Node(model, node); if (t == null) return; var b = GlbKit.LocalBounds(t.gameObject, t.parent); t.localScale = Vector3.one * s; t.localPosition = b.center * (1f - s); }
+            Scale("Slats", 0.985f);
+            Scale("CrateCore", 0.97f);
+            Scale("DiagonalBraces", 1.012f);
         }
 
         /// <summary>
@@ -230,7 +244,8 @@ namespace CarWash.Editor
             void Put(string id, Vector3 pos, float yaw = 0f, int stack = 0)
             {
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PathOf(id));
-                if (prefab != null && prefab.transform.Find("Model") != null) { float r = RestY(id); pos.y = r + stack * (r - 0.01f) * 2f; }
+                // M4.6 B5: stacked GLB props rest exactly on the one below + 2 cm (they used to start 2 cm inside it)
+                if (prefab != null && prefab.transform.Find("Model") != null) { float r = RestY(id); pos.y = r + stack * ((r - 0.01f) * 2f + 0.02f); }
                 list.Add(PathOf(id), pos, new Vector3(0, yaw, 0));
             }
             Put("Crate", new Vector3(-3.5f, 0.41f, -8.5f));
