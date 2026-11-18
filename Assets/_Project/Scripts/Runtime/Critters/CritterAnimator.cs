@@ -14,13 +14,17 @@ namespace CarWash.Critters
     /// </summary>
     public class CritterAnimator : MonoBehaviour
     {
-        public enum Kind { Quadruped, Slime, Bee }
+        /// <summary>Quadruped / Slime / Bee = rig-less part-node GLBs; Rigid = one solid mesh (Hunyuan3D *_hy.glb): the whole body
+        /// pivot hops, leans, waddles and squashes, and falls on its back / side.</summary>
+        public enum Kind { Quadruped, Slime, Bee, Rigid }
 
         [SerializeField] private Kind _kind;
         [SerializeField] private Transform _visual;
         [SerializeField] private Transform _body, _head, _tail, _legFL, _legFR, _legBL, _legBR, _eyeL, _eyeR, _carry;
         [SerializeField] private Transform[] _drips;
         [SerializeField] private float _maxSpeed = 4f;
+        [Tooltip("Rigid: pivot height when lying on the back (stunned) / on the side (possum playing dead)")]
+        [SerializeField] private float _lieBack = 0.2f, _lieSide = 0.15f;
 
         CritterBase _critter;
         Vector3 _lastPos;
@@ -34,6 +38,9 @@ namespace CarWash.Critters
         /// <summary>0 upright … 1 fully flipped / rolled (stun, play dead).</summary>
         public float Flip => Mathf.Max(_flip, _side);
         public Transform CarrySocket => _carry;
+        /// <summary>The node that rolls / flips (part-node Body or the solid model's HyPivot).</summary>
+        public Transform BodyPivot => _body;
+        public Kind AnimKind => _kind;
 
         void Awake()
         {
@@ -70,6 +77,7 @@ namespace CarWash.Critters
             {
                 case Kind.Quadruped: Quadruped(dt, t, move, carried); break;
                 case Kind.Slime: Slime(dt, t, move, stunned); break;
+                case Kind.Rigid: Rigid(dt, t, move, carried); break;
             }
             if (carried) HangOnNet();
         }
@@ -100,6 +108,33 @@ namespace CarWash.Critters
                 _body.localRotation = Quaternion.Euler(0f, 0f, roll) * _bodyRot;
                 _body.localPosition = _bodyPos + Vector3.up * (Mathf.Abs(Mathf.Sin(_phase)) * 0.025f * move);
             }
+        }
+
+        /// <summary>Single-mesh critter: everything happens on the body pivot (at mid-height) — no limbs to swing.</summary>
+        void Rigid(float dt, float t, float move, bool carried)
+        {
+            if (_body == null) return;
+            // little bouncy steps: ~3 hops per metre, forward lean + side waddle with speed, squash on each landing
+            _phase += (carried ? 10f : _speed * 3f * Mathf.PI) * dt;
+            float s = Mathf.Sin(_phase);
+            float hop = Mathf.Abs(s);
+            float knocked = Mathf.Max(_flip, _side);
+            float up = (1f - knocked) * (carried ? 0f : hop * 0.07f * move);
+            float pitch = 12f * move * (1f - knocked) + Mathf.Sin(t * 1.7f) * 2f * (1f - move);
+            float roll = s * 9f * move + (carried ? Mathf.Sin(t * 9f) * 14f : 0f);
+            float yaw = Mathf.Sin(t * 0.6f) * 10f * (1f - move) * (1f - knocked);
+            // falls flat on its back when stunned (face up), onto its side when the possum plays dead
+            float back = Mathf.SmoothStep(0f, 1f, _flip), side = Mathf.SmoothStep(0f, 1f, _side);
+            var rot = Quaternion.Euler(-88f * back, 0f, 88f * side) * Quaternion.Euler(pitch, yaw, roll);
+            float restY = _bodyPos.y;
+            float y = Mathf.Lerp(restY, _lieBack, back);
+            y = Mathf.Lerp(y, _lieSide, side);
+            _body.localPosition = new Vector3(_bodyPos.x, y + up, _bodyPos.z);
+            _body.localRotation = rot * _bodyRot;
+            float squash = move > 0.05f ? 1f - (1f - hop) * 0.1f * move : 1f + Mathf.Sin(t * 2.2f) * 0.02f; // breathing when idle
+            float twitch = _flip > 0.5f ? 1f + Mathf.Sin(t * 20f) * 0.03f : 1f;                              // stunned: shivers
+            float sxz = 1f / Mathf.Sqrt(Mathf.Max(0.5f, squash));
+            _body.localScale = Vector3.Scale(_bodyScale, new Vector3(sxz * twitch, squash, sxz));
         }
 
         static void Leg(Transform leg, Quaternion rest, float swing, float splay)

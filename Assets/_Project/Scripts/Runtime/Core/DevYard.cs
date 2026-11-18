@@ -19,7 +19,7 @@ namespace CarWash.Core
         public static Vector3 Towel => Origin + new Vector3(1.5f, 1f, -5f);
         public static Vector3 NetPole => Origin + new Vector3(4.5f, 1f, -5f);
         public static Vector3 Raccoon => Origin + new Vector3(2f, 0.05f, -8f);   // T3.1 test critters (generic behaviour)
-        public static Vector3 Possum => Origin + new Vector3(5.5f, 0.05f, 15f);  // far from the raccoon so the net test hits the right one
+        public static Vector3 Possum => Origin + new Vector3(5.5f, 0.05f, 13f);  // far from the raccoon so the net test hits the right one
         public static Vector3 Slime => Origin + new Vector3(-3f, 0.05f, -4.5f);   // next to the V02 test car (re-dirt check)
         public static Vector3 Bees => Origin + new Vector3(5.5f, 0.05f, 4f);
     }

@@ -52,6 +52,9 @@ namespace CarWash.Editor
         /// <summary>Raccoon / possum: same node set; CritterAnimator.Quadruped. Collider = the graybox capsule.</summary>
         static Func<Transform, GameObject, float> GlbAnimal(string file, Func<Transform, GameObject, float> graybox, Vector3 body) => (visual, root) =>
         {
+            // Hunyuan3D solid model first (art batch 2026-11-18); the part-node model and the graybox stay as fallbacks
+            var hy = GlbHy(file, visual, root, body);
+            if (hy != null) return GlbKit.LocalBounds(hy, root.transform).max.y + 0.15f;
             var model = GlbModel(file, visual, AnimalScale);
             if (model == null) return graybox(visual, root);
             var col = root.AddComponent<CapsuleCollider>();
@@ -61,6 +64,47 @@ namespace CarWash.Editor
             Wire(anim, visual, model, "Body", "Head", "Tail", "Leg_FL", "Leg_FR", "Leg_BL", "Leg_BR", null, null, "Socket_Carry");
             return GlbKit.LocalBounds(model, root.transform).max.y + 0.15f;
         };
+
+        // ---------------- Hunyuan3D critters (C01_raccoon_hy / C05_possum_hy: one solid PBR mesh, standing pose) ----------------
+        /// <summary>Visual height in the game (the delivered 0.92 m / 0.70 m standing figures scaled to the critters' size).</summary>
+        public static readonly Dictionary<string, float> HyHeight = new Dictionary<string, float> { { "C01_raccoon", 0.66f }, { "C05_possum", 0.52f } };
+
+        /// <summary>
+        /// "HyPivot" at mid-height carries the model (feet on the ground, facing +Z as delivered) so CritterAnimator.Rigid can
+        /// hop / lean / squash it and lay it on its back or side around its centre. glTF PBR material kept (base + normal + MR).
+        /// Socket_Carry at the chest. Returns null when the _hy file is missing (part-node model or graybox are the fallbacks).
+        /// </summary>
+        static GameObject GlbHy(string file, Transform visual, GameObject root, Vector3 body)
+        {
+            string path = GlbKit.Find("Critters", file + "_hy");
+            if (path == null || !HyHeight.TryGetValue(file, out float height)) return null;
+            var pivot = new GameObject("HyPivot") { layer = Layers.Critter }.transform;
+            pivot.SetParent(visual, false);
+            var model = GlbKit.Model(path, pivot, Layers.Critter, convert: false);
+            var raw = GlbKit.LocalBounds(model, pivot);
+            float s = height / Mathf.Max(0.01f, raw.size.y);
+            model.transform.localScale = Vector3.one * s;
+            var b = GlbKit.LocalBounds(model, pivot);
+            pivot.localPosition = new Vector3(0f, height * 0.5f, 0f);
+            model.transform.localPosition = new Vector3(-b.center.x, -b.min.y - height * 0.5f, -b.center.z);
+            foreach (var r in model.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            var carry = new GameObject("Socket_Carry") { layer = Layers.Critter }.transform;
+            carry.SetParent(pivot, false);
+            carry.localPosition = new Vector3(0f, height * 0.15f, 0f);
+            var col = root.AddComponent<CapsuleCollider>();
+            col.direction = 2; col.radius = body.x * 0.55f; col.height = body.z + 0.1f; col.center = new Vector3(0, body.y * 0.6f, 0);
+            var anim = root.AddComponent<CritterAnimator>();
+            Kind(anim, CritterAnimator.Kind.Rigid, 4f);
+            var so = new SerializedObject(anim);
+            so.FindProperty("_visual").objectReferenceValue = visual;
+            so.FindProperty("_body").objectReferenceValue = pivot;
+            so.FindProperty("_carry").objectReferenceValue = carry;
+            // lying: back → pivot at half the body depth, side → half the body width (scaled bounds, tail excluded roughly)
+            so.FindProperty("_lieBack").floatValue = Mathf.Min(b.size.z, height) * 0.32f;
+            so.FindProperty("_lieSide").floatValue = Mathf.Min(b.size.x, height) * 0.45f;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return model;
+        }
 
         static float GlbSlime(Transform visual, GameObject root)
         {

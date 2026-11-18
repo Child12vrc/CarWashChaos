@@ -17,11 +17,15 @@ namespace CarWash.Core
         public const int Ragdoll = 15;
         /// <summary>GLB vehicles: exact body mesh used only by washing raycasts (spray, towel). Collides with nothing — physics uses the simple VehicleHull boxes on Vehicle.</summary>
         public const int WashSurface = 16;
+        /// <summary>Invisible play-area walls (+ ceiling): stop players, props, tools, critters and ragdolls — vehicles drive through (road in/out).</summary>
+        public const int PlayBounds = 17;
+        /// <summary>Decoration outside the play area (city blocks, trees, lamps, parked cars): render only, no colliders.</summary>
+        public const int Scenery = 18;
 
         public static readonly string[] Names =
         {
             null, null, null, null, null, null,
-            "Player", "Vehicle", "Prop", "Critter", "Tool", "Interactable", "FoamArea", "Trigger", "FPArms", "Ragdoll", "WashSurface"
+            "Player", "Vehicle", "Prop", "Critter", "Tool", "Interactable", "FoamArea", "Trigger", "FPArms", "Ragdoll", "WashSurface", "PlayBounds", "Scenery"
         };
 
         public const int SprayMask = (1 << Default) | (1 << Player) | (1 << Vehicle) | (1 << Prop) | (1 << Critter) | (1 << Tool) | (1 << WashSurface);

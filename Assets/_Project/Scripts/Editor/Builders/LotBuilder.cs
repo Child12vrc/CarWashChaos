@@ -73,6 +73,7 @@ namespace CarWash.Editor
             cam.transform.SetPositionAndRotation(new Vector3(0, 30f, -34f), Quaternion.Euler(45f, 0, 0));
 
             EnvironmentBuilder.Build(env, bays); // P6: sky, skyline, post, signs, physic materials
+            SceneryBuilder.Build(env);            // map completeness: city around the lot + invisible play-area walls
             var lotPaths = BuildPaths(bays);
             BuildCustomers(lotPaths);
             BuildSpawner();
@@ -201,6 +202,10 @@ namespace CarWash.Editor
             PrefabBuilder.SetArray(paths, "_exitLane", Points("Exit", new Vector3(-8f, 0, ExitZ), new Vector3(0f, 0, ExitZ), new Vector3(8f, 0, ExitZ),
                 new Vector3(20f, 0, ExitZ), new Vector3(20f, 0, RoadZ), new Vector3(36f, 0, RoadZ)));
             PrefabBuilder.SetArray(paths, "_bays", bays);
+            // map polish: customers appear / vanish on the far road behind the city blocks (SceneryBuilder draws the same roads)
+            PrefabBuilder.SetArray(paths, "_approach", Points("Approach", SceneryBuilder.Approach));
+            PrefabBuilder.SetArray(paths, "_depart", Points("Depart", SceneryBuilder.Depart));
+            PrefabBuilder.SetArray(paths, "_leaveWest", Points("LeaveWest", SceneryBuilder.LeaveWest));
             return paths;
         }
 

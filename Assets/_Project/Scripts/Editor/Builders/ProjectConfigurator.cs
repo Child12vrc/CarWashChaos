@@ -51,6 +51,14 @@ namespace CarWash.Editor
                 Physics.IgnoreLayerCollision(Layers.Ragdoll, l, true);
             // GLB vehicle wash surfaces: raycast-only (spray / towel), never physical
             for (int l = 0; l < 32; l++) Physics.IgnoreLayerCollision(Layers.WashSurface, l, true);
+            // play-area walls: block bodies and loose objects, let cars through the road openings, ignore triggers / raycast-only layers
+            for (int l = 0; l < 32; l++)
+            {
+                bool keep = l == Layers.Default || l == Layers.Player || l == Layers.Prop || l == Layers.Critter || l == Layers.Tool || l == Layers.Ragdoll;
+                Physics.IgnoreLayerCollision(Layers.PlayBounds, l, !keep);
+            }
+            Physics.IgnoreLayerCollision(Layers.PlayBounds, Layers.Default, true); // static vs static: nothing to resolve
+            for (int l = 0; l < 32; l++) Physics.IgnoreLayerCollision(Layers.Scenery, l, true);
 
             Physics.defaultSolverIterations = 8;
             Physics.defaultSolverVelocityIterations = 2;

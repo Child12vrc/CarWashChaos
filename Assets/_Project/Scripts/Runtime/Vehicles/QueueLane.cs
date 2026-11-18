@@ -36,7 +36,7 @@ namespace CarWash.Vehicles
         {
             get
             {
-                var p = _paths.Arrival[0].position;
+                var p = _paths.SpawnPoint;
                 foreach (var v in _active) if (v != null && (v.transform.position - p).sqrMagnitude < 49f) return false;
                 return true;
             }
@@ -56,8 +56,8 @@ namespace CarWash.Vehicles
         public Vehicle ServerArrive(string vehicleId, bool noGrease)
         {
             if (!IsServer || !HasRoom || !SpawnClear) return null;
-            var start = _paths.Arrival[0];
-            var v = _spawner.ServerSpawn(vehicleId, start.position, Quaternion.LookRotation(Vector3.right), noGrease);
+            var spawnAt = _paths.SpawnPoint;
+            var v = _spawner.ServerSpawn(vehicleId, spawnAt, _paths.SpawnRotation, noGrease);
             if (v == null) return null;
             _active.Add(v);
             int slot = _queue.Count;

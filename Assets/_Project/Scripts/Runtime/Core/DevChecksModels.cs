@@ -154,6 +154,7 @@ namespace CarWash.Core
 
             // 1) motion sampled for 4 s (the brain wanders them): leg swing ∝ speed, tail wag, slime squash, bee wings
             float t0 = Time.time;
+            float hopLo = 9f, hopHi = 0f, leanMax = 0f, rollMax = 0f, sqLo = 9f;
             float rMax = 0f, legLo = 999f, legHi = -999f, legAtSpeed = 0f, legIdle = 0f, tailLo = 999f, tailHi = -999f, sLo = 9f, sHi = 0f, wLo = 999f, wHi = -999f;
             var ra = raccoon != null ? raccoon.GetComponent<CritterAnimator>() : null;
             var leg = raccoon != null ? Find(raccoon.transform, "Leg_FL") : null;
@@ -170,10 +171,16 @@ namespace CarWash.Core
                     if (ra.Speed < 0.05f) legIdle = Mathf.Max(legIdle, Mathf.Abs(a));
                 }
                 if (tail != null) { float y = Signed(tail.localEulerAngles.y); tailLo = Mathf.Min(tailLo, y); tailHi = Mathf.Max(tailHi, y); }
+                if (ra != null && ra.AnimKind == CritterAnimator.Kind.Rigid && ra.BodyPivot != null)
+                {
+                    var bp = ra.BodyPivot; rMax = Mathf.Max(rMax, ra.Speed);
+                    if (ra.Speed > 0.8f) { hopHi = Mathf.Max(hopHi, bp.localPosition.y); hopLo = Mathf.Min(hopLo, bp.localPosition.y); leanMax = Mathf.Max(leanMax, Signed(bp.localEulerAngles.x)); rollMax = Mathf.Max(rollMax, Mathf.Abs(Signed(bp.localEulerAngles.z))); sqLo = Mathf.Min(sqLo, bp.localScale.y); }
+                }
                 if (sBody != null) { sLo = Mathf.Min(sLo, sBody.localScale.y); sHi = Mathf.Max(sHi, sBody.localScale.y); }
                 if (wing != null) { float z = Signed(wing.localEulerAngles.z); wLo = Mathf.Min(wLo, z); wHi = Mathf.Max(wHi, z); }
                 yield return null;
             }
+            if (ra != null && ra.AnimKind == CritterAnimator.Kind.Rigid) Log($"anim raccoon (Hunyuan solid): speed max {rMax:0.0} m/s, moving: hop pivot y {hopLo:0.000}..{hopHi:0.000} m, lean {leanMax:0}°, waddle roll ±{rollMax:0}°, squash scale.y ≥ {sqLo:0.00}");
             Log($"anim raccoon: speed max {rMax:0.0} m/s, leg swing {legLo:0}..{legHi:0}° (|max| moving {legAtSpeed:0}°, idle {legIdle:0}°), tail wag {tailLo:0}..{tailHi:0}°");
             Log($"anim slime: Body scale.y {sLo:0.00}..{sHi:0.00}; bees: flock={bees?.GetComponentInChildren<BeeFlock>()?.Count ?? 0} wing flap {wLo:0}..{wHi:0}°");
 
@@ -196,7 +203,7 @@ namespace CarWash.Core
                 yield return LookFrom(me, raccoon.transform.position, 1.6f);
                 ScreenCapture.CaptureScreenshot("autotest_models_raccoon_stunned.png");
                 yield return null;
-                Log($"raccoon stunned: state={raccoon.State.Value} flip={ra.Flip:0.00} body roll={Signed(Find(raccoon.transform, "Body").localEulerAngles.z):0}°");
+                Log($"raccoon stunned: state={raccoon.State.Value} flip={ra.Flip:0.00} body pitch/roll={Signed(ra.BodyPivot.localEulerAngles.x):0}°/{Signed(ra.BodyPivot.localEulerAngles.z):0}° (kind {ra.AnimKind})");
 
                 yield return DevChecksFoam.Equip<NetPole>(me);
                 float tn = Time.time;
@@ -228,7 +235,7 @@ namespace CarWash.Core
                 yield return LookFrom(me, possum.transform.position, 1.8f);
                 ScreenCapture.CaptureScreenshot("autotest_models_possum_playdead.png");
                 yield return null;
-                Log($"possum: state={possum.State.Value} flip={(pa != null ? pa.Flip : -1f):0.00} body roll={Signed(Find(possum.transform, "Body").localEulerAngles.z):0}°");
+                Log($"possum: state={possum.State.Value} flip={(pa != null ? pa.Flip : -1f):0.00} body roll={Signed(possum.GetComponent<CritterAnimator>().BodyPivot.localEulerAngles.z):0}°");
             }
 
             // 4) bees: washer disperses the flock (Spread grows), screenshot of the GLB swarm

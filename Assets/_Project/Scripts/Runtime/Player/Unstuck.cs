@@ -12,14 +12,14 @@ namespace CarWash.Player
     {
         public const float Cooldown = 30f;
         public const float Radius = 0.35f, Height = 1.8f;
-        const int BlockMask = (1 << Core.Layers.Default) | (1 << Core.Layers.Vehicle) | (1 << Core.Layers.Prop) | (1 << Core.Layers.Interactable);
+        const int BlockMask = (1 << Core.Layers.Default) | (1 << Core.Layers.Vehicle) | (1 << Core.Layers.Prop) | (1 << Core.Layers.Interactable) | (1 << Core.Layers.PlayBounds);
 
         /// <summary>True when the capsule at `feet` overlaps nothing solid.</summary>
         public static bool HasRoom(Vector3 feet)
         {
             var a = feet + Vector3.up * (Radius + 0.05f);
             var b = feet + Vector3.up * (Height - Radius);
-            return !Physics.CheckCapsule(a, b, Radius, BlockMask, QueryTriggerInteraction.Ignore);
+            return Core.PlayArea.Contains(feet, Radius) && !Physics.CheckCapsule(a, b, Radius, BlockMask, QueryTriggerInteraction.Ignore);
         }
 
         public static bool CanUse(float now, float readyAt) => now >= readyAt;

@@ -71,7 +71,7 @@ namespace CarWash.Editor
                 surface.agentTypeID = AgentTypeId(name);
                 surface.collectObjects = CollectObjects.All;
                 surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
-                surface.layerMask = 1 << Layers.Default;
+                surface.layerMask = (1 << Layers.Default) | (1 << Layers.PlayBounds); // walls end the walkable mesh: critters can't path out
                 surface.BuildNavMesh();
                 string path = $"{dir}/NavMesh-{name}.asset";
                 AssetDatabase.DeleteAsset(path);

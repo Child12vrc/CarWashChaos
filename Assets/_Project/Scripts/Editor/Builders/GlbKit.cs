@@ -27,7 +27,7 @@ namespace CarWash.Editor
         }
 
         /// <summary>Instance of the .glb under `parent` named "Model", every node on `layer`, materials converted.</summary>
-        public static GameObject Model(string path, Transform parent, int layer, Vector3 localPos = default, float scale = 1f, System.Func<Material, Material> remap = null)
+        public static GameObject Model(string path, Transform parent, int layer, Vector3 localPos = default, float scale = 1f, System.Func<Material, Material> remap = null, bool convert = true)
         {
             var src = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             var model = Object.Instantiate(src, parent, false);
@@ -38,7 +38,7 @@ namespace CarWash.Editor
             foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true))
             {
                 var mats = r.sharedMaterials;
-                for (int i = 0; i < mats.Length; i++) { mats[i] = Lit(mats[i]); if (remap != null) mats[i] = remap(mats[i]); }
+                for (int i = 0; i < mats.Length; i++) { if (convert) mats[i] = Lit(mats[i]); if (remap != null) mats[i] = remap(mats[i]); }
                 r.sharedMaterials = mats;
                 r.shadowCastingMode = ShadowCastingMode.On;
             }

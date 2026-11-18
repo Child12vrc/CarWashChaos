@@ -69,7 +69,7 @@ namespace CarWash.Critters
             _renderers = (_visual != null ? _visual : transform).GetComponentsInChildren<Renderer>();
             _baseColors = new Color[_renderers.Length];
             for (int i = 0; i < _renderers.Length; i++)
-                _baseColors[i] = _renderers[i].sharedMaterial != null && _renderers[i].sharedMaterial.HasProperty("_BaseColor") ? _renderers[i].sharedMaterial.GetColor("_BaseColor") : Color.white;
+                _baseColors[i] = BaseColorOf(_renderers[i].sharedMaterial);
         }
 
         public override void OnNetworkSpawn()
@@ -354,6 +354,16 @@ namespace CarWash.Critters
             foreach (var c in _colliders) c.enabled = State.Value != CritterState.Hidden; // hidden inside a car: nothing to hit or bump into
         }
 
+        static readonly int GltfBaseColor = Shader.PropertyToID("baseColorFactor");
+
+        static Color BaseColorOf(Material m)
+        {
+            if (m == null) return Color.white;
+            if (m.HasProperty("_BaseColor")) return m.GetColor("_BaseColor");
+            if (m.HasProperty(GltfBaseColor)) return m.GetColor(GltfBaseColor);
+            return Color.white;
+        }
+
         void UpdateVisuals()
         {
             if (_visual == null) return;
@@ -375,7 +385,9 @@ namespace CarWash.Critters
             for (int i = 0; i < _renderers.Length; i++)
             {
                 _renderers[i].GetPropertyBlock(_mpb);
-                _mpb.SetColor("_BaseColor", Color.Lerp(_baseColors[i], new Color(0.25f, 0.4f, 0.75f), wet * 0.6f));
+                var wetCol = Color.Lerp(_baseColors[i], new Color(0.25f, 0.4f, 0.75f), wet * 0.6f);
+                _mpb.SetColor("_BaseColor", wetCol);
+                _mpb.SetColor(GltfBaseColor, wetCol); // Hunyuan3D critters keep their glTF PBR material
                 _renderers[i].SetPropertyBlock(_mpb);
             }
         }

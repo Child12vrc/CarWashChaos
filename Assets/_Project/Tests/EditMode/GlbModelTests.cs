@@ -70,8 +70,8 @@ namespace CarWash.Tests
             Assert.AreEqual("Socket_Capture", Load("Tools/T06_NetPole").GetComponent<NetPole>().Capture.name);
         }
 
-        [TestCase("C01_Raccoon", CritterAnimator.Kind.Quadruped)]
-        [TestCase("C05_Possum", CritterAnimator.Kind.Quadruped)]
+        [TestCase("C01_Raccoon", CritterAnimator.Kind.Rigid)]
+        [TestCase("C05_Possum", CritterAnimator.Kind.Rigid)]
         [TestCase("C03_MudSlime", CritterAnimator.Kind.Slime)]
         public void CritterIsAnimatedFromItsNodes(string file, CritterAnimator.Kind kind)
         {
@@ -85,9 +85,25 @@ namespace CarWash.Tests
             if (kind == CritterAnimator.Kind.Quadruped)
                 foreach (var leg in new[] { "_legFL", "_legFR", "_legBL", "_legBR", "_tail", "_head" })
                     Assert.IsNotNull(so.FindProperty(leg).objectReferenceValue, leg);
-            else Assert.AreEqual(3, so.FindProperty("_drips").arraySize);
+            else if (kind == CritterAnimator.Kind.Slime) Assert.AreEqual(3, so.FindProperty("_drips").arraySize);
             // nothing animation-related is networked: only CritterBase's NetworkVariables + the root NetworkTransform
             Assert.AreEqual(1, p.GetComponentsInChildren<Unity.Netcode.Components.NetworkTransform>(true).Length);
+        }
+
+        [TestCase("C01_Raccoon", 0.66f)]
+        [TestCase("C05_Possum", 0.52f)]
+        public void HunyuanCritterIsUsed_ScaledFeetDown_PbrKept(string file, float height)
+        {
+            var p = Load("Critters/" + file);
+            var pivot = p.transform.Find("Visual/HyPivot");
+            Assert.IsNotNull(pivot, "solid _hy model used");
+            var r = pivot.GetComponentInChildren<MeshRenderer>();
+            var m = r.sharedMaterial;
+            Assert.IsTrue(m.HasProperty("normalTexture") && m.GetTexture("normalTexture") != null, "PBR material kept (normal map)");
+            var b = GlbKit.LocalBounds(pivot.GetChild(0).gameObject, p.transform);
+            Assert.AreEqual(height, b.size.y, 0.02f, "scaled to the critter size");
+            Assert.AreEqual(0f, b.min.y, 0.02f, "feet on the ground");
+            Assert.IsNotNull(p.GetComponent<CapsuleCollider>(), "gameplay capsule kept");
         }
 
         [Test]

@@ -84,6 +84,8 @@ Surface textures are seamless (checked by half-offset). Signs: alpha-cut quads (
 | Critters/C05_possum.glb | 932 | 0.7 m incl. tail; same node set as raccoon (play-dead = roll Body 90° + legs up) |
 | Critters/C03_mud_slime.glb | 580 | 0.6 m blob; Body pivot bottom center (squash/stretch scale), Eye_L/R, Drip_1..3, Socket_Carry/Head |
 | Critters/C02_bee.glb | 506 | 0.14 m single bee; Body, Head, Wing_L/R (pivot at wing root → flap), Stinger; swarm = instance several |
+| Critters/C01_raccoon_hy.glb | ~50k | Hunyuan3D, single mesh (1 node, no rig), PBR embedded (base 1024 jpg, normal 1024, MR 512), node X+90° (feet at y≈0 after it), 0.92 m standing pose, faces +Z. In game: scaled to 0.66 m, code animation on one pivot (hop / lean / waddle / squash, on its back when stunned); preferred over C01_raccoon.glb (part-node version kept as fallback); gameplay capsule unchanged |
+| Critters/C05_possum_hy.glb | ~50k | Hunyuan3D, same format as above, 0.70 m standing pose (long tail −Z), faces +Z. In game: scaled to 0.52 m, playing dead = lies on its side; preferred over C05_possum.glb (fallback) |
 
 ## Player characters (third-party, CC0) — `Art/ThirdParty/Quaternius/Characters/`
 Source: Quaternius "Ultimate Modular Men Pack" (Feb 2022) + "Ultimate Modular Women Pack" (Apr 2022), **Humanoid Rig** versions, CC0 1.0 (LICENSE_CC0_Quaternius.txt). Low-poly stylized, vertex/flat colors, ~same scale as YBot (≈1.8 m; verify), Unity Humanoid avatar compatible.
