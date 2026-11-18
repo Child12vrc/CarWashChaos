@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using CarWash.Core;
 using UnityEditor;
 using UnityEngine;
@@ -33,14 +34,23 @@ namespace CarWash.Editor
         }
 
         // ------------------------------------------------------------------ sky, light, fog
+        public const string DaySkyPath = MatDir + "/Sky_Day.mat";
+
+        /// <summary>M4.9 G1/G2: the CarWash/DaySky skybox (DayNightCycle drives a runtime copy); the asset holds the noon look.</summary>
+        public static Material DaySky()
+        {
+            var sky = AssetDatabase.LoadAssetAtPath<Material>(DaySkyPath);
+            if (sky == null) { sky = new Material(Shader.Find("CarWash/DaySky")); AssetDatabase.CreateAsset(sky, DaySkyPath); }
+            sky.SetColor("_Zenith", new Color(0.22f, 0.45f, 0.82f)); sky.SetColor("_Horizon", new Color(0.7f, 0.8f, 0.92f));
+            sky.SetVector("_SunDir", (Quaternion.Euler(-42f, 145f, 0f) * Vector3.forward));
+            sky.SetFloat("_CloudCover", 0.45f); sky.SetFloat("_CloudSpeed", 0.012f);
+            EditorUtility.SetDirty(sky);
+            return sky;
+        }
+
         static void Sky()
         {
-            string path = MatDir + "/Sky_Procedural.mat";
-            var sky = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (sky == null) { sky = new Material(Shader.Find("Skybox/Procedural")); AssetDatabase.CreateAsset(sky, path); }
-            sky.SetFloat("_SunSize", 0.035f); sky.SetFloat("_AtmosphereThickness", 0.85f);
-            sky.SetColor("_SkyTint", new Color(0.55f, 0.65f, 0.85f)); sky.SetColor("_GroundColor", new Color(0.42f, 0.45f, 0.5f));
-            sky.SetFloat("_Exposure", 1.25f);
+            var sky = DaySky();
             RenderSettings.skybox = sky;
             RenderSettings.ambientMode = AmbientMode.Skybox;
             RenderSettings.ambientIntensity = 1.0f;
@@ -161,6 +171,7 @@ namespace CarWash.Editor
             m.SetTexture("_BaseMap", tex); m.mainTexture = tex; m.SetColor("_BaseColor", Color.white);
             m.SetFloat("_AlphaClip", 1f); m.SetFloat("_Cutoff", 0.5f); m.EnableKeyword("_ALPHATEST_ON");
             m.SetFloat("_Cull", 0f); m.SetFloat("_Smoothness", 0.3f);
+            m.SetTexture("_EmissionMap", tex); m.SetColor("_EmissionColor", Color.black); m.EnableKeyword("_EMISSION"); // G1: glows at night
             m.renderQueue = (int)RenderQueue.AlphaTest;
             EditorUtility.SetDirty(m);
             return m;
@@ -189,12 +200,53 @@ namespace CarWash.Editor
             // big roadside sign by the lot entry (west end of the road), facing the road
             GrayboxMaterials.Box(root, "SudsyPole", new Vector3(-27f, 3f, -19.2f), new Vector3(0.25f, 6f, 0.25f), pole);
             Sign(root, "sign_sudsy.png", new Vector3(-27f, 6.2f, -19.05f), 0f, 3.2f);
+            NightSpot(root, "SudsyLight", new Vector3(-27f, 4.2f, -17.6f), new Vector3(-27f, 6.2f, -19.05f), 9f, 6f, new Color(1f, 0.9f, 0.75f), 0.4f);
             // plate above each bay entrance (north opening), readable from the feed lane
             foreach (var b in bays)
                 Sign(root, $"sign_bay{b.Index + 1}.png", b.transform.position + new Vector3(0f, 3.15f, 5.25f), 0f, 0.75f);
             // exit sign at the exit ramp
             GrayboxMaterials.Box(root, "ExitPole", new Vector3(22.2f, 1.4f, -6.2f), new Vector3(0.12f, 2.8f, 0.12f), pole);
             Sign(root, "sign_exit.png", new Vector3(22.1f, 2.6f, -6.2f), -90f, 0.7f); // faces the cars coming from the west
+        }
+
+        // ------------------------------------------------------------------ M4.9 G1 day / night
+        /// <summary>A shadowless spot light aimed at <paramref name="at"/> that fades in at night (lamps, signs).</summary>
+        public static Light NightSpot(Transform parent, string name, Vector3 pos, Vector3 at, float range, float intensity, Color c, float onAt, float angle = 70f)
+        {
+            var go = new GameObject(name) { layer = parent.gameObject.layer };
+            go.transform.SetParent(parent, true);
+            go.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(at - pos));
+            var l = go.AddComponent<Light>();
+            l.type = LightType.Spot; l.range = range; l.intensity = intensity; l.color = c; l.spotAngle = angle; l.innerSpotAngle = angle * 0.55f;
+            l.shadows = LightShadows.None; l.enabled = false;
+            go.AddComponent<Visual.NightLight>().Init(new[] { l }, onAt);
+            return l;
+        }
+
+        /// <summary>The local day / night driver + the shared materials that glow at night (lamp heads, signs).</summary>
+        public static void DayNight(Transform env)
+        {
+            var go = new GameObject("DayNightCycle"); go.transform.SetParent(env);
+            var dn = go.AddComponent<Visual.DayNightCycle>();
+            SceneBuilder.Set(dn, "_sun", RenderSettings.sun);
+            SceneBuilder.Set(dn, "_skyAsset", DaySky());
+            var far = new System.Collections.Generic.List<Object> { AssetDatabase.LoadAssetAtPath<Material>(MatDir + "/Skyline.mat") };
+            foreach (var n in new[] { "FarA", "FarB", "FarC", "FarD" }) far.Add(AssetDatabase.LoadAssetAtPath<Material>(SceneryBuilder.MatDir + "/" + n + ".mat"));
+            PrefabBuilder.SetArray(dn, "_far", far.Where(m => m != null).ToArray());
+            var mats = new System.Collections.Generic.List<Material>(); var cols = new System.Collections.Generic.List<Color>(); var on = new System.Collections.Generic.List<float>();
+            void G(Material m, Color c, float o) { if (m == null) return; m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", Color.black); EditorUtility.SetDirty(m); mats.Add(m); cols.Add(c); on.Add(o); }
+            G(GrayboxMaterials.Get("Scenery_LampHead", new Color(1f, 0.95f, 0.8f), 0.8f), new Color(1f, 0.85f, 0.6f) * 3f, 0.35f);
+            foreach (var guid in AssetDatabase.FindAssets("Sign_ t:Material", new[] { MatDir }))
+            {
+                var m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
+                if (m != null && m.HasProperty("_EmissionMap") && m.GetTexture("_EmissionMap") != null) G(m, Color.white * 0.9f, 0.45f);
+            }
+            var so = new SerializedObject(dn);
+            void Arr<T>(string p, System.Collections.Generic.List<T> list, System.Action<SerializedProperty, T> set) { var a = so.FindProperty(p); a.arraySize = list.Count; for (int i = 0; i < list.Count; i++) set(a.GetArrayElementAtIndex(i), list[i]); }
+            Arr("_glowMats", mats, (p, v) => p.objectReferenceValue = v);
+            Arr("_glowCols", cols, (p, v) => p.colorValue = v);
+            Arr("_glowOnAt", on, (p, v) => p.floatValue = v);
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // ------------------------------------------------------------------ physics

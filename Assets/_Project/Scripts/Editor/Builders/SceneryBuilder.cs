@@ -22,7 +22,7 @@ namespace CarWash.Editor
     /// </summary>
     public static class SceneryBuilder
     {
-        const string MatDir = "Assets/_Project/Art/Materials/Scenery";
+        public const string MatDir = "Assets/_Project/Art/Materials/Scenery";
         static System.Random _rng;
         static float Rand(float a, float b) => a + (float)_rng.NextDouble() * (b - a);
 
@@ -332,6 +332,9 @@ namespace CarWash.Editor
             var a = GrayboxMaterials.Box(l, "Pole", new Vector3(0, 3.5f, 0), new Vector3(0.14f, 7f, 0.14f), pole, collider: false);
             GrayboxMaterials.Box(l, "Arm", new Vector3(0, 6.9f, 0.8f), new Vector3(0.1f, 0.1f, 1.6f), pole, collider: false);
             GrayboxMaterials.Box(l, "Head", new Vector3(0, 6.8f, 1.5f), new Vector3(0.35f, 0.15f, 0.6f), head, collider: false);
+            // M4.9 G1: a real light under the head at night (no shadows); lamps switch on one by one
+            var hp = l.TransformPoint(new Vector3(0, 6.65f, 1.5f));
+            EnvironmentBuilder.NightSpot(l, "LampLight", hp, hp + Vector3.down * 5f + l.forward * 1.2f, 18f, 45f, new Color(1f, 0.82f, 0.58f), 0.3f + Mathf.Repeat(p.x * 0.37f + p.z * 0.11f, 1f) * 0.12f, 115f);
         }
 
         static void Lamps(Transform root)

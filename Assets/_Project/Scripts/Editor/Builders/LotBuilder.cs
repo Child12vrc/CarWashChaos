@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using CarWash.Core;
 using CarWash.Net;
@@ -75,6 +76,7 @@ namespace CarWash.Editor
             EnvironmentBuilder.Build(env, bays); // P6: sky, skyline, post, signs, physic materials
             SceneryBuilder.Build(env);            // map completeness: city around the lot + invisible play-area walls
             EnvDressingBuilder.Build(env);        // M4.7 E2/E3: decals + set dressing (combined meshes, off every route)
+            EnvironmentBuilder.DayNight(env);    // M4.9 G1/G2: local day → night (sky, sun, fog, post, lamps / signs glow)
             var lotPaths = BuildPaths(bays);
             BuildCustomers(lotPaths);
             BuildSpawner();
@@ -83,6 +85,7 @@ namespace CarWash.Editor
             spawns.Add(PrefabBuilder.LotStatePath, Vector3.zero, Vector3.zero);
             spawns.Add(DayBuilder.DirectorPath, Vector3.zero, Vector3.zero);
             foreach (var b in bays) spawns.Add(DayBuilder.BayButtonPath, b.Panel.position + new Vector3(-0.1f, 0f, 0f), Vector3.zero); // DONE on the inner face of each bay panel
+            foreach (var b in bays) spawns.Add(DayBuilder.BayLightSwitchPath, b.Panel.position + new Vector3(-0.08f, 0.15f, 0.7f), Vector3.zero); // M4.9 G7: light switch next to it
             spawns.Add(DayBuilder.DayBoardPath, OfficeCenter + new Vector3(-1.5f, 1.6f, 3.05f), Vector3.zero);
             PropBuilder.PlaceInLot(spawns);
             spawns.Add(ToolBuilder.PathOf("T01_PressureWasher"), bays[0].HoseReel.position + new Vector3(0.25f, 0f, 0f), Vector3.zero);
@@ -181,7 +184,39 @@ namespace CarWash.Editor
             so.FindProperty("_panel").objectReferenceValue = panel;
             so.ApplyModifiedPropertiesWithoutUndo();
             PrefabBuilder.SetArray(bay, "_shutters", shutters);
+            BayFixtures(b, i); // M4.9 G7
             return bay;
+        }
+
+        /// <summary>M4.9 G7: two LED bars under the bay roof + a shadowless spot under each (switched by the bay's wall switch).</summary>
+        static void BayFixtures(Transform b, int i)
+        {
+            var off = GrayboxMaterials.Get("BayLED_Off", new Color(0.55f, 0.57f, 0.6f), 0.6f);
+            var on = GrayboxMaterials.Get("BayLED_On", new Color(0.95f, 0.97f, 1f), 0.6f);
+            on.EnableKeyword("_EMISSION"); on.SetColor("_EmissionColor", new Color(1f, 0.98f, 0.94f) * 4f); on.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            EditorUtility.SetDirty(on);
+            var root = new GameObject("BayLights").transform; root.SetParent(b, false);
+            var lights = new List<Light>(); var bars = new List<Renderer>();
+            foreach (float x in new[] { -1.45f, 1.45f })
+            {
+                GrayboxMaterials.Box(root, "LedHousing", new Vector3(x, 3.47f, 0f), new Vector3(0.22f, 0.06f, 4.6f), GrayboxMaterials.Get("Panel", new Color(0.25f, 0.3f, 0.4f)), collider: false);
+                bars.Add(GrayboxMaterials.Box(root, "LedBar", new Vector3(x, 3.435f, 0f), new Vector3(0.14f, 0.02f, 4.4f), off, collider: false).GetComponent<Renderer>());
+                var lg = new GameObject("BayLight") { layer = b.gameObject.layer }; lg.transform.SetParent(root, false);
+                lg.transform.localPosition = new Vector3(x, 3.38f, 0f); lg.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                var l = lg.AddComponent<Light>();
+                l.type = LightType.Spot; l.range = 8f; l.spotAngle = 140f; l.innerSpotAngle = 80f; l.intensity = 7f; l.color = new Color(1f, 0.98f, 0.94f);
+                l.shadows = LightShadows.None; l.enabled = false;
+                lights.Add(l);
+            }
+            foreach (var r in bars) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var bl = root.gameObject.AddComponent<Visual.BayLights>();
+            var so = new SerializedObject(bl);
+            so.FindProperty("_bay").intValue = i;
+            so.FindProperty("_onMat").objectReferenceValue = on;
+            so.FindProperty("_offMat").objectReferenceValue = off;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            PrefabBuilder.SetArray(bl, "_lights", lights.Cast<Object>().ToArray());
+            PrefabBuilder.SetArray(bl, "_bars", bars.Cast<Object>().ToArray());
         }
 
         static LotPaths BuildPaths(Bay[] bays)
