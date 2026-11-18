@@ -94,6 +94,7 @@ namespace CarWash.UI
             var reg = Services.Get<Data.DataRegistry>();
             var d = reg != null ? reg.Get<Data.VehicleData>(n.vehicleId) : null;
             string name = d != null ? d.displayName : n.vehicleId;
+            if (n.angry) WorldPopup.Show(n.position + Vector3.up * 2.2f, "떠남! -평판", new Color(1f, 0.45f, 0.4f)); // M4.9 G6
             if (n.angry) Toast($"{name}: 기다리다 화나서 떠났어요! (평판 하락)", new Color(1f, 0.55f, 0.5f));
             else if (n.refused) Toast($"{name}: 결제 거절! 청결 {Mathf.FloorToInt(n.clean * 100f)}% (평판 하락)", new Color(1f, 0.55f, 0.5f));
             else if (n.dryTip > 0) Toast($"{name}: +${n.amount}  (청결 {Mathf.FloorToInt(n.clean * 100f)}%) 물기까지 완벽! 팁 +${n.dryTip}", new Color(0.55f, 0.95f, 1f));

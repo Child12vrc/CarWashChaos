@@ -95,7 +95,7 @@ Rule: do tasks in order unless marked (parallel). One task ≈ one agent session
 - [x] G3 Wardrobe: the personal locker opens a wardrobe — camera moves in front of my character (mirror / preview), pick 1 of 12 looks + player colour while seeing it; remove Z / X / C keys and the lobby look text; same preview in the Esc menu; remembered (PlayerPrefs) + synced.
 - [x] G4 Nickname: main-menu input (required on first run, Korean IME, 2–12 chars, remembered) → name tags, summary, join / leave notices; verify Korean IME + no missing glyphs.
 - [ ] G5 UI rework: one top status bar — money $ / today's income / rent (remaining + reached colour) · reputation stars + number · clock / time left; bay cards with customer patience gauge, current clean % and target %; +$ / −$ popups; short text labels on every icon at first; remove clutter; keep the UI scale slider; check at 1920×1080, 1280×720, 2560×1440.
-- [ ] G6 Patience timers over cars (billboard ring shrinking clockwise + seconds, white → yellow → red, blink + angry emoji + warning sound at 10 s, '떠남! -평판' popup), queue + bay cars, small when far / edge arrows when off-screen, same value on the bay card; synced as server start time + limit only; audit the patience rules (too-early / unexplained leaving) + one line in tutorial / help.
+- [x] G6 Patience timers over cars (billboard ring shrinking clockwise + seconds, white → yellow → red, blink + angry emoji + warning sound at 10 s, '떠남! -평판' popup), queue + bay cars, small when far / edge arrows when off-screen, same value on the bay card; synced as server start time + limit only; audit the patience rules (too-early / unexplained leaving) + one line in tutorial / help.
 - [x] G7 Bay lights + switch: ceiling fixtures (emissive LED bars) + real lights, a wall switch (E, click sound hook, shows its state), NetworkVariable (toggle only); on by default at night (G1); 1–2 lights per bay, shadows only where needed; clearly darker when off.
 - [ ] G9 Layout redesign as a Korean self-service car wash: 3 bays under one big canopy (dividers / curtains, big numbers 1·2·3, pay terminal + mode buttons per pillar, rotating ceiling boom arm, foam-brush holder, hose reel, centre drain grating); separate drying / vacuum area (canopy, vacuum pillars, mat rack + mat washer, air gun); entrance price board, info board, in / out arrows, no-entry + slow road markings; coin changer, vending machines, recycling bins, bench, parasol, CCTV, extinguisher, water tank / chemical drums, buckets, towel rack, slippery sign, hose reels, pipes, electrical box, AC units, planters, bicycle. Props as prefabs with simple procedural meshes first; list + sizes in ART_REQUESTS.md. Re-fit car paths, queue, spawns, bounds, tutorial spots, auto tests, GDD §11. First: a top-view layout proposal image for the user.
 - [ ] v0.7 release build (Relay verified) + zip + GitHub push.
@@ -295,3 +295,22 @@ M4.9 G3 (2026-11-19):
   - The test deletes its prefs afterwards.
   - Screenshots: the full character fits.
   - EditMode: the lockers test plus a source check that the lobby no longer reads Z / X / C.
+
+M4.9 G6 (2026-11-19):
+- Rings (`BayCards.UpdateRings`, replacing the old queue bars): a radial ring with the seconds inside, over every queued car (patience) and every washing car (wash time limit).
+  - Colours: white → yellow (≤50 %) → red (≤25 %, the last 10 s, or overtime "+N").
+  - At ≤10 s: blinks, a pulsing angry face (procedural sprite, `UiSprites.Angry`) and one "patience_warn" sound per car.
+  - Scale: 14/distance, clamped 0.45–1.
+  - Off-screen: the ring sits on the screen edge with an arrow pointing to the car. Queue cars always get one; bay cars only when ≤25 % is left, to avoid clutter.
+  - Bay cards keep the same wash timer value.
+- Leaving: '떠남! -평판' floats up from the car (`UI.WorldPopup`, reused by G5) next to the existing toast.
+- Sync: nothing new. The rings use each car's `PhaseStart` (server time) plus the replicated patience or the vehicle data limit.
+- Rule audit:
+  - Before: only queued cars lose patience (45 s from entering the queue); bay cars never leave; there was no visible reason.
+  - The problem: when all bays were busy, the queue drained by angry leaves.
+  - Change (DESIGN-GAP): when the head of the queue drives into a bay, every car still waiting gets +10 s (`QueueLane.QueueAdvanceBonus`, PhaseStart moves later, never past now).
+  - Help gained a '손님 타이머' line; tutorial step 3 got '줄 선 차 위의 원(초)이 0이 되면 손님이 떠나요!'.
+- Check: 2-player `-autotest-patience` → PASS (1 bay open, 30 s patience, 4 cars).
+  - Ring logged white on screen and at the edge, then WARN at 10 s with a screenshot.
+  - The popup '떠남! -평판' and the toast appeared.
+  - Host: DONE in bay 1 → V02 waited 16.0 s → 9.0 s three seconds later (+10 s applied); 1 angry leave after that.

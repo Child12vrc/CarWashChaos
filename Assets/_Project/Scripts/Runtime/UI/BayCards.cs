@@ -25,10 +25,7 @@ namespace CarWash.UI
             public int lastClean = -1, lastSecs = int.MinValue; // M4.7: rebuild the strings only when the shown number changes
         }
 
-        class PBar { public RectTransform root; public Image fill; }
-
         readonly List<Card> _cards = new List<Card>();
-        readonly List<PBar> _pbars = new List<PBar>();
         RectTransform _root;
         UiSkin _skin;
         DataRegistry _data;
@@ -84,16 +81,6 @@ namespace CarWash.UI
             c.timeFill = UiFactory.Bar("TimeBar", t, tl, new Vector2(186, -120), new Vector2(120, 20));
             c.timeText = UiFactory.Label("TimeText", t, "", 20, tl, new Vector2(282, -120), new Vector2(66, 26), TextAnchor.MiddleLeft, txt);
             return c;
-        }
-
-        PBar MakePBar()
-        {
-            var rt = UiFactory.Rect("PatienceBar", _root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(150, 30));
-            Icon(rt, "ico_patience", new Vector2(0f, 0.5f), new Vector2(12, 0), 28);
-            var fill = UiFactory.Bar("Bar", rt, new Vector2(0.5f, 0.5f), new Vector2(14, 0), new Vector2(112, 16));
-            var pb = new PBar { root = rt, fill = fill };
-            _pbars.Add(pb);
-            return pb;
         }
 
         static string Mmss(float s) { int i = Mathf.Max(0, Mathf.CeilToInt(s)); return $"{i / 60}:{i % 60:00}"; }
@@ -192,25 +179,110 @@ namespace CarWash.UI
                 }
             }
 
-            // patience bars over queued cars
+            // M4.9 G6: patience / wash-time rings over queued and bay cars (seconds inside; white → yellow → red; ≤10 s blinks +
+            // angry face + one warning sound; small when far; an edge arrow when off-screen). Queue: patience from PhaseStart
+            // (leaves at 0); bay: the wash time limit (overtime = "+" seconds, no leaving).
+            UpdateRings(dm, show);
+        }
+
+        class Ring { public RectTransform root; public Image bg, fill, face, arrow; public Text secs; public bool warned; public Vehicle car; public float phaseStart; }
+        readonly List<Ring> _rings = new List<Ring>();
+        public const float WarnSeconds = 10f;
+        /// <summary>Dev check: "V02 queue 31s white" per visible ring.</summary>
+        public readonly List<string> RingInfo = new List<string>();
+
+        Ring MakeRing()
+        {
+            var r = new Ring();
+            r.root = UiFactory.Rect("PatienceRing", _root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96));
+            r.bg = UiFactory.Panel("Bg", r.root, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96), new Color(0f, 0f, 0f, 0.45f));
+            r.bg.sprite = UiSprites.Disc; r.bg.raycastTarget = false;
+            r.fill = UiFactory.Panel("Fill", r.root, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96), Color.white);
+            r.fill.sprite = UiSprites.Ring; r.fill.type = Image.Type.Filled; r.fill.fillMethod = Image.FillMethod.Radial360;
+            r.fill.fillOrigin = (int)Image.Origin360.Top; r.fill.fillClockwise = false; r.fill.raycastTarget = false;
+            r.secs = UiFactory.Label("Secs", r.root, "", 28, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(84, 40));
+            r.secs.fontStyle = FontStyle.Bold;
+            r.face = UiFactory.Panel("Angry", r.root, new Vector2(0.5f, 0.5f), new Vector2(0, 70), new Vector2(48, 48), Color.white);
+            r.face.sprite = UiSprites.Angry; r.face.raycastTarget = false;
+            r.arrow = UiFactory.Panel("Arrow", r.root, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40, 40), Color.white);
+            r.arrow.sprite = UiSprites.Arrow; r.arrow.raycastTarget = false;
+            _rings.Add(r);
+            return r;
+        }
+
+        void UpdateRings(DayManager dm, bool show)
+        {
             var cam = PlayerLook.Local != null ? PlayerLook.Local.Camera : Camera.main;
             float patience = dm != null ? Mathf.Max(1f, dm.PatienceNet.Value) : 45f;
             int n = 0;
+            RingInfo.Clear();
             if (show && cam != null)
+            {
+                var size = _root.rect.size;
                 foreach (var v in _vehicles)
                 {
-                    if (v == null || !v.IsSpawned || v.State.Value != VehicleState.Queued) continue;
-                    var sp = cam.WorldToScreenPoint(v.transform.position + Vector3.up * 2.8f);
-                    if (sp.z <= 0.5f || sp.z > 60f) continue;
-                    if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_root, sp, null, out var local)) continue;
-                    var pb = n < _pbars.Count ? _pbars[n] : MakePBar();
+                    if (v == null || !v.IsSpawned) continue;
+                    var st = v.State.Value;
+                    bool queue = st == VehicleState.Queued, bay = st == VehicleState.Washing;
+                    if (!queue && !bay) continue;
+                    float limit = queue ? patience : (v.Data != null ? v.Data.timeLimit : 0f);
+                    if (limit <= 0f) continue;
+                    float left = limit - v.PhaseElapsed;
+                    var r = n < _rings.Count ? _rings[n] : MakeRing();
                     n++;
-                    pb.root.gameObject.SetActive(true);
-                    pb.root.anchoredPosition = local;
-                    float f = 1f - v.PhaseElapsed / patience;
-                    UiFactory.SetBar(pb.fill, f, f > 0.5f ? UiFactory.BarGreen : f > 0.25f ? UiFactory.BarYellow : UiFactory.BarRed);
+                    if (r.car != v || !Mathf.Approximately(r.phaseStart, v.PhaseStart.Value)) { r.car = v; r.phaseStart = v.PhaseStart.Value; r.warned = false; }
+                    var world = v.transform.position + Vector3.up * 3.0f;
+                    var sp = cam.WorldToScreenPoint(world);
+                    float dist = Vector3.Distance(cam.transform.position, world);
+                    bool behind = sp.z <= 0.3f;
+                    bool onScreen = !behind && sp.x >= 0 && sp.x <= Screen.width && sp.y >= 0 && sp.y <= Screen.height;
+                    float frac = Mathf.Clamp01(left / limit);
+                    bool warn = left <= WarnSeconds;
+                    // off-screen: only queue cars, and bay cars that are running out — no clutter for calm cars
+                    if (!onScreen && !queue && frac > 0.25f) { n--; continue; }
+                    r.root.gameObject.SetActive(true);
+                    Vector2 local;
+                    if (onScreen)
+                    {
+                        RectTransformUtility.ScreenPointToLocalPointInRectangle(_root, sp, null, out local);
+                        r.root.localScale = Vector3.one * Mathf.Clamp(14f / Mathf.Max(1f, dist), 0.45f, 1f);
+                        r.arrow.enabled = false;
+                    }
+                    else
+                    {
+                        // edge arrow: direction from the screen centre toward the car (flipped when behind the camera)
+                        var dir = new Vector2(sp.x - Screen.width * 0.5f, sp.y - Screen.height * 0.5f);
+                        if (behind) dir = -dir;
+                        if (dir.sqrMagnitude < 1f) dir = Vector2.down;
+                        dir.Normalize();
+                        var half = size * 0.5f - new Vector2(70f, 70f);
+                        float k = Mathf.Min(Mathf.Abs(half.x / (dir.x == 0 ? 1e-4f : dir.x)), Mathf.Abs(half.y / (dir.y == 0 ? 1e-4f : dir.y)));
+                        local = dir * k;
+                        r.root.localScale = Vector3.one * 0.7f;
+                        r.arrow.enabled = true;
+                        r.arrow.rectTransform.anchoredPosition = dir * 58f;
+                        r.arrow.rectTransform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 90f);
+                    }
+                    r.root.anchoredPosition = local;
+                    var col = left < 0f || warn ? UiFactory.BarRed : frac > 0.5f ? Color.white : frac > 0.25f ? UiFactory.BarYellow : UiFactory.BarRed;
+                    bool blinkOff = warn && left > 0f && Mathf.Repeat(Time.time * 3f, 1f) < 0.35f;
+                    r.fill.fillAmount = left > 0f ? frac : 1f;
+                    r.fill.color = blinkOff ? new Color(col.r, col.g, col.b, 0.25f) : col;
+                    r.arrow.color = col;
+                    int s = Mathf.CeilToInt(Mathf.Abs(left));
+                    r.secs.text = left >= 0f ? s.ToString() : "+" + s;
+                    r.secs.color = col;
+                    r.face.enabled = warn;
+                    if (warn) r.face.rectTransform.localScale = Vector3.one * (1f + 0.12f * Mathf.Sin(Time.time * 12f));
+                    if (warn && !r.warned && left > 0f)
+                    {
+                        r.warned = true;
+                        Services.Get<AudioService>()?.Play3D("patience_warn", v.transform.position); // sound hook
+                    }
+                    RingInfo.Add($"{v.DataId} {(queue ? "queue" : "bay")} {(left >= 0f ? "" : "+")}{s}s {(left < 0f || warn || frac <= 0.25f ? "red" : frac <= 0.5f ? "yellow" : "white")}{(warn ? " WARN" : "")}{(onScreen ? "" : " edge")} scale {r.root.localScale.x:0.00}");
                 }
-            for (int i = n; i < _pbars.Count; i++) _pbars[i].root.gameObject.SetActive(false);
+            }
+            for (int i = n; i < _rings.Count; i++) _rings[i].root.gameObject.SetActive(false);
             VisiblePatienceBars = n;
         }
     }

@@ -54,7 +54,7 @@ namespace CarWash.Core
             if (NetworkManager.Singleton.IsServer && observeOnly) me.Ready.Value = true; // T4.1: the observing editor host is always ready
             if (observeOnly)
             {
-                if (NetworkManager.Singleton.IsServer) StartCoroutine(BoundsMode ? DevChecksBounds.HostIdle() : LooksMode ? DevLooksScenario.Run() : ModelsMode ? DevModelsScenario.Run() : GlbMode ? DevGlbScenario.Run() : ReleaseMode ? DevReleaseScenario.Run() : P1Mode ? DevP1Scenario.Run() : NetMode ? DevNetScenario.Run() : SurpriseMode ? DevSurpriseScenario.Run() : DayMode ? DevDayScenario.Run() : DevHostScenario.Run());
+                if (NetworkManager.Singleton.IsServer) StartCoroutine(DevChecksPatience.Requested ? DevChecksPatience.Host() : BoundsMode ? DevChecksBounds.HostIdle() : LooksMode ? DevLooksScenario.Run() : ModelsMode ? DevModelsScenario.Run() : GlbMode ? DevGlbScenario.Run() : ReleaseMode ? DevReleaseScenario.Run() : P1Mode ? DevP1Scenario.Run() : NetMode ? DevNetScenario.Run() : SurpriseMode ? DevSurpriseScenario.Run() : DayMode ? DevDayScenario.Run() : DevHostScenario.Run());
                 if (NetworkManager.Singleton.IsServer && ReleaseMode && DevChecksSwing.Requested) StartCoroutine(DevChecksSwing.HostObserve()); // M4.6 D8
                 yield break;
             }
@@ -120,6 +120,7 @@ namespace CarWash.Core
                 if (DevChecksInterior.Requested) { yield return DevChecksInterior.Run(me); Log("DONE"); yield break; } // M4.6 D3
                 if (DevChecksLights.Requested) { yield return DevChecksLights.Run(me); Log("DONE"); yield break; } // M4.9 G7
                 if (DevChecksWardrobe.Requested) { yield return DevChecksWardrobe.Run(me); Log("DONE"); yield break; } // M4.9 G3
+                if (DevChecksPatience.Requested) { yield return DevChecksPatience.Client(me); Log("DONE"); yield break; } // M4.9 G6
                 if (DevChecksTutorial.Requested) StartCoroutine(DevChecksTutorial.Watch()); // M4.6 D1
                 yield return DevChecksRelease.Run(me);
                 if (DevChecksTutorial.Requested) yield return DevChecksTutorial.HelpAndScale(); // M4.6 D1/D2

@@ -54,7 +54,7 @@ namespace CarWash.UI
             {
                 new Step { title = "1/5  움직여 보기", text = "W A S D 로 이동, 마우스로 둘러보기.\nShift 달리기 · Space 점프 · Ctrl 앉기", done = () => Me != null && Flat(Me.transform.position - _start) > 4f },
                 new Step { title = "2/5  고압 세척기 집기", text = "차고지 1 왼쪽 벽 가운데의 노란 세척기를 보고 [E].\n호스가 닿는 곳까지만 들고 다닐 수 있어요.", done = () => Me != null && Me.GetComponent<PlayerTools>().Equipped is PressureWasher },
-                new Step { title = "3/5  영업 시작", text = "대기실에서 모두 [R] 준비 →\n사무실 벽 일정판을 보고 [E] 영업 시작.", done = () => DayManager.Instance != null && DayManager.Instance.State.Value == GameState.Day },
+                new Step { title = "3/5  영업 시작", text = "대기실에서 모두 [R] 준비 →\n사무실 벽 일정판을 보고 [E] 영업 시작.\n줄 선 차 위의 원(초)이 0이 되면 손님이 떠나요!", done = () => DayManager.Instance != null && DayManager.Instance.State.Value == GameState.Day },
                 new Step { title = "4/5  세차하기", text = "차가 차고지에 들어오면 마우스 왼쪽으로 물을 뿌려요.\n오른쪽 클릭: 물줄기 넓게/좁게. 오른쪽 차고지 정보창에 청결도 %.", done = () => _sprayTime > 3f },
                 new Step { title = "5/5  정산하기", text = "다 씻었으면 차고지 안쪽 벽 버튼을 보고 [E]\n\"세차 완료! 정산하기\" → 돈을 받아요.", done = () => EconomyState.Instance != null && _money0 >= 0 && EconomyState.Instance.Money.Value > _money0 },
             };

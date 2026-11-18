@@ -111,6 +111,14 @@ namespace CarWash.Vehicles
             StateChanged?.Invoke(this, s);
         }
 
+        /// <summary>M4.9 G6 server: give a waiting customer <paramref name="seconds"/> more patience (the start moves later, never past now).</summary>
+        public void ServerAddPatience(float seconds)
+        {
+            if (!IsServer) return;
+            float now = (float)NetworkManager.ServerTime.Time;
+            PhaseStart.Value = Mathf.Min(now, PhaseStart.Value + seconds);
+        }
+
         internal void ServerNotifyDoorOpened(VehicleDoor door) => DoorOpened?.Invoke(this, door);
 
         /// <summary>Doors may be used only while the car is parked (queue or bay).</summary>

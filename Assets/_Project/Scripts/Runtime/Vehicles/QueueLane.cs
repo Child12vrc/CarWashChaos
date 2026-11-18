@@ -17,6 +17,8 @@ namespace CarWash.Vehicles
         public static QueueLane Instance { get; private set; }
         /// <summary>Dev/test override of the queue patience (seconds, 0 = BalanceData).</summary>
         public static float PatienceOverride;
+        /// <summary>M4.9 G6: patience seconds given back to every waiting car when the head goes into a bay.</summary>
+        public const float QueueAdvanceBonus = 10f;
 
         [SerializeField] private DataRegistry _data;
         [SerializeField] private LotPaths _paths;
@@ -114,6 +116,8 @@ namespace CarWash.Vehicles
         void Dispatch(Vehicle v, Bay bay)
         {
             RemoveFromQueue(v);
+            // M4.9 G6 (rule audit): the line moved — everyone still waiting calms down a little
+            foreach (var q in _queue) if (q != null && q.State.Value == VehicleState.Queued) q.ServerAddPatience(QueueAdvanceBonus);
             bay.Occupant = v;
             v.BayIndex.Value = bay.Index;
             v.ServerSetState(VehicleState.Parking);
