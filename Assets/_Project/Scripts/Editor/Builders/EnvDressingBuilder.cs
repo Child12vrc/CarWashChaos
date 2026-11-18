@@ -33,6 +33,8 @@ namespace CarWash.Editor
             new Rect(-11.5f, -1.5f, 23f, 11f),  // the three bays (x -11.1 … 11.1, z -1 … 9)
             new Rect(-12f, -7.8f, 52f, 5.6f),   // exit lane z = -5 → east
             new Rect(-40f, -18.6f, 80f, 6.2f),  // road z = -15.5
+            new Rect(31.5f, -13f, 4f, 9f),       // M4.9 G9: exit ramp x = 33.5
+            new Rect(19.5f, -12.2f, 11.5f, 5.6f), // M4.9 G9: drying / vacuum area
         };
 
         static readonly Vector3[] KeepClear =
@@ -58,6 +60,7 @@ namespace CarWash.Editor
             if (InCarPath(p, radius * 0.5f)) return false;
             foreach (var k in KeepClear) if ((new Vector2(p.x - k.x, p.z - k.z)).sqrMagnitude < (radius + 1.6f) * (radius + 1.6f)) return false;
             foreach (var s in LotBuilderSpawns) if ((new Vector2(p.x - s.x, p.z - s.z)).sqrMagnitude < 9f) return false;
+            foreach (var (c, r) in SelfWashBuilder.Footprints) { float rr = Mathf.Max(radius, 0.35f) + r; if ((new Vector2(p.x - c.x, p.z - c.z)).sqrMagnitude < rr * rr) return false; } // G9 props (≥0.35: same answer as the 0.3 test check)
             return true;
         }
 

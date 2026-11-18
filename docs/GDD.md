@@ -130,14 +130,21 @@ Cosmetics (hats, uniforms) unlocked by achievements; no money cost.
 Daily events (W2+): Rush Hour (x2 arrivals 60s), Inspection (bonus if all bays ≥90%), Heatwave (water evaporates: spots spawn faster), Outage (lights/dryer off 45s).
 
 ## 11. Map — "Sudsy Lot" (single map MVP)
-Layout (top view, ~40x30m):
+M4.9 G9: a Korean self-service car wash (셀프 세차장). Proposal image: docs/layout/G9_layout_proposal.png. Top view, about 66 × 38 m play area (x −28…38, z −20…18.4).
 ```
-[Road/entry]→[Queue lane x4 slots]→[Bay1][Bay2][Bay3]→[Exit]
-[Office: shop terminal, day board, cage(Animal Control)]  [Vacuum station]
-[Back alley: dumpster(critter hide), vents, puddles(mud)]  [Spawn: player lockers]
+                 [back yard: water tank · chemical drums · pipes · AC units · electrical box]        (fence z 18.5)
+ [queue lane x −20] →  feed lane z 12  →  [ BIG CANOPY: Bay1 · Bay2 · Bay3 ]  (x −8 / 0 / 8, z −1…9)
+ [price board]                                       ↓ exit lane z −5 →→→→→→→→→→→→→→→→→→→→→ ramp x 33.5 ↓
+ [info board]   [office · vending ×2 · coin changer]  [cage] [lockers]   [drying / vacuum area x 20…30.5]
+ ═══════════════════════════ road z −15.5 (customers drive W → E; enter at the queue lane, leave by the ramp) ═══
 ```
-Bay = 6x10m roof, drain grate, wall hose reel (washer tether anchor), button panel (lights, auto dryer, gate).
-Closed bays have shutter down.
+- Canopy: one roof over all three bays (24.8 × 11.2 m, h 4.3 m, blue fascia with the name and the bay plates 1·2·3) on 8 pillars. The bays are separated by 2.2 m dividers, and closed bays still have their shutters.
+- Each bay: pay terminal with mode buttons (east divider), a ceiling boom arm (slowly swaying), a foam-brush holder and a hose-reel drum (west divider; the washer tether anchor), a big centre drain grating, a painted floor number, the 정산 button panel and the G7 light switch, and 2 LED light bars under the canopy.
+- Drying / vacuum area (decor for now): its own canopy, 4 vacuum pillars, a mat rack, a mat washer, an air gun, recycling bins and a towel rack.
+- Entrance: price board (faces the road), info board (faces the queue), painted '입구 / 서행' plus arrows on the route, '출구' at the ramp, and a no-entry sign where the ramp meets the road.
+- Office side: vending machines ×2, coin changer, bench, parasol, bicycle, AC unit, electrical box, extinguisher and CCTV. Under the canopy: extinguishers, CCTV, slippery signs, buckets and a towel rack.
+- Every prop is a procedural prefab (`Prefabs/Props/SelfWash/SW_*`, listed with sizes in docs/ART_REQUESTS.md) waiting for real models.
+- Unchanged: the office with shop terminal, day board and Animal Control cage; the player lockers / spawns (now also the wardrobe, G3); the back alley behind the north fence (dumpster, vents, mud puddles).
 
 ## 12. Session & social
 - Host creates Steam lobby (public/friends/private), max 4, join mid-day allowed (spawn at lockers).

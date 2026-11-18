@@ -59,7 +59,7 @@ namespace CarWash.Editor
                 face.AddComponent<Player.WardrobeLocker>();
                 GrayboxMaterials.Box(locker.transform, "Handle", new Vector3(0.32f, 0f, 0.52f), new Vector3(0.05f, 0.12f, 0.06f), GrayboxMaterials.Get("Panel", new Color(0.25f, 0.3f, 0.4f)), collider: false);
             }
-            VacuumStation(env, M.panel);
+            // M4.9 G9: the old shop-vac station is replaced by the drying / vacuum area (SelfWashBuilder)
             BuildCage(env, M);
             GrayboxMaterials.Box(env, "FenceN", new Vector3(0, 1f, 18.5f), new Vector3(56, 2f, 0.2f), M.brick);
             GrayboxMaterials.Box(env, "Dumpster", new Vector3(16f, 0.75f, 15.5f), new Vector3(3f, 1.5f, 1.8f), M.prop);
@@ -84,6 +84,7 @@ namespace CarWash.Editor
 
             EnvironmentBuilder.Build(env, bays); // P6: sky, skyline, post, signs, physic materials
             SceneryBuilder.Build(env);            // map completeness: city around the lot + invisible play-area walls
+            SelfWashBuilder.Build(env, bays);   // M4.9 G9: canopy, bay props, vacuum area, entrance boards, small props
             EnvDressingBuilder.Build(env);        // M4.7 E2/E3: decals + set dressing (combined meshes, off every route)
             EnvironmentBuilder.DayNight(env);    // M4.9 G1/G2: local day → night (sky, sun, fog, post, lamps / signs glow)
             var lotPaths = BuildPaths(bays);
@@ -171,10 +172,10 @@ namespace CarWash.Editor
             var b = new GameObject("Bay" + (i + 1)).transform;
             b.SetParent(parent); b.localPosition = BayCenters[i];
             GrayboxMaterials.Box(b, "Floor", new Vector3(0, 0.01f, 0), new Vector3(6, 0.02f, 10), M.concrete); // P6: collider → slippery wet-concrete physic material
-            GrayboxMaterials.Box(b, "WallW", new Vector3(-3.1f, 1.5f, 0), new Vector3(0.2f, 3f, 10), M.wall);
-            GrayboxMaterials.Box(b, "WallE", new Vector3(3.1f, 1.5f, 0), new Vector3(0.2f, 3f, 10), M.wall);
-            GrayboxMaterials.Box(b, "Roof", new Vector3(0, 3.6f, 0), new Vector3(6.6f, 0.2f, 10.4f), M.roof);
-            GrayboxMaterials.Box(b, "DrainGrate", new Vector3(0, 0.025f, 0), new Vector3(1.2f, 0.01f, 0.4f), M.road, collider: false);
+            // M4.9 G9: dividers (2.2 m) instead of 3 m walls; the per-bay roof + drain box are replaced by the shared canopy and
+            // the SW_DrainGrate prop (SelfWashBuilder)
+            GrayboxMaterials.Box(b, "WallW", new Vector3(-3.1f, 1.1f, 0), new Vector3(0.2f, 2.2f, 10), M.wall);
+            GrayboxMaterials.Box(b, "WallE", new Vector3(3.1f, 1.1f, 0), new Vector3(0.2f, 2.2f, 10), M.wall);
             // GLB batch (DESIGN-GAP): reel moved from the front corner (z -4.2) to the middle of the west wall — with the 8 m GDD hose
             // the far rear corner of a 4.6-5.2 m GLB car (bay z +3) was out of reach; from mid-wall every point in the bay is within 7.6 m
             var reel = new GameObject("Socket_HoseReel").transform; reel.SetParent(b, false); reel.localPosition = new Vector3(-2.75f, 1.0f, 0f);
@@ -208,12 +209,12 @@ namespace CarWash.Editor
             var lights = new List<Light>(); var bars = new List<Renderer>();
             foreach (float x in new[] { -1.45f, 1.45f })
             {
-                GrayboxMaterials.Box(root, "LedHousing", new Vector3(x, 3.47f, 0f), new Vector3(0.22f, 0.06f, 4.6f), GrayboxMaterials.Get("Panel", new Color(0.25f, 0.3f, 0.4f)), collider: false);
-                bars.Add(GrayboxMaterials.Box(root, "LedBar", new Vector3(x, 3.435f, 0f), new Vector3(0.14f, 0.02f, 4.4f), off, collider: false).GetComponent<Renderer>());
+                GrayboxMaterials.Box(root, "LedHousing", new Vector3(x, 4.27f, 0f), new Vector3(0.22f, 0.06f, 4.6f), GrayboxMaterials.Get("Panel", new Color(0.25f, 0.3f, 0.4f)), collider: false);
+                bars.Add(GrayboxMaterials.Box(root, "LedBar", new Vector3(x, 4.235f, 0f), new Vector3(0.14f, 0.02f, 4.4f), off, collider: false).GetComponent<Renderer>());
                 var lg = new GameObject("BayLight") { layer = b.gameObject.layer }; lg.transform.SetParent(root, false);
-                lg.transform.localPosition = new Vector3(x, 3.38f, 0f); lg.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                lg.transform.localPosition = new Vector3(x, 4.18f, 0f); lg.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 var l = lg.AddComponent<Light>();
-                l.type = LightType.Spot; l.range = 8f; l.spotAngle = 140f; l.innerSpotAngle = 80f; l.intensity = 7f; l.color = new Color(1f, 0.98f, 0.94f);
+                l.type = LightType.Spot; l.range = 9f; l.spotAngle = 140f; l.innerSpotAngle = 80f; l.intensity = 9f; l.color = new Color(1f, 0.98f, 0.94f);
                 l.shadows = LightShadows.None; l.enabled = false;
                 lights.Add(l);
             }
@@ -245,7 +246,7 @@ namespace CarWash.Editor
             PrefabBuilder.SetArray(paths, "_queueSlots", Points("QueueSlot", slots));
             PrefabBuilder.SetArray(paths, "_feedLane", Points("Feed", new Vector3(QueueX, 0, FeedZ), new Vector3(-8f, 0, FeedZ), new Vector3(0f, 0, FeedZ), new Vector3(8f, 0, FeedZ)));
             PrefabBuilder.SetArray(paths, "_exitLane", Points("Exit", new Vector3(-8f, 0, ExitZ), new Vector3(0f, 0, ExitZ), new Vector3(8f, 0, ExitZ),
-                new Vector3(20f, 0, ExitZ), new Vector3(20f, 0, RoadZ), new Vector3(36f, 0, RoadZ)));
+                new Vector3(SelfWashBuilder.RampX, 0, ExitZ), new Vector3(SelfWashBuilder.RampX, 0, RoadZ), new Vector3(37.5f, 0, RoadZ))); // G9: ramp east of the vacuum area
             PrefabBuilder.SetArray(paths, "_bays", bays);
             // map polish: customers appear / vanish on the far road behind the city blocks (SceneryBuilder draws the same roads)
             PrefabBuilder.SetArray(paths, "_approach", Points("Approach", SceneryBuilder.Approach));

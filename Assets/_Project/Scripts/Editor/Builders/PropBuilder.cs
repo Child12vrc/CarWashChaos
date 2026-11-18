@@ -261,7 +261,7 @@ namespace CarWash.Editor
             // P6: caution A-frames by the bay entrances + extra props around the lot
             Put("CautionSign", new Vector3(-4.4f, 0.42f, 10.2f), 30f);
             Put("CautionSign", new Vector3(4.4f, 0.42f, 10.2f), -20f);
-            Put("Cone", new Vector3(19.2f, 0.36f, -8.2f)); Put("Cone", new Vector3(19.2f, 0.36f, -12.5f));
+            Put("Cone", new Vector3(19.2f, 0.36f, -8.2f)); Put("Cone", new Vector3(19.2f, 0.36f, -12.5f)); // by the drying / vacuum area (G9)
             Put("Bucket", new Vector3(-5.6f, 0.21f, -1.2f)); Put("Bucket", new Vector3(2.6f, 0.21f, -1.2f));
             Put("Tire", new Vector3(12.4f, 0.37f, -7.6f), 10f, stack: 1);
             Put("HayBale", new Vector3(16.1f, 0.26f, 10.3f), 15f);

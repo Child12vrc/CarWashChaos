@@ -97,7 +97,7 @@ Rule: do tasks in order unless marked (parallel). One task ≈ one agent session
 - [x] G5 UI rework: one top status bar — money $ / today's income / rent (remaining + reached colour) · reputation stars + number · clock / time left; bay cards with customer patience gauge, current clean % and target %; +$ / −$ popups; short text labels on every icon at first; remove clutter; keep the UI scale slider; check at 1920×1080, 1280×720, 2560×1440.
 - [x] G6 Patience timers over cars (billboard ring shrinking clockwise + seconds, white → yellow → red, blink + angry emoji + warning sound at 10 s, '떠남! -평판' popup), queue + bay cars, small when far / edge arrows when off-screen, same value on the bay card; synced as server start time + limit only; audit the patience rules (too-early / unexplained leaving) + one line in tutorial / help.
 - [x] G7 Bay lights + switch: ceiling fixtures (emissive LED bars) + real lights, a wall switch (E, click sound hook, shows its state), NetworkVariable (toggle only); on by default at night (G1); 1–2 lights per bay, shadows only where needed; clearly darker when off.
-- [ ] G9 Layout redesign as a Korean self-service car wash: 3 bays under one big canopy (dividers / curtains, big numbers 1·2·3, pay terminal + mode buttons per pillar, rotating ceiling boom arm, foam-brush holder, hose reel, centre drain grating); separate drying / vacuum area (canopy, vacuum pillars, mat rack + mat washer, air gun); entrance price board, info board, in / out arrows, no-entry + slow road markings; coin changer, vending machines, recycling bins, bench, parasol, CCTV, extinguisher, water tank / chemical drums, buckets, towel rack, slippery sign, hose reels, pipes, electrical box, AC units, planters, bicycle. Props as prefabs with simple procedural meshes first; list + sizes in ART_REQUESTS.md. Re-fit car paths, queue, spawns, bounds, tutorial spots, auto tests, GDD §11. First: a top-view layout proposal image for the user.
+- [x] G9 Layout redesign as a Korean self-service car wash: 3 bays under one big canopy (dividers / curtains, big numbers 1·2·3, pay terminal + mode buttons per pillar, rotating ceiling boom arm, foam-brush holder, hose reel, centre drain grating); separate drying / vacuum area (canopy, vacuum pillars, mat rack + mat washer, air gun); entrance price board, info board, in / out arrows, no-entry + slow road markings; coin changer, vending machines, recycling bins, bench, parasol, CCTV, extinguisher, water tank / chemical drums, buckets, towel rack, slippery sign, hose reels, pipes, electrical box, AC units, planters, bicycle. Props as prefabs with simple procedural meshes first; list + sizes in ART_REQUESTS.md. Re-fit car paths, queue, spawns, bounds, tutorial spots, auto tests, GDD §11. First: a top-view layout proposal image for the user.
 - [ ] v0.7 release build (Relay verified) + zip + GitHub push.
 
 ## M5 Progression
@@ -328,3 +328,33 @@ M4.9 G5 (2026-11-19):
 - Bay cards: '차종 · 목표 80%', with marker lines on the clean bar at 80 % (full pay, dark) and 95 % (bonus, yellow). The wash-time bar plus the G6 ring cover customer patience.
 - The invite card moved below the bar. The UI scale slider is unchanged.
 - Checked at 1280×720, 1920×1080 and 2560×1440 (`-popupwindow` on the 2560 monitor) with the G6 scenario. The clock first wrapped at 1920 and 2560 and was shortened; all three now fit on one line.
+
+M4.9 G9 (2026-11-19):
+- `SelfWashBuilder` turns the lot into a Korean self-service car wash, following docs/layout/G9_layout_proposal.png. The bays keep x −8 / 0 / 8, so the car routes barely move.
+- Canopy: one canopy over all 3 bays (24.8 × 11.2 m, h 4.3 m, blue fascia with '셀프 세차장 · SUDSY' and the bay plates 1·2·3) on 8 pillars.
+  - Per-bay roofs are removed; the walls are now 2.2 m dividers; shutters stay for closed bays.
+  - The G7 LED bars moved under the canopy (h 4.2, 9 m range).
+- Each bay gets:
+  - a pay terminal with 4 mode buttons;
+  - a ceiling boom arm that sways slowly (`Visual.BoomSway`, local);
+  - a foam-brush holder and a hose-reel drum;
+  - a big drain grating;
+  - a painted floor number.
+- Drying / vacuum area (x 20–30.5, z −11.6…−7.2; decor for now): its own canopy, 4 vacuum pillars, a mat rack, a mat washer, an air gun, recycling bins, a towel rack and a night light. The old shop-vac station is gone.
+- Exit ramp: moved from x = 20 to x = 33.5, east of the area; the exit sign moved with it.
+- Entrance:
+  - price board and info board, west of the leave lane and facing the queue;
+  - planters;
+  - painted '입구 / 서행 / 출구' and arrows along the route;
+  - a no-entry sign where the ramp meets the road.
+- Office side: vending machines ×2, coin changer, bench, parasol, bicycle, AC unit, electrical box, extinguisher, CCTV.
+- Under the canopy: extinguishers, CCTV, slippery signs, buckets, towel rack.
+- Back yard: water tank, chemical drums, pipes, AC units, electrical box, hose reel, planter.
+- 30 prop types are procedural prefabs (Prefabs/Props/SelfWash/SW_*). Only the big ones have one box collider (F7). They are listed with sizes and notes in docs/ART_REQUESTS.md, in a generated section. EnvDressing keeps its random dressing off the new footprints, the ramp and the vacuum area.
+- GDD §11 rewritten for the new layout.
+- Checks:
+  - EditMode: one canopy and no bay roofs; every prop is a prefab and listed in ART_REQUESTS; exit, feed, arrival and leave lanes stay more than 1.25 m from every solid prop and pillar; everything is inside the play area. 202 green.
+  - Dev lot check: 94 route segments, 0 blocked with the 1.8 m sweep. Ground-height hits (2 cm floor slabs) are now ignored. The first run caught the info board and a planter on the angry-car leave lane at x −24.5, and they moved west.
+  - NavMesh complete for both agents.
+  - 2-player release loop PASS; screenshots by day and at night (25 night lights).
+- Kept: spawns, bounds, the tutorial text ('차고지 1 왼쪽 벽 가운데의 세척기' is still true), lockers and the office.

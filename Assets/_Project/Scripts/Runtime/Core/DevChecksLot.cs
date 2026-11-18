@@ -26,7 +26,8 @@ namespace CarWash.Core
                 {
                     segs++;
                     var a = r[i] + Vector3.up * 0.8f; var c = r[i + 1] + Vector3.up * 0.8f;
-                    if (Physics.SphereCast(a, 0.9f, (c - a).normalized, out var hit, Vector3.Distance(a, c), 1 << Layers.Default, QueryTriggerInteraction.Ignore))
+                    // (hits at ground height are the 2 cm floor slabs / ground edges the low sphere grazes, not obstacles)
+                    if (Physics.SphereCast(a, 0.9f, (c - a).normalized, out var hit, Vector3.Distance(a, c), 1 << Layers.Default, QueryTriggerInteraction.Ignore) && hit.point.y > 0.15f)
                     { blocked++; DevAutopilot.Log($"route segment blocked by {hit.collider.name} at {hit.point:F1}"); }
                 }
             DevAutopilot.Log($"lot: queue slots={paths.QueueSlots.Count}, bays={paths.Bays.Count}, route segments={segs}, blocked={blocked} (car width sweep 1.8 m)");

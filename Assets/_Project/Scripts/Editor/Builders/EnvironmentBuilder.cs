@@ -203,10 +203,11 @@ namespace CarWash.Editor
             NightSpot(root, "SudsyLight", new Vector3(-27f, 4.2f, -17.6f), new Vector3(-27f, 6.2f, -19.05f), 9f, 6f, new Color(1f, 0.9f, 0.75f), 0.4f);
             // plate above each bay entrance (north opening), readable from the feed lane
             foreach (var b in bays)
-                Sign(root, $"sign_bay{b.Index + 1}.png", b.transform.position + new Vector3(0f, 3.15f, 5.25f), 0f, 0.75f);
+                Sign(root, $"sign_bay{b.Index + 1}.png", b.transform.position + new Vector3(0f, 4.25f, 5.74f), 0f, 0.68f); // G9: on the canopy fascia
             // exit sign at the exit ramp
-            GrayboxMaterials.Box(root, "ExitPole", new Vector3(22.2f, 1.4f, -6.2f), new Vector3(0.12f, 2.8f, 0.12f), pole);
-            Sign(root, "sign_exit.png", new Vector3(22.1f, 2.6f, -6.2f), -90f, 0.7f); // faces the cars coming from the west
+            // G9: the exit ramp moved east (x = SelfWashBuilder.RampX)
+            GrayboxMaterials.Box(root, "ExitPole", new Vector3(SelfWashBuilder.RampX + 2.2f, 1.4f, -6.6f), new Vector3(0.12f, 2.8f, 0.12f), pole);
+            Sign(root, "sign_exit.png", new Vector3(SelfWashBuilder.RampX + 2.1f, 2.6f, -6.6f), -90f, 0.7f); // faces the cars coming from the west
         }
 
         // ------------------------------------------------------------------ M4.9 G1 day / night

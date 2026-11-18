@@ -95,6 +95,71 @@ namespace CarWash.Tests
             StringAssert.DoesNotContain("zKey", lobby); StringAssert.DoesNotContain("cKey", lobby); StringAssert.DoesNotContain("[Z]", lobby);
         }
 
+        [Test]
+        public void SelfWash_OneCanopy_NoPerBayRoof_PropsAreListedPrefabs()
+        {
+            var art = System.IO.File.ReadAllText("docs/ART_REQUESTS.md");
+            foreach (var d in SelfWashBuilder.Catalog)
+            {
+                Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<GameObject>(SelfWashBuilder.PathOf(d.id)), d.id);
+                StringAssert.Contains("SW_" + d.id, art, "listed in ART_REQUESTS.md");
+            }
+            WithLot(roots =>
+            {
+                var all = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).ToArray();
+                Assert.AreEqual(1, all.Count(t => t.name == "Canopy"));
+                foreach (var b in roots.SelectMany(r => r.GetComponentsInChildren<Vehicles.Bay>(true)))
+                {
+                    Assert.IsNull(b.transform.Find("Roof"), "the canopy replaces the per-bay roof");
+                    Assert.LessOrEqual(b.transform.Find("WallW").localScale.y, 2.3f, "dividers, not walls");
+                }
+                Assert.Greater(all.Count(t => t.name.StartsWith("SW_")), 40, "props placed");
+            });
+        }
+
+        [Test]
+        public void CarRoutes_StayClearOfTheCanopyPillarsAndSolidProps()
+        {
+            WithLot(roots =>
+            {
+                var paths = roots.SelectMany(r => r.GetComponentsInChildren<Vehicles.LotPaths>(true)).Single();
+                var so = new SerializedObject(paths);
+                var solids = roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).Where(t => t.name == "SelfWash").SelectMany(t => t.GetComponentsInChildren<Collider>(true))
+                    .Where(c => c.name != "Roof" && c.name != "VacRoof").ToArray();
+                Assert.Greater(solids.Length, 10);
+                foreach (var lane in new[] { "_exitLane", "_feedLane", "_arrival" })
+                {
+                    var arr = so.FindProperty(lane);
+                    for (int i = 0; i + 1 < arr.arraySize; i++)
+                    {
+                        var a = ((Transform)arr.GetArrayElementAtIndex(i).objectReferenceValue).position;
+                        var b = ((Transform)arr.GetArrayElementAtIndex(i + 1).objectReferenceValue).position;
+                        for (float k = 0; k <= 1f; k += 0.02f)
+                        {
+                            var p = Vector3.Lerp(a, b, k);
+                            foreach (var c in solids)
+                            {
+                                var q = c.bounds.ClosestPoint(new Vector3(p.x, c.bounds.center.y, p.z));
+                                float d = new Vector2(q.x - p.x, q.z - p.z).magnitude;
+                                Assert.Greater(d, 1.25f, $"{lane} {i} at {p} hits {c.name} ({c.transform.parent?.name})");
+                            }
+                        }
+                    }
+                }
+                // the leave lane angry queue cars use (LotPaths.RouteQueueToExit: x = queue − 4.5, down to the road)
+                float lx = LotBuilder.QueueX - 4.5f;
+                for (float zz = LotBuilder.QueueSlotZ[0]; zz >= LotBuilder.RoadZ + 3f; zz -= 0.25f)
+                    foreach (var c in solids)
+                    {
+                        var q = c.bounds.ClosestPoint(new Vector3(lx, c.bounds.center.y, zz));
+                        Assert.Greater(new Vector2(q.x - lx, q.z - zz).magnitude, 1.25f, $"leave lane at z {zz} hits {c.name}");
+                    }
+                // everything new sits inside the play area
+                foreach (var t in roots.SelectMany(r => r.GetComponentsInChildren<Transform>(true)).Where(t => t.name.StartsWith("SW_")))
+                    Assert.IsTrue(t.position.x > -28f && t.position.x < 38f && t.position.z > -20f && t.position.z < 18.4f, t.name + " " + t.position);
+            });
+        }
+
         [TestCase("김철수", true)]
         [TestCase("세차왕", true)]
         [TestCase("Bob", true)]
