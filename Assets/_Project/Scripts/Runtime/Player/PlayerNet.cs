@@ -33,8 +33,20 @@ namespace CarWash.Player
             Status = GetComponent<PlayerStatus>();
         }
 
+        /// <summary>M4.6 B3: where the server placed this player. The owner moves its (owner-authoritative) body there on spawn —
+        /// the spawn transform sometimes did not reach the owning client, which then started at the origin (inside closed bay 2).</summary>
+        public readonly NetworkVariable<Vector3> SpawnPos = new NetworkVariable<Vector3>();
+
         public override void OnNetworkSpawn()
         {
+            if (IsOwner && SpawnPos.Value != Vector3.zero)
+            {
+                if ((transform.position - SpawnPos.Value).sqrMagnitude > 0.25f)
+                    Debug.Log($"[PlayerNet] owner spawn fix: was at {transform.position} → {SpawnPos.Value}");
+                Motor.Teleport(SpawnPos.Value);
+                Motor.SetSpawn(SpawnPos.Value);
+                StartCoroutine(HoldSpawn()); // the network transform may still apply a stale origin pose for a few frames
+            }
             ColorIndex.OnValueChanged += (_, v) => ApplyColor(v);
             if (IsServer && ColorIndex.Value < 0) ColorIndex.Value = PickFreeColor();
             ApplyColor(ColorIndex.Value);
@@ -62,6 +74,16 @@ namespace CarWash.Player
         }
 
         bool _ownBodyVisible;
+
+        System.Collections.IEnumerator HoldSpawn()
+        {
+            for (int i = 0; i < 30; i++)
+            {
+                yield return null;
+                var d = transform.position - SpawnPos.Value; d.y = 0f;
+                if (d.sqrMagnitude > 4f && transform.position.sqrMagnitude < 1f) { Debug.Log($"[PlayerNet] owner spawn fix (late): {transform.position} → {SpawnPos.Value}"); Motor.Teleport(SpawnPos.Value); }
+            }
+        }
 
         /// <summary>Owner: show the own body (third-person comfort camera) or only its shadow (first person).</summary>
         public void SetOwnBodyVisible(bool visible)

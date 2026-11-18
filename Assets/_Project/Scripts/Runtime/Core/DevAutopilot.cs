@@ -33,6 +33,8 @@ namespace CarWash.Core
         public static bool LooksMode = Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-looks") >= 0;
         /// <summary>Play-area walls check (-autotest-bounds; the hosting exe only observes).</summary>
         public static bool BoundsMode = Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-bounds") >= 0;
+        /// <summary>M4.6 B3 spawn check (-autotest-spawn on host + clients; everyone checks their own spawn, nobody observes).</summary>
+        public static bool SpawnMode = Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-spawn") >= 0;
         public static event Func<PlayerNet, IEnumerator> ExtraChecks; // later tasks append their own checks
 
         [Tooltip("Host in the editor: only log remote players (the client build runs the checks)")]
@@ -48,11 +50,18 @@ namespace CarWash.Core
             StartCoroutine(Observe());
             if ((ReleaseMode || GlbMode || ModelsMode || LooksMode || BoundsMode) && NetworkManager.Singleton.IsServer) observeOnly = true; // P7: the hosting exe only observes
             // dev only: open all three bays so the vehicle test fills them in parallel (not in the release check)
-            if (!ReleaseMode && !GlbMode && !ModelsMode && !LooksMode && !BoundsMode && NetworkManager.Singleton.IsServer && Vehicles.LotState.Instance != null) Vehicles.LotState.Instance.ServerSetOpenCount(3);
+            if (!ReleaseMode && !GlbMode && !ModelsMode && !LooksMode && !BoundsMode && !SpawnMode && NetworkManager.Singleton.IsServer && Vehicles.LotState.Instance != null) Vehicles.LotState.Instance.ServerSetOpenCount(3);
             if (NetworkManager.Singleton.IsServer && observeOnly) me.Ready.Value = true; // T4.1: the observing editor host is always ready
             if (observeOnly)
             {
                 if (NetworkManager.Singleton.IsServer) StartCoroutine(BoundsMode ? DevChecksBounds.HostIdle() : LooksMode ? DevLooksScenario.Run() : ModelsMode ? DevModelsScenario.Run() : GlbMode ? DevGlbScenario.Run() : ReleaseMode ? DevReleaseScenario.Run() : P1Mode ? DevP1Scenario.Run() : NetMode ? DevNetScenario.Run() : SurpriseMode ? DevSurpriseScenario.Run() : DayMode ? DevDayScenario.Run() : DevHostScenario.Run());
+                yield break;
+            }
+            if (SpawnMode)
+            {
+                if (NetworkManager.Singleton.IsServer) StartCoroutine(DevChecksSpawn.Host(4));
+                yield return DevChecksSpawn.Run(me);
+                Log("DONE");
                 yield break;
             }
             if (BoundsMode)
