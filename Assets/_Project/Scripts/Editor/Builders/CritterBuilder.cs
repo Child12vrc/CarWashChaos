@@ -25,10 +25,10 @@ namespace CarWash.Editor
         {
             var list = new List<GameObject>
             {
-                Build<Raccoon>("C01", "C01_Raccoon", (v, r) => Animal(v, new Color(0.45f, 0.42f, 0.4f), new Vector3(0.45f, 0.4f, 0.7f), true, r)),
-                Build<Possum>("C05", "C05_Possum", (v, r) => Animal(v, new Color(0.75f, 0.73f, 0.7f), new Vector3(0.35f, 0.3f, 0.6f), false, r)),
-                Build<MudSlime>("C03", "C03_MudSlime", Slime),
-                Build<BeeSwarm>("C02", "C02_BeeSwarm", Bees),
+                Build<Raccoon>("C01", "C01_Raccoon", GlbAnimal("C01_raccoon", (v, r) => Animal(v, new Color(0.45f, 0.42f, 0.4f), new Vector3(0.45f, 0.4f, 0.7f), true, r), new Vector3(0.45f, 0.4f, 0.7f))),
+                Build<Possum>("C05", "C05_Possum", GlbAnimal("C05_possum", (v, r) => Animal(v, new Color(0.75f, 0.73f, 0.7f), new Vector3(0.35f, 0.3f, 0.6f), false, r), new Vector3(0.35f, 0.3f, 0.6f))),
+                Build<MudSlime>("C03", "C03_MudSlime", GlbSlime),
+                Build<BeeSwarm>("C02", "C02_BeeSwarm", GlbBees),
             };
             // the slime spawns copies of itself when it splits
             var slime = AssetDatabase.LoadAssetAtPath<GameObject>(PathOf("C03_MudSlime"));
@@ -40,6 +40,92 @@ namespace CarWash.Editor
             return list;
         }
 
+        // ---------------- GLB critters (docs/ART_IMPORT.md 3D Models: no rig, parts split into nodes) ----------------
+        /// <summary>Model scale vs the delivered size (0.75 m raccoon etc.): a touch bigger so they read at washer range —
+        /// the gameplay colliders stay the tuned graybox ones.</summary>
+        public const float AnimalScale = 1.25f, SlimeScale = 1.35f, BeeScale = 1.6f;
+        public const int SwarmSize = 12;
+
+        static GameObject GlbModel(string file, Transform visual, float scale) =>
+            GlbKit.Find("Critters", file) is string p ? GlbKit.Model(p, visual, Layers.Critter, Vector3.zero, scale) : null;
+
+        /// <summary>Raccoon / possum: same node set; CritterAnimator.Quadruped. Collider = the graybox capsule.</summary>
+        static Func<Transform, GameObject, float> GlbAnimal(string file, Func<Transform, GameObject, float> graybox, Vector3 body) => (visual, root) =>
+        {
+            var model = GlbModel(file, visual, AnimalScale);
+            if (model == null) return graybox(visual, root);
+            var col = root.AddComponent<CapsuleCollider>();
+            col.direction = 2; col.radius = body.x * 0.55f; col.height = body.z + 0.1f; col.center = new Vector3(0, body.y * 0.6f, 0);
+            var anim = root.AddComponent<CritterAnimator>();
+            Kind(anim, CritterAnimator.Kind.Quadruped, 4f);
+            Wire(anim, visual, model, "Body", "Head", "Tail", "Leg_FL", "Leg_FR", "Leg_BL", "Leg_BR", null, null, "Socket_Carry");
+            return GlbKit.LocalBounds(model, root.transform).max.y + 0.15f;
+        };
+
+        static float GlbSlime(Transform visual, GameObject root)
+        {
+            var model = GlbModel("C03_mud_slime", visual, SlimeScale);
+            if (model == null) return Slime(visual, root);
+            var col = root.AddComponent<SphereCollider>();
+            col.radius = 0.4f; col.center = new Vector3(0, 0.3f, 0);
+            var anim = root.AddComponent<CritterAnimator>();
+            Kind(anim, CritterAnimator.Kind.Slime, 2.5f);
+            Wire(anim, visual, model, "Body", null, null, null, null, null, null, "Eye_L", "Eye_R", "Socket_Carry");
+            var so = new SerializedObject(anim);
+            var drips = so.FindProperty("_drips");
+            var list = new List<Transform>();
+            foreach (var n in new[] { "Drip_1", "Drip_2", "Drip_3" }) { var t = GlbKit.Node(model, n); if (t) list.Add(t); }
+            drips.arraySize = list.Count;
+            for (int i = 0; i < list.Count; i++) drips.GetArrayElementAtIndex(i).objectReferenceValue = list[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return GlbKit.LocalBounds(model, root.transform).max.y + 0.2f;
+        }
+
+        /// <summary>Swarm = SwarmSize C02_bee instances under "Bees" (BeeFlock orbits + wing flaps them).</summary>
+        static float GlbBees(Transform visual, GameObject root)
+        {
+            string p = GlbKit.Find("Critters", "C02_bee");
+            if (p == null) return Bees(visual, root);
+            var centre = new GameObject("Bees") { layer = Layers.Critter }.transform;
+            centre.SetParent(visual, false);
+            centre.localPosition = new Vector3(0, 1.2f, 0);
+            var bees = new Transform[SwarmSize];
+            for (int i = 0; i < SwarmSize; i++)
+            {
+                var m = GlbKit.Model(p, centre, Layers.Critter, UnityEngine.Random.insideUnitSphere * 0.5f, BeeScale);
+                m.name = "Bee" + i;
+                foreach (var r in m.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                bees[i] = m.transform;
+            }
+            var flock = centre.gameObject.AddComponent<BeeFlock>();
+            var so = new SerializedObject(flock);
+            var arr = so.FindProperty("_bees");
+            arr.arraySize = bees.Length;
+            for (int i = 0; i < bees.Length; i++) arr.GetArrayElementAtIndex(i).objectReferenceValue = bees[i];
+            so.ApplyModifiedPropertiesWithoutUndo();
+            var col = root.AddComponent<SphereCollider>();
+            col.radius = 0.7f; col.center = new Vector3(0, 1.2f, 0);
+            return 2.0f;
+        }
+
+        static void Kind(CritterAnimator anim, CritterAnimator.Kind kind, float maxSpeed)
+        {
+            var so = new SerializedObject(anim);
+            so.FindProperty("_kind").enumValueIndex = (int)kind;
+            so.FindProperty("_maxSpeed").floatValue = maxSpeed;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void Wire(CritterAnimator anim, Transform visual, GameObject model, string body, string head, string tail, string fl, string fr, string bl, string br, string eyeL, string eyeR, string carry)
+        {
+            var so = new SerializedObject(anim);
+            so.FindProperty("_visual").objectReferenceValue = visual;
+            void Set(string prop, string node) { if (node != null) so.FindProperty(prop).objectReferenceValue = GlbKit.Node(model, node); }
+            Set("_body", body); Set("_head", head); Set("_tail", tail);
+            Set("_legFL", fl); Set("_legFR", fr); Set("_legBL", bl); Set("_legBR", br);
+            Set("_eyeL", eyeL); Set("_eyeR", eyeR); Set("_carry", carry);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
         static GameObject Prim(PrimitiveType t, Transform parent, string name, Vector3 pos, Vector3 scale, Material m)
         {
             var go = GameObject.CreatePrimitive(t);
@@ -131,6 +217,8 @@ namespace CarWash.Editor
             so.FindProperty("_visual").objectReferenceValue = visual;
             var beesProp = so.FindProperty("_bees");
             if (beesProp != null) beesProp.objectReferenceValue = visual.GetComponentInChildren<ParticleSystem>();
+            var flockProp = so.FindProperty("_flock");
+            if (flockProp != null) flockProp.objectReferenceValue = visual.GetComponentInChildren<BeeFlock>();
             so.ApplyModifiedPropertiesWithoutUndo();
             System.IO.Directory.CreateDirectory(Dir);
             return PrefabBuilder.Save(root, PathOf(file));

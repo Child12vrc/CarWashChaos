@@ -61,6 +61,15 @@ namespace CarWash.Player
         void Awake()
         {
             _net = GetComponent<PlayerNet>();
+            Bind(_animator, _bones);
+        }
+
+        /// <summary>Use this body (animator + ragdoll bones, hips first). PlayerAppearance calls it when the look changes
+        /// (lobby only, while standing). Every body has the same 11-bone ragdoll, so snapshots stay compatible.</summary>
+        public void Bind(Animator animator, Rigidbody[] bones)
+        {
+            if (_bones != null && _bones.Length > 0 && _hipsParent != null) ReattachHips();
+            _animator = animator; _bones = bones ?? Array.Empty<Rigidbody>();
             _cols = new Collider[_bones.Length];
             for (int i = 0; i < _bones.Length; i++)
             {

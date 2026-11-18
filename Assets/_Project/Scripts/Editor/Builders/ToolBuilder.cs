@@ -64,13 +64,44 @@ namespace CarWash.Editor
             GrayboxMaterials.Box(root, "Cloth", new Vector3(0, -0.05f, 0.15f), new Vector3(0.3f, 0.03f, 0.4f), mat, layer: Layers.Tool);
         }
 
+        // ---------------- GLB tools (docs/ART_IMPORT.md 3D Models: origin = grip, +Z forward) ----------------
+        /// <summary>Tool id → .glb + first-person / third-person grip offsets from the head (the root is the grip now, the
+        /// graybox root was the gun body ~0.15 m above it).</summary>
+        static readonly Dictionary<string, (string file, Vector3 view, Vector3 third)> Glb = new Dictionary<string, (string, Vector3, Vector3)>
+        {
+            { "T01", ("T_pressure_washer_gun", new Vector3(0.24f, -0.34f, 0.42f), new Vector3(0.22f, -0.55f, 0.38f)) },
+            { "T02", ("T_foam_cannon",         new Vector3(0.24f, -0.30f, 0.40f), new Vector3(0.22f, -0.52f, 0.36f)) },
+            { "T03", ("T_towel",               new Vector3(0.22f, -0.30f, 0.42f), new Vector3(0.22f, -0.50f, 0.40f)) },
+            { "T06", ("T_net_pole",            new Vector3(0.28f, -0.42f, 0.25f), new Vector3(0.25f, -0.60f, 0.25f)) },
+        };
+
+        /// <summary>The .glb as both the view model and the world model (same object, ToolBase poses it). Colliders: a convex hull
+        /// (net pole: stick box + hoop box). Returns the Socket_Nozzle (or Socket_Capture) to aim from, null if no model.</summary>
+        static Transform GlbShape(string toolId, GameObject root)
+        {
+            if (!Glb.TryGetValue(toolId, out var g)) return null;
+            string path = GlbKit.Find("Tools", g.file);
+            if (path == null) return null;
+            var model = GlbKit.Model(path, root.transform, Layers.Tool);
+            if (toolId == "T06")
+            {
+                bool Hoop(Transform t) => t.name == "Hoop" || t.name == "Netting";
+                GlbKit.Box(root, GlbKit.LocalBounds(model, root.transform, t => !Hoop(t)));
+                GlbKit.Box(root, GlbKit.LocalBounds(model, root.transform, Hoop));
+            }
+            else GlbKit.Convex(root, GlbKit.HullMesh(model, root.transform, "Tool_" + toolId + "_Hull"));
+            var so = new SerializedObject(root.GetComponent<ToolBase>());
+            so.FindProperty("_viewOffset").vector3Value = g.view;
+            so.FindProperty("_thirdPersonOffset").vector3Value = g.third;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            var capture = GlbKit.Node(model, "Socket_Capture");
+            if (capture != null && root.GetComponent<NetPole>() != null) SceneBuilder.Set(root.GetComponent<NetPole>(), "_capture", capture);
+            return GlbKit.Node(model, "Socket_Nozzle") ?? capture;
+        }
+
         static GameObject BuildTool<T>(string toolId, string file, Color color, float mass, System.Action<Transform, Material, Material> shape) where T : ToolBase
         {
             var root = new GameObject(file) { layer = Layers.Tool };
-            shape(root.transform, GrayboxMaterials.Get("Tool_" + toolId, color), GrayboxMaterials.Get("ToolDark", new Color(0.2f, 0.2f, 0.22f)));
-            var nozzle = new GameObject("Socket_Nozzle").transform;
-            nozzle.SetParent(root.transform, false);
-            nozzle.localPosition = new Vector3(0, 0.03f, 0.68f);
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = mass; rb.interpolation = RigidbodyInterpolation.Interpolate;
             root.AddComponent<NetworkObject>();
@@ -78,10 +109,18 @@ namespace CarWash.Editor
             root.AddComponent<NetworkRigidbody>();
             var tool = root.AddComponent<T>();
             SceneBuilder.Set(tool, "_data", DataBuilder.LoadRegistry());
-            SceneBuilder.Set(tool, "_nozzle", nozzle);
             var so = new SerializedObject(tool);
             so.FindProperty("_toolId").stringValue = toolId;
             so.ApplyModifiedPropertiesWithoutUndo();
+            var nozzle = GlbShape(toolId, root);
+            if (nozzle == null)
+            {
+                shape(root.transform, GrayboxMaterials.Get("Tool_" + toolId, color), GrayboxMaterials.Get("ToolDark", new Color(0.2f, 0.2f, 0.22f)));
+                nozzle = new GameObject("Socket_Nozzle").transform;
+                nozzle.SetParent(root.transform, false);
+                nozzle.localPosition = new Vector3(0, 0.03f, 0.68f);
+            }
+            SceneBuilder.Set(tool, "_nozzle", nozzle);
             return root;
         }
 
@@ -131,6 +170,8 @@ namespace CarWash.Editor
             SceneBuilder.Set(hose, "_data", DataBuilder.LoadRegistry());
             SceneBuilder.Set(hose, "_line", line);
             SceneBuilder.Set(hose, "_reelMaterial", GrayboxMaterials.Get("HoseReel", new Color(0.85f, 0.2f, 0.2f)));
+            var hoseIn = root.transform.Find("Model/Socket_HoseIn");
+            if (hoseIn != null) SceneBuilder.Set(hose, "_hoseIn", hoseIn);
         }
 
         static FoamPatch BuildFoamPatch()

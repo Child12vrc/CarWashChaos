@@ -25,6 +25,9 @@ namespace CarWash.Player
 
         void Start() => _lastPos = transform.position;
 
+        /// <summary>PlayerAppearance: the active look's animator (same controller on every look, humanoid retargeting).</summary>
+        public void SetAnimator(Animator a) => _animator = a;
+
         void LateUpdate()
         {
             float dt = Time.deltaTime;

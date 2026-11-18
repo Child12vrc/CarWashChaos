@@ -14,8 +14,8 @@ Shader "Hidden/CarWash/DirtUnwrapPaint"
 
         CGINCLUDE
         #include "UnityCG.cginc"
-        struct a2v { float4 vertex : POSITION; float3 normal : NORMAL; float2 uv2 : TEXCOORD1; };
-        struct v2f { float4 pos : SV_POSITION; float3 objPos : TEXCOORD0; float2 uv2 : TEXCOORD1; float3 normal : TEXCOORD2; };
+        struct a2v { float4 vertex : POSITION; float3 normal : NORMAL; float2 uv2 : TEXCOORD1; float2 uv3 : TEXCOORD2; };
+        struct v2f { float4 pos : SV_POSITION; float3 objPos : TEXCOORD0; float2 uv2 : TEXCOORD1; float3 normal : TEXCOORD2; float hidden : TEXCOORD3; };
 
         float4 _Brushes[32];   // xyz object-space position, w radius
         float4 _BrushStr[32];  // per-channel strength (already * dt)
@@ -33,6 +33,7 @@ Shader "Hidden/CarWash/DirtUnwrapPaint"
             o.objPos = v.vertex.xyz;
             o.uv2 = v.uv2;
             o.normal = v.normal;
+            o.hidden = v.uv3.x; // UV3.x = 1: face no player can reach (baked by VehicleGlbBuilder)
             return o;
         }
 
@@ -103,8 +104,9 @@ Shader "Hidden/CarWash/DirtUnwrapPaint"
             float n1 = saturate(fbm(p) * 1.5 - 0.1);
             float n2 = saturate(fbm(p * 1.3 + 17.0) * 1.6 - 0.25);
             float lowBias = saturate(1.2 - i.objPos.y * 0.6); // more mud low on the body
-            float cover = i.normal.y < -0.6 ? 0.0 : 1.0; // underside is unreachable → not counted
-            return float4(saturate(_InitDirt.x * lerp(0.55, 1.0, n1) * lerp(0.7, 1.0, lowBias)), saturate(_InitDirt.y * lerp(0.5, 1.0, n2)), 0, cover);
+            float cover = (i.normal.y < -0.6 || i.hidden > 0.5) ? 0.0 : 1.0; // underside / baked-unreachable faces → not counted
+            float tucked = i.hidden > 0.5 ? 0.35 : 1.0; // not-counted crevices start only lightly dirty (they can never be cleaned)
+            return float4(saturate(_InitDirt.x * lerp(0.55, 1.0, n1) * lerp(0.7, 1.0, lowBias) * tucked), saturate(_InitDirt.y * lerp(0.5, 1.0, n2) * tucked), 0, cover);
         }
 
         float4 fragFade(v2f i) : SV_Target { return float4(_FadeAmount, 0, 0, 0); }

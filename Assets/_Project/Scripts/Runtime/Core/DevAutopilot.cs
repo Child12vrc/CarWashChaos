@@ -23,6 +23,14 @@ namespace CarWash.Core
         public static bool NetMode = Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-net") >= 0;
         /// <summary>P1 network-simulator test (client: -autotest-p1; editor host: set before adding the component).</summary>
         public static bool P1Mode = Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-p1") >= 0;
+        /// <summary>P7 release loop check (-autotest-release; the hosting exe observes and runs DevReleaseScenario).</summary>
+        /// <summary>GLB vehicle check (-autotest-glb; the hosting exe observes and runs DevGlbScenario).</summary>
+        public static bool GlbMode = Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-glb") >= 0;
+        public static bool ReleaseMode = Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-release") >= 0;
+        /// <summary>GLB props / tools / critters check (-autotest-models; the hosting exe observes and runs DevModelsScenario).</summary>
+        public static bool ModelsMode = Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-models") >= 0;
+        /// <summary>Player looks check (-autotest-looks; the hosting exe observes and runs DevLooksScenario, two clients run DevChecksLooks).</summary>
+        public static bool LooksMode = Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-looks") >= 0;
         public static event Func<PlayerNet, IEnumerator> ExtraChecks; // later tasks append their own checks
 
         [Tooltip("Host in the editor: only log remote players (the client build runs the checks)")]
@@ -36,12 +44,37 @@ namespace CarWash.Core
             var me = PlayerLook.Local.GetComponent<PlayerNet>();
             Log($"local player client={me.OwnerClientId} server={NetworkManager.Singleton.IsServer} color={me.ColorIndex.Value}");
             StartCoroutine(Observe());
-            // dev only: open all three bays so the vehicle test fills them in parallel
-            if (NetworkManager.Singleton.IsServer && Vehicles.LotState.Instance != null) Vehicles.LotState.Instance.ServerSetOpenCount(3);
+            if ((ReleaseMode || GlbMode || ModelsMode || LooksMode) && NetworkManager.Singleton.IsServer) observeOnly = true; // P7: the hosting exe only observes
+            // dev only: open all three bays so the vehicle test fills them in parallel (not in the release check)
+            if (!ReleaseMode && !GlbMode && !ModelsMode && !LooksMode && NetworkManager.Singleton.IsServer && Vehicles.LotState.Instance != null) Vehicles.LotState.Instance.ServerSetOpenCount(3);
             if (NetworkManager.Singleton.IsServer && observeOnly) me.Ready.Value = true; // T4.1: the observing editor host is always ready
             if (observeOnly)
             {
-                if (NetworkManager.Singleton.IsServer) StartCoroutine(P1Mode ? DevP1Scenario.Run() : NetMode ? DevNetScenario.Run() : SurpriseMode ? DevSurpriseScenario.Run() : DayMode ? DevDayScenario.Run() : DevHostScenario.Run());
+                if (NetworkManager.Singleton.IsServer) StartCoroutine(LooksMode ? DevLooksScenario.Run() : ModelsMode ? DevModelsScenario.Run() : GlbMode ? DevGlbScenario.Run() : ReleaseMode ? DevReleaseScenario.Run() : P1Mode ? DevP1Scenario.Run() : NetMode ? DevNetScenario.Run() : SurpriseMode ? DevSurpriseScenario.Run() : DayMode ? DevDayScenario.Run() : DevHostScenario.Run());
+                yield break;
+            }
+            if (LooksMode)
+            {
+                yield return DevChecksLooks.Run(me);
+                Log("DONE");
+                yield break;
+            }
+            if (ModelsMode)
+            {
+                yield return DevChecksModels.Run(me);
+                Log("DONE");
+                yield break;
+            }
+            if (GlbMode)
+            {
+                yield return DevChecksGlb.Run(me);
+                Log("DONE");
+                yield break;
+            }
+            if (ReleaseMode)
+            {
+                yield return DevChecksRelease.Run(me);
+                Log("DONE");
                 yield break;
             }
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "-autotest-scenery") >= 0)

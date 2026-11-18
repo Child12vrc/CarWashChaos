@@ -27,6 +27,7 @@ namespace CarWash.Editor
             new Spec("Bucket", "양동이", PrimitiveType.Cylinder, new Vector3(0.35f, 0.2f, 0.35f), 1.5f, new Color(0.2f, 0.5f, 0.9f)),
             new Spec("Tire", "타이어", PrimitiveType.Cylinder, new Vector3(0.7f, 0.12f, 0.7f), 10f, new Color(0.1f, 0.1f, 0.1f)),
             new Spec("HayBale", "건초 더미", PrimitiveType.Cube, new Vector3(1.0f, 0.5f, 0.5f), 25f, new Color(0.9f, 0.8f, 0.35f)),
+            new Spec("TrashBag", "쓰레기봉투", PrimitiveType.Sphere, new Vector3(0.5f, 0.6f, 0.5f), 4f, new Color(0.2f, 0.2f, 0.22f)),
         };
 
         public static string PathOf(string id) => $"{Dir}/{id}.prefab";
@@ -61,6 +62,7 @@ namespace CarWash.Editor
 
         static GameObject Build(Spec s, bool trash = false)
         {
+            if (!trash) { var glb = BuildGlb(s.id, s.nameKo, s.mass); if (glb != null) return glb; }
             var go = GameObject.CreatePrimitive(s.shape);
             go.name = s.id;
             go.layer = Layers.Prop;
@@ -101,6 +103,7 @@ namespace CarWash.Editor
             if (id == "Cone") return EnvironmentBuilder.Phys("RubberCone", 0.9f, 1.0f, 0.3f);
             if (id == "Tire") return EnvironmentBuilder.Phys("RubberTire", 0.95f, 1.0f, 0.45f);
             if (id == "HayBale") return EnvironmentBuilder.Phys("Hay", 0.9f, 1.0f, 0.0f);
+            if (id == "TrashBag") return EnvironmentBuilder.Phys("Bag", 0.8f, 0.9f, 0.05f);
             if (id == "Bucket" || id == "CautionSign" || id.StartsWith("Trash")) return EnvironmentBuilder.Phys("Plastic", 0.45f, 0.55f, 0.2f);
             return null;
         }
@@ -108,6 +111,8 @@ namespace CarWash.Editor
         /// <summary>P6: "미끄럼 주의" A-frame (art: Signs/sign_caution_slippery.png on both faces), 3 kg, knock-over-able.</summary>
         static GameObject BuildCautionSign()
         {
+            var glbSign = BuildGlb("CautionSign", "미끄럼 주의 표지판", 3f);
+            if (glbSign != null) return glbSign;
             var go = new GameObject("CautionSign") { layer = Layers.Prop };
             var col = go.AddComponent<BoxCollider>();
             col.size = new Vector3(0.5f, 0.8f, 0.42f); col.center = new Vector3(0f, 0f, 0f);
@@ -133,14 +138,107 @@ namespace CarWash.Editor
             return PrefabBuilder.Save(go, PathOf("CautionSign"));
         }
 
+        // ---------------- GLB props (docs/ART_IMPORT.md 3D Models) ----------------
+        /// <summary>Graybox id → .glb, collider kind (box / convex hull), uniform scale, material tint.</summary>
+        struct GlbSpec { public string file; public bool box; public float scale; public Color tint; }
+
+        static readonly Dictionary<string, GlbSpec> Glb = new Dictionary<string, GlbSpec>
+        {
+            { "Crate",       new GlbSpec { file = "P_crate",         box = true,  scale = 1.2f, tint = Color.white } },
+            { "HeavyCrate",  new GlbSpec { file = "P_crate",         box = true,  scale = 1.8f, tint = new Color(0.62f, 0.55f, 0.5f) } },
+            { "Cone",        new GlbSpec { file = "P_traffic_cone",  box = false, scale = 1.2f, tint = Color.white } },
+            { "Bucket",      new GlbSpec { file = "P_bucket",        box = false, scale = 1f,   tint = Color.white } },
+            { "Tire",        new GlbSpec { file = "P_tire",          box = false, scale = 1f,   tint = Color.white } },
+            { "HayBale",     new GlbSpec { file = "P_hay_bale",      box = true,  scale = 1f,   tint = Color.white } },
+            { "TrashBag",    new GlbSpec { file = "P_trash_bag",     box = false, scale = 1f,   tint = Color.white } },
+            { "CautionSign", new GlbSpec { file = "P_caution_sign",  box = false, scale = 1f,   tint = Color.white } },
+        };
+
+        /// <summary>
+        /// The .glb as the visual (origin bottom-centre in the file) re-centred so the prefab root sits at the bounds centre like
+        /// the graybox did — the grab hold point, throw spin and lot placements all assume a centred pivot. Returns null when the
+        /// model is missing (graybox stays).
+        /// </summary>
+        static GameObject BuildGlb(string id, string nameKo, float mass)
+        {
+            if (!Glb.TryGetValue(id, out var g)) return null;
+            string path = GlbKit.Find("Props", g.file);
+            if (path == null) return null;
+            var go = new GameObject(id) { layer = Layers.Prop };
+            System.Func<Material, Material> tint = null;
+            if (g.tint != Color.white) tint = m => GlbKit.Tinted(m, id, g.tint);
+            var model = GlbKit.Model(path, go.transform, Layers.Prop, Vector3.zero, g.scale, tint);
+            var b = GlbKit.LocalBounds(model, go.transform);
+            model.transform.localPosition = -b.center;
+            b.center = Vector3.zero;
+            if (id == "CautionSign") SignFaces(model);
+            if (g.box) GlbKit.Box(go, b);
+            else GlbKit.Convex(go, GlbKit.HullMesh(model, go.transform, "Prop_" + id + "_Hull"));
+            foreach (var col in go.GetComponents<Collider>()) col.sharedMaterial = PhysFor(id);
+            var rb = go.AddComponent<Rigidbody>();
+            rb.mass = mass;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            go.AddComponent<NetworkObject>();
+            go.AddComponent<NetworkTransform>().Interpolate = true;
+            go.AddComponent<NetworkRigidbody>();
+            var grab = go.AddComponent<Grabbable>();
+            var so = new SerializedObject(grab);
+            so.FindProperty("_displayName").stringValue = nameKo;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return PrefabBuilder.Save(go, PathOf(id));
+        }
+
+        /// <summary>
+        /// P_caution_sign: SignFace (front leaf only, planar UV) gets sign_caution_slippery.png; a copy turned 180° covers the
+        /// back leaf (the A-frame is symmetric). ART NOTE: SignFace's V runs top→bottom (image would be upside down) → the
+        /// material flips V (tiling y -1) instead of touching the .glb.
+        /// </summary>
+        static void SignFaces(GameObject model)
+        {
+            var face = GlbKit.Node(model, "SignFace");
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(GrayboxMaterials.EnvTex.Replace("Textures/", "Signs/") + "sign_caution_slippery.png");
+            if (face == null || tex == null) return;
+            string matPath = GlbKit.MatDir + "/SignFace_caution.mat";
+            var m = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+            if (m == null) { m = new Material(Shader.Find("Universal Render Pipeline/Lit")); AssetDatabase.CreateAsset(m, matPath); }
+            m.SetTexture("_BaseMap", tex); m.mainTexture = tex; m.SetColor("_BaseColor", Color.white);
+            m.SetTextureScale("_BaseMap", new Vector2(1f, -1f)); m.SetTextureOffset("_BaseMap", new Vector2(0f, 1f));
+            m.SetFloat("_Smoothness", 0.3f);
+            m.SetFloat("_AlphaClip", 1f); m.SetFloat("_Cutoff", 0.5f); m.EnableKeyword("_ALPHATEST_ON"); m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+            EditorUtility.SetDirty(m);
+            face.GetComponent<MeshRenderer>().sharedMaterial = m;
+            var back = Object.Instantiate(face.gameObject, face.parent, false);
+            back.name = "SignFace_Back";
+            back.transform.localRotation = Quaternion.Euler(0f, 180f, 0f) * face.localRotation;
+            back.transform.localPosition = Quaternion.Euler(0f, 180f, 0f) * face.localPosition;
+        }
+
+        /// <summary>Lot spawn height for a prop resting on the ground (root = bounds centre).</summary>
+        static float RestY(string id)
+        {
+            var p = AssetDatabase.LoadAssetAtPath<GameObject>(PathOf(id));
+            var c = p != null ? p.GetComponent<Collider>() : null;
+            if (c is BoxCollider bc) return bc.size.y * 0.5f - bc.center.y + 0.01f;
+            if (c is MeshCollider mc && mc.sharedMesh != null) return -mc.sharedMesh.bounds.min.y + 0.01f;
+            return 0.4f;
+        }
         /// <summary>Adds the lot's starting props as server spawn entries (never in-scene NetworkObjects).</summary>
         public static void PlaceInLot(SpawnListWriter list)
         {
-            void Put(string id, Vector3 pos, float yaw = 0f) => list.Add(PathOf(id), pos, new Vector3(0, yaw, 0));
+            // GLB props: rest on the ground (or `stack` levels up) at their real height; graybox keeps the hand-set y
+            void Put(string id, Vector3 pos, float yaw = 0f, int stack = 0)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PathOf(id));
+                if (prefab != null && prefab.transform.Find("Model") != null) { float r = RestY(id); pos.y = r + stack * (r - 0.01f) * 2f; }
+                list.Add(PathOf(id), pos, new Vector3(0, yaw, 0));
+            }
             Put("Crate", new Vector3(-3.5f, 0.41f, -8.5f));
-            Put("Crate", new Vector3(-3.5f, 1.22f, -8.5f), 20f);
+            Put("Crate", new Vector3(-3.5f, 1.22f, -8.5f), 20f, stack: 1);
             Put("HeavyCrate", new Vector3(-3.5f, 0.61f, -6.6f)); // P6: moved off the animal cage footprint
+            list.DevOnly = true; // P7: dev yard cone row (release builds skip it)
             for (int i = 0; i < 5; i++) Put("Cone", Core.DevYard.ConeRow + new Vector3(i * 0.9f, 0.36f, 0f)); // dev yard, within its washer reach
+            list.DevOnly = false;
             Put("Bucket", new Vector3(-12f, 0.21f, 1f));
             Put("Tire", new Vector3(12f, 0.13f, -8f));
             Put("Tire", new Vector3(12.8f, 0.13f, -7.2f));
@@ -150,8 +248,10 @@ namespace CarWash.Editor
             Put("CautionSign", new Vector3(4.4f, 0.42f, 10.2f), -20f);
             Put("Cone", new Vector3(19.2f, 0.36f, -8.2f)); Put("Cone", new Vector3(19.2f, 0.36f, -12.5f));
             Put("Bucket", new Vector3(-5.6f, 0.21f, -1.2f)); Put("Bucket", new Vector3(2.6f, 0.21f, -1.2f));
-            Put("Tire", new Vector3(13.2f, 0.37f, -7.6f), 10f);
+            Put("Tire", new Vector3(12.4f, 0.37f, -7.6f), 10f, stack: 1);
             Put("HayBale", new Vector3(16.1f, 0.26f, 10.3f), 15f);
+            // GLB batch: trash bags piled by the alley dumpster
+            Put("TrashBag", new Vector3(13.9f, 0.3f, 15.6f), 20f); Put("TrashBag", new Vector3(14.1f, 0.3f, 14.7f), -35f); Put("TrashBag", new Vector3(18.1f, 0.3f, 15.2f), 70f);
         }
     }
 }

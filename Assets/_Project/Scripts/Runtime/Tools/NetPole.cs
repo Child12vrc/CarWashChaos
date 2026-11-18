@@ -10,6 +10,9 @@ namespace CarWash.Tools
     /// </summary>
     public class NetPole : ToolBase
     {
+        [SerializeField] private Transform _capture; // GLB: Socket_Capture (hoop centre) — every peer hangs the netted critter here
+        public Transform Capture => _capture;
+
         static readonly RaycastHit[] Hits = new RaycastHit[8];
 
         public override void ServerUse(Vector3 origin, Vector3 dir, float dt)

@@ -10,6 +10,7 @@ namespace CarWash.Critters
     public class BeeSwarm : CritterBase
     {
         [SerializeField] private ParticleSystem _bees;
+        [SerializeField] private BeeFlock _flock; // GLB: instanced C02_bee models (replaces the particle dots)
         public int Stings { get; private set; }
         public bool Killed { get; private set; }
         float _nextSting;
@@ -30,6 +31,7 @@ namespace CarWash.Critters
         [Unity.Netcode.Rpc(Unity.Netcode.SendTo.Everyone)]
         void DieRpc()
         {
+            if (_flock != null) _flock.Die();
             if (_bees == null) return;
             var main = _bees.main; main.gravityModifier = 2f;
             var em = _bees.emission; em.enabled = false;
@@ -54,6 +56,7 @@ namespace CarWash.Critters
         protected override void Update()
         {
             base.Update();
+            if (_flock != null) _flock.Spread = Mathf.MoveTowards(_flock.Spread, State.Value == CritterState.Stunned ? 3f : 0.55f, Time.deltaTime * 4f);
             if (_bees == null) return;
             // dispersed while "stunned": spread wide; otherwise a tight buzzing ball
             var sh = _bees.shape;

@@ -17,6 +17,8 @@ Shader "Hidden/CarWash/DirtEval"
             float4 _SrcTexel;   // x = 1/srcSize
             int _Block;         // src texels per output texel (per axis)
             float3 _Weights;    // mud, grease, spots
+            #define FAINT 0.05
+            float Faint(float d) { return saturate((d - FAINT) / (1.0 - FAINT)); }
 
             float4 frag(v2f_img i) : SV_Target
             {
@@ -29,9 +31,10 @@ Shader "Hidden/CarWash/DirtEval"
                     float4 init = tex2Dlod(_DirtInit, float4(uv, 0, 0));
                     float4 cl = tex2Dlod(_CleanAcc, float4(uv, 0, 0));
                     float cov = init.a > 0.5 ? 1.0 : 0.0;
-                    float mud = saturate(init.r - cl.r);
-                    float grease = saturate(init.g - cl.g);
-                    float spots = saturate(cl.b - cl.a);
+                    // DESIGN-GAP (GLB): residue under 5 % is invisible on the body shader → counts as clean (remapped, monotonic)
+                    float mud = Faint(saturate(init.r - cl.r));
+                    float grease = Faint(saturate(init.g - cl.g));
+                    float spots = Faint(saturate(cl.b - cl.a));
                     sum += float4(dot(_Weights, float3(mud, grease, spots)) * cov, cov, mud * cov, grease * cov);
                 }
                 return sum / (float)(_Block * _Block);

@@ -91,8 +91,6 @@ namespace CarWash.Tools
                 if (on) { _stream.Play(); _mist.Play(); _audio.Play(); } else { _stream.Stop(); _mist.Stop(); _audio.Stop(); }
             }
             if (!on) return;
-            _stream.transform.SetPositionAndRotation(nozzle.position, nozzle.rotation);
-            _mist.transform.SetPositionAndRotation(nozzle.position, nozzle.rotation);
             var shape = _stream.shape; shape.angle = coneDeg * 0.5f;
             var main = _stream.main; main.startLifetime = range / _speed;
 
@@ -104,8 +102,14 @@ namespace CarWash.Tools
             for (int i = 0; i < n; i++)
             {
                 if (holder != null && _hits[i].collider.transform.IsChildOf(holder.transform)) continue;
+                if (Vehicles.VehicleHull.Is(_hits[i].collider)) continue; // splash on the exact GLB body
                 if (_hits[i].distance < best) { best = _hits[i].distance; p = _hits[i].point; normal = _hits[i].normal; }
             }
+            // GLB: the stream leaves Socket_Nozzle and converges on the aim point (crosshair hit), not parallel to the aim ray
+            var aim = best == float.MaxValue ? origin + dir * range : p;
+            var streamRot = (aim - nozzle.position).sqrMagnitude > 0.01f ? Quaternion.LookRotation(aim - nozzle.position) : nozzle.rotation;
+            _stream.transform.SetPositionAndRotation(nozzle.position, streamRot);
+            _mist.transform.SetPositionAndRotation(nozzle.position, streamRot);
             if (best == float.MaxValue) return;
             _splashT += Time.deltaTime;
             if (_splashT < 0.05f) return;

@@ -24,6 +24,9 @@ namespace CarWash.Vehicles
         [SerializeField] private DataRegistry _data;
         [SerializeField] private string _dataId;
         [SerializeField] private Transform _interior, _surprise, _driver;
+        /// <summary>GLB vehicles: body-coloured parts outside the dirt body (doors, trunk, mirrors) — renderer + material slot.</summary>
+        [SerializeField] private Renderer[] _paintRenderers = Array.Empty<Renderer>();
+        [SerializeField] private int[] _paintSlots = Array.Empty<int>();
 
         public readonly NetworkVariable<VehicleState> State = new NetworkVariable<VehicleState>(VehicleState.Arriving);
         public readonly NetworkVariable<int> BayIndex = new NetworkVariable<int>(-1);
@@ -72,7 +75,19 @@ namespace CarWash.Vehicles
 
         void ApplyPaint(int i)
         {
-            if (i >= 0) Dirt.Painter.SetBaseColor(Paints[i % Paints.Length]);
+            if (i < 0) return;
+            var c = Paints[i % Paints.Length];
+            Dirt.Painter.SetBaseColor(c);
+            if (_paintRenderers.Length == 0) return;
+            var mpb = new MaterialPropertyBlock();
+            for (int k = 0; k < _paintRenderers.Length && k < _paintSlots.Length; k++)
+            {
+                var r = _paintRenderers[k];
+                if (r == null) continue;
+                r.GetPropertyBlock(mpb, _paintSlots[k]);
+                mpb.SetColor("_BaseColor", c);
+                r.SetPropertyBlock(mpb, _paintSlots[k]);
+            }
         }
 
         /// <summary>Server, before Spawn: dirt from VehicleData (Day-1 cars have no grease: U05 note).</summary>

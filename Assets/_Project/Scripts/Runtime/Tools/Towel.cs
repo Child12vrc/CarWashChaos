@@ -22,19 +22,27 @@ namespace CarWash.Tools
         {
             var d = Data;
             float reach = (d != null ? d.range : 1f) + 0.8f;
-            int n = Physics.SphereCastNonAlloc(origin, _castRadius, dir, Hits, reach, 1 << Layers.Vehicle, QueryTriggerInteraction.Ignore);
-            float best = float.MaxValue; DirtNetSync target = null; Vector3 point = default;
+            // wipe exactly where the player aims (low corners under an overhang: a fat sphere would catch the edge above);
+            // the sphere cast is only the forgiving fallback when the aim ray misses the body
+            if (!Nearest(Physics.RaycastNonAlloc(origin, dir, Hits, reach, Layers.WashMask, QueryTriggerInteraction.Ignore), origin, dir, out var target, out var point) &&
+                !Nearest(Physics.SphereCastNonAlloc(origin, _castRadius, dir, Hits, reach, Layers.WashMask, QueryTriggerInteraction.Ignore), origin, dir, out target, out point))
+                return;
+            float rate = d != null ? d.cleanRate.z : 1.5f;
+            target.ServerWorldStroke(point, _data.balance.tools.towelRadius * 0.4f, new Vector4(0f, 0f, 0f, rate * dt), StrokeType.Clean);
+        }
+
+        static bool Nearest(int n, Vector3 origin, Vector3 dir, out DirtNetSync target, out Vector3 point)
+        {
+            float best = float.MaxValue; target = null; point = default;
             for (int i = 0; i < n; i++)
             {
-                if (Hits[i].distance >= best) continue;
+                if (Hits[i].distance >= best || Vehicles.VehicleHull.Is(Hits[i].collider)) continue;
                 var s = Hits[i].collider.GetComponentInParent<DirtNetSync>();
                 if (s == null) continue;
                 best = Hits[i].distance; target = s;
                 point = Hits[i].point == Vector3.zero ? origin + dir * Hits[i].distance : Hits[i].point;
             }
-            if (target == null) return;
-            float rate = d != null ? d.cleanRate.z : 1.5f;
-            target.ServerWorldStroke(point, _data.balance.tools.towelRadius * 0.4f, new Vector4(0f, 0f, 0f, rate * dt), StrokeType.Clean);
+            return target != null;
         }
     }
 }

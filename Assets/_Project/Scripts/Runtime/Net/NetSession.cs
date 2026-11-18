@@ -9,7 +9,7 @@ namespace CarWash.Net
 {
     /// <summary>
     /// Wraps NetworkManager + transport selection (TECH S01). Dev = UTP 127.0.0.1:24565.
-    /// Command line: -host  |  -join &lt;ip&gt;  |  -netsim delayMs,jitterMs,lossPercent (dev builds/editor: Multiplayer
+    /// Command line: -host (IP) | -host-relay | -join &lt;ip&gt; | -joincode &lt;code&gt; | -netsim delayMs,jitterMs,lossPercent (dev builds/editor: Multiplayer
     /// Tools Network Simulator on this peer). Losing the connection (host quit, timeout, kicked) shuts down cleanly and
     /// returns to the main menu with the reason (P1).
     /// </summary>
@@ -59,12 +59,14 @@ namespace CarWash.Net
 
         public static void ParseArgs(string[] args)
         {
-            ArgHost = false; ArgJoin = null; ArgNetSim = null;
+            ArgHost = false; ArgJoin = null; ArgNetSim = null; ArgJoinCode = null; ArgHostRelay = false;
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "-host") ArgHost = true;
+                else if (args[i] == "-host-relay") ArgHostRelay = true;
+                else if (args[i] == "-joincode" && i + 1 < args.Length) ArgJoinCode = args[i + 1];
                 else if (args[i] == "-join") ArgJoin = i + 1 < args.Length ? args[i + 1] : "127.0.0.1";
-                else if (args[i] == "-netsim" && i + 1 < args.Length) ArgNetSim = ParseNetSim(args[i + 1]);
+                else if (args[i] == "-netsim" && i + 1 < args.Length && Core.DevFlags.DevContent) ArgNetSim = ParseNetSim(args[i + 1]);
             }
         }
 
@@ -124,6 +126,7 @@ namespace CarWash.Net
             if (_backend != NetBackend.Utp) throw new NotSupportedException("Steam backend arrives in M7");
             LastDisconnectReason = null;
             Utp.SetConnectionData("0.0.0.0", port, "0.0.0.0");
+            Mode = ConnectMode.Ip; JoinCode = null; IpAddress = $"{LocalIPv4()}:{port}";
             ApplyNetSim();
             return _manager.StartHost();
         }
@@ -132,8 +135,79 @@ namespace CarWash.Net
         {
             LastDisconnectReason = null;
             Utp.SetConnectionData(string.IsNullOrEmpty(address) ? "127.0.0.1" : address, port);
+            Mode = ConnectMode.Ip; JoinCode = null; IpAddress = $"{(string.IsNullOrEmpty(address) ? "127.0.0.1" : address)}:{port}";
             ApplyNetSim();
             return _manager.StartClient();
+        }
+
+        // ---- P7: how this session was opened (shown by the invite card) ----
+        public enum ConnectMode { None, Relay, Ip }
+        public static ConnectMode Mode { get; private set; }
+        /// <summary>Relay join code of the current session (host and guests), or null.</summary>
+        public static string JoinCode { get; private set; }
+        /// <summary>IP mode: what others type to reach this host ("192.168.0.12:24565"), or the address a guest used.</summary>
+        public static string IpAddress { get; private set; }
+        public static string ArgJoinCode { get; private set; }
+        public static bool ArgHostRelay { get; private set; }
+
+        /// <summary>P7 default flow: Relay host. Returns null on success, else a Korean error for the menu.</summary>
+        public async System.Threading.Tasks.Task<string> HostRelay()
+        {
+            LastDisconnectReason = null;
+            try
+            {
+                string code = await RelayConnector.PrepareHost(Utp, MaxPlayers);
+                if (!_manager.StartHost()) return "호스트를 시작하지 못했습니다.";
+                Mode = ConnectMode.Relay; JoinCode = code; IpAddress = null;
+                return null;
+            }
+            catch (RelayConnector.RelayError e) { return e.Message; }
+        }
+
+        /// <summary>P7 default flow: join by Relay code. Returns null on success (connecting), else a Korean error.</summary>
+        public async System.Threading.Tasks.Task<string> JoinRelay(string code)
+        {
+            LastDisconnectReason = null;
+            try
+            {
+                await RelayConnector.PrepareJoin(Utp, code);
+                if (!_manager.StartClient()) return "접속을 시작하지 못했습니다.";
+                Mode = ConnectMode.Relay; JoinCode = RelayConnector.NormalizeCode(code); IpAddress = null;
+                return null;
+            }
+            catch (RelayConnector.RelayError e) { return e.Message; }
+        }
+
+        /// <summary>This PC's private IPv4 for LAN play (192.168.x / 10.x / 172.16-31.x preferred), or 127.0.0.1.</summary>
+        public static string LocalIPv4()
+        {
+            string best = null;
+            try
+            {
+                foreach (var ni in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
+                    if (ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback) continue;
+                    if (ni.GetIPProperties().GatewayAddresses.Count == 0) continue; // skip virtual adapters without a route
+                    foreach (var ua in ni.GetIPProperties().UnicastAddresses)
+                    {
+                        if (ua.Address.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork) continue;
+                        string s = ua.Address.ToString();
+                        if (IsPrivate(s)) return s;
+                        if (best == null && !s.StartsWith("169.254.")) best = s;
+                    }
+                }
+            }
+            catch (Exception e) { Debug.LogWarning("[NET] local IP lookup failed: " + e.Message); }
+            return best ?? "127.0.0.1";
+        }
+
+        public static bool IsPrivate(string ip)
+        {
+            if (ip.StartsWith("10.") || ip.StartsWith("192.168.")) return true;
+            if (!ip.StartsWith("172.")) return false;
+            var p = ip.Split('.');
+            return p.Length == 4 && int.TryParse(p[1], out int b) && b >= 16 && b <= 31;
         }
 
         /// <summary>Editor/dev: simulate a bad connection on this peer (set before Host/Join, or call again any time).</summary>

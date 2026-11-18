@@ -17,6 +17,7 @@ namespace CarWash.Tools
         [SerializeField] private DataRegistry _data;
         [SerializeField] private LineRenderer _line;
         [SerializeField] private Material _reelMaterial;
+        [SerializeField] private Transform _hoseIn; // GLB washer: Socket_HoseIn (back of the gun); graybox: the nozzle
 
         public readonly NetworkVariable<Vector3> Anchor = new NetworkVariable<Vector3>();
         public float Length => (_data != null ? _data.balance.tools.hoseLength : 8f) * LengthMultiplier;
@@ -69,7 +70,7 @@ namespace CarWash.Tools
             bool show = !_tool.Stowed;
             _line.enabled = show;
             if (!show) return;
-            Vector3 a = Anchor.Value, b = _tool.Nozzle.position;
+            Vector3 a = Anchor.Value, b = _hoseIn != null ? _hoseIn.position : _tool.Nozzle.position;
             if (!_ropeInit)
             {
                 for (int i = 0; i < Points; i++) _pos[i] = _prev[i] = Vector3.Lerp(a, b, i / (Points - 1f));

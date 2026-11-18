@@ -14,6 +14,8 @@ namespace CarWash.Tools
     public abstract class ToolBase : NetworkBehaviour, IInteractable
     {
         public const ulong NoHolder = ulong.MaxValue;
+        /// <summary>Every spawned tool on this peer.</summary>
+        public static readonly System.Collections.Generic.List<ToolBase> All = new System.Collections.Generic.List<ToolBase>();
 
         [SerializeField] protected DataRegistry _data;
         [SerializeField] private string _toolId = "T01";
@@ -43,6 +45,7 @@ namespace CarWash.Tools
 
         public override void OnNetworkSpawn()
         {
+            All.Add(this);
             Holder.OnValueChanged += (_, v) => OnHolderChanged(v);
             OnHolderChanged(Holder.Value);
             Stolen.OnValueChanged += (_, v) => OnStolenChanged(v);
@@ -52,6 +55,7 @@ namespace CarWash.Tools
 
         public override void OnNetworkDespawn()
         {
+            All.Remove(this);
             if (IsServer && NetworkManager != null) NetworkManager.OnClientDisconnectCallback -= OnClientLeft;
         }
 

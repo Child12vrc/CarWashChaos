@@ -49,7 +49,7 @@ namespace CarWash.Editor
             GrayboxMaterials.Box(env, "DayBoard", OfficeCenter + new Vector3(-1.5f, 1.6f, 3.05f), new Vector3(2.4f, 1.2f, 0.1f), M.board);
             for (int i = 0; i < 4; i++)
                 GrayboxMaterials.Box(env, "Locker" + i, LockerArea + new Vector3(-1.5f + i, 1f, -2.6f), new Vector3(0.8f, 2f, 0.5f), M.wall);
-            GrayboxMaterials.Box(env, "VacuumStation", new Vector3(14f, 0.75f, -10f), new Vector3(1f, 1.5f, 1f), M.panel);
+            VacuumStation(env, M.panel);
             BuildCage(env, M);
             GrayboxMaterials.Box(env, "FenceN", new Vector3(0, 1f, 18.5f), new Vector3(56, 2f, 0.2f), M.brick);
             GrayboxMaterials.Box(env, "Dumpster", new Vector3(16f, 0.75f, 15.5f), new Vector3(3f, 1.5f, 1.8f), M.prop);
@@ -58,7 +58,7 @@ namespace CarWash.Editor
             GrayboxMaterials.Box(env, "MudPuddle2", new Vector3(6f, 0.008f, 16.2f), new Vector3(1.8f, 0.01f, 1.4f), M.mud, collider: false);
 
             // Dev yard (test content outside the customer flow): foam floor zone + marker
-            var dev = new GameObject("DevYard").transform; dev.SetParent(env);
+            var dev = new GameObject("DevYard", typeof(DevOnlyObject)).transform; dev.SetParent(env); // P7: removed in release
             var foam = GrayboxMaterials.Box(dev, "FoamTrigger_Test", DevYard.FoamZone + new Vector3(0, 0.5f, 0), new Vector3(5.6f, 1f, 8f), M.foam, layer: Layers.FoamArea);
             Object.DestroyImmediate(foam.GetComponent<MeshRenderer>());
             Object.DestroyImmediate(foam.GetComponent<MeshFilter>());
@@ -86,14 +86,17 @@ namespace CarWash.Editor
             spawns.Add(ToolBuilder.PathOf("T01_PressureWasher"), bays[0].HoseReel.position + new Vector3(0.25f, 0f, 0f), Vector3.zero);
             // DESIGN-GAP: GDD U05 says W1 Day1 has no foam cannon; until the shop (T5.1) it lies by the office
             spawns.Add(ToolBuilder.PathOf("T03_Towel"), OfficeCenter + new Vector3(4.6f, 1.0f, 2f), Vector3.zero);
-            // dev yard test content
+            // dev yard test content (P7: dev-only, not spawned in release builds)
+            spawns.DevOnly = true;
             spawns.Add(ToolBuilder.PathOf("T01_PressureWasher"), DevYard.WasherReel, Vector3.zero);
             spawns.Add(ToolBuilder.PathOf("T02_FoamCannon"), DevYard.FoamCannon, Vector3.zero);
             spawns.Add(ToolBuilder.PathOf("T03_Towel"), DevYard.Towel, Vector3.zero);
             spawns.Add(VehicleBuilder.TestCarPath("V02"), DevYard.CarV02 + new Vector3(0, 0.02f, 0), new Vector3(0, 180, 0));
             spawns.Add(VehicleBuilder.TestCarPath("V04"), DevYard.CarV04 + new Vector3(0, 0.02f, 0), new Vector3(0, 180, 0));
             // T3.1: net pole by the Animal Control cage; dev-yard critters (generic behaviour) + a second net
+            spawns.DevOnly = false; // the cage net pole is real game content
             spawns.Add(ToolBuilder.PathOf("T06_NetPole"), CagePos + new Vector3(0f, 1f, -2f), Vector3.zero);
+            spawns.DevOnly = true;
             spawns.Add(ToolBuilder.PathOf("T06_NetPole"), DevYard.NetPole, Vector3.zero);
             spawns.Add(CritterBuilder.PathOf("C01_Raccoon"), DevYard.Raccoon, Vector3.zero);
             spawns.Add(CritterBuilder.PathOf("C05_Possum"), DevYard.Possum, Vector3.zero);
@@ -108,6 +111,23 @@ namespace CarWash.Editor
 
         /// <summary>Animal Control cage (GDD §11 office area): between the office and the lockers, clear of the exit lane.</summary>
         public static readonly Vector3 CagePos = new Vector3(-6.6f, 0f, -10.2f);
+
+        /// <summary>
+        /// Vacuum station by the exit lane. GLB batch: T_shop_vac.glb stands on a low pedestal (DESIGN-GAP: T04 청소기 has no
+        /// holdable tool code yet — interior trash is picked up by hand — so the model dresses the station instead of a view model).
+        /// </summary>
+        static void VacuumStation(Transform env, Material panel)
+        {
+            string glb = GlbKit.Find("Tools", "T_shop_vac");
+            if (glb == null) { GrayboxMaterials.Box(env, "VacuumStation", new Vector3(14f, 0.75f, -10f), new Vector3(1f, 1.5f, 1f), panel); return; }
+            var station = GrayboxMaterials.Box(env, "VacuumStation", new Vector3(14f, 0.15f, -10f), new Vector3(1.4f, 0.3f, 1.6f), panel);
+            var vac = new GameObject("ShopVac");
+            vac.transform.SetParent(station.transform.parent, false);
+            vac.transform.localPosition = new Vector3(14f, 0.3f, -10f);
+            vac.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+            var model = GlbKit.Model(glb, vac.transform, Layers.Default, Vector3.zero, 1.6f);
+            GlbKit.Box(vac, GlbKit.LocalBounds(model, vac.transform));
+        }
 
         static void BuildCage(Transform env, Mats M)
         {
@@ -141,7 +161,9 @@ namespace CarWash.Editor
             GrayboxMaterials.Box(b, "WallE", new Vector3(3.1f, 1.5f, 0), new Vector3(0.2f, 3f, 10), M.wall);
             GrayboxMaterials.Box(b, "Roof", new Vector3(0, 3.6f, 0), new Vector3(6.6f, 0.2f, 10.4f), M.roof);
             GrayboxMaterials.Box(b, "DrainGrate", new Vector3(0, 0.025f, 0), new Vector3(1.2f, 0.01f, 0.4f), M.road, collider: false);
-            var reel = new GameObject("Socket_HoseReel").transform; reel.SetParent(b, false); reel.localPosition = new Vector3(-2.75f, 1.0f, -4.2f);
+            // GLB batch (DESIGN-GAP): reel moved from the front corner (z -4.2) to the middle of the west wall — with the 8 m GDD hose
+            // the far rear corner of a 4.6-5.2 m GLB car (bay z +3) was out of reach; from mid-wall every point in the bay is within 7.6 m
+            var reel = new GameObject("Socket_HoseReel").transform; reel.SetParent(b, false); reel.localPosition = new Vector3(-2.75f, 1.0f, 0f);
             var panel = GrayboxMaterials.Box(b, "ButtonPanel", new Vector3(2.95f, 1.3f, -4.2f), new Vector3(0.1f, 0.6f, 0.4f), M.panel).transform;
             var shutters = new Transform[2];
             shutters[0] = GrayboxMaterials.Box(b, "ShutterN", new Vector3(0, 1.5f, 5.05f), new Vector3(6f, 3f, 0.12f), M.shutter).transform;

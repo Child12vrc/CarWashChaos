@@ -133,6 +133,7 @@ namespace CarWash.Critters
         protected override void Update()
         {
             base.Update();
+            if (GetComponent<CritterAnimator>() != null) return; // GLB: CritterAnimator does the hop + squash
             // hop: bounce the visual while moving (every peer — NetworkTransform moves the root)
             var v = transform.Find("Visual");
             if (v == null) return;

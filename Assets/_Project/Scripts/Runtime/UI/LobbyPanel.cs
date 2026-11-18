@@ -32,9 +32,10 @@ namespace CarWash.UI
             {
                 var sw = UiFactory.Panel("Swatch" + i, _panel.transform, new Vector2(0f, 1f), new Vector2(46, -92 - i * 48), new Vector2(28, 28), Color.gray);
                 var lb = UiFactory.Label("Row" + i, _panel.transform, "", 24, new Vector2(0f, 1f), new Vector2(230, -92 - i * 48), new Vector2(330, 36), TextAnchor.MiddleLeft, txt);
+                lb.resizeTextForBestFit = true; lb.resizeTextMinSize = 14; lb.resizeTextMaxSize = 24;
                 _rows.Add((sw, lb));
             }
-            _hint = UiFactory.Label("Hint", _panel.transform, "[R] 준비   [C] 색 바꾸기\n모두 준비되면 일정판 [E] 영업 시작", 20, new Vector2(0.5f, 0f), new Vector2(0, 42), new Vector2(390, 56), color: new Color(1f, 0.85f, 0.3f));
+            _hint = UiFactory.Label("Hint", _panel.transform, "[R] 준비  [C] 색  [Z]/[X] 외형\n모두 준비되면 일정판 [E] 영업 시작", 20, new Vector2(0.5f, 0f), new Vector2(0, 42), new Vector2(390, 56), color: new Color(1f, 0.85f, 0.3f));
             _panel.gameObject.SetActive(false);
         }
 
@@ -56,13 +57,17 @@ namespace CarWash.UI
                 var p = players[i];
                 int ci = Mathf.Max(0, p.ColorIndex.Value) % PlayerNet.Colors.Length;
                 _rows[i].swatch.color = PlayerNet.Colors[ci];
-                _rows[i].label.text = $"{PlayerNet.ColorNames[ci]}{(p == me ? " (나)" : "")} — {(p.Ready.Value ? "준비 완료" : "준비 중")}";
+                var ap = p.GetComponent<PlayerAppearance>();
+                _rows[i].label.text = $"{PlayerNet.ColorNames[ci]}{(p == me ? " (나)" : "")} · {(ap != null ? ap.CurrentName : "-")} — {(p.Ready.Value ? "준비 완료" : "준비 중")}";
                 _rows[i].label.color = p.Ready.Value ? new Color(0.55f, 1f, 0.55f) : new Color(1f, 1f, 1f, 0.8f);
             }
             if (me != null && Keyboard.current != null && Cursor.lockState == CursorLockMode.Locked)
             {
                 if (Keyboard.current.rKey.wasPressedThisFrame) me.RequestToggleReady();
                 if (Keyboard.current.cKey.wasPressedThisFrame) me.RequestNextColor();
+                var myLook = me.GetComponent<PlayerAppearance>();
+                if (myLook != null && Keyboard.current.zKey.wasPressedThisFrame) myLook.RequestStep(-1);
+                if (myLook != null && Keyboard.current.xKey.wasPressedThisFrame) myLook.RequestStep(1);
             }
         }
     }

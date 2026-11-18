@@ -57,11 +57,15 @@ namespace CarWash.Critters
         Color[] _baseColors;
         float _popT = -1f;
         Collider[] _colliders;
+        CritterAnimator _animator;
+        Vector3 _carryRest;
 
         protected virtual void Awake()
         {
             Agent = GetComponent<NavMeshAgent>();
             Agent.enabled = false;
+            _animator = GetComponent<CritterAnimator>();
+            if (_animator != null && _animator.CarrySocket != null) _carryRest = transform.InverseTransformPoint(_animator.CarrySocket.position);
             _renderers = (_visual != null ? _visual : transform).GetComponentsInChildren<Renderer>();
             _baseColors = new Color[_renderers.Length];
             for (int i = 0; i < _renderers.Length; i++)
@@ -239,6 +243,8 @@ namespace CarWash.Critters
                 float reach = _carrierTool != null ? 2.1f : 1.2f;
                 transform.position = t.position + Vector3.up * 1.0f + t.forward * reach;
                 transform.rotation = Quaternion.LookRotation(-t.forward);
+                // GLB: by hand, Socket_Carry (scruff) sits at the hold point; netted, every peer hangs the visual on the hoop instead
+                if (_carrierTool == null && _animator != null && _animator.CarrySocket != null) transform.position -= transform.TransformPoint(_carryRest) - transform.position;
                 if (AnimalCage.Instance != null && AnimalCage.Instance.Contains(transform.position)) ServerCapture();
                 return;
             }
@@ -363,7 +369,7 @@ namespace CarWash.Critters
             _visual.localScale = Vector3.one * s;
             // stunned: tipped over; wet: darker blue-ish tint
             var stunned = LooksKnockedOut;
-            _visual.localRotation = Quaternion.Slerp(_visual.localRotation, Quaternion.Euler(0f, 0f, stunned ? 80f : 0f), Time.deltaTime * 8f);
+            if (_animator == null) _visual.localRotation = Quaternion.Slerp(_visual.localRotation, Quaternion.Euler(0f, 0f, stunned ? 80f : 0f), Time.deltaTime * 8f); // GLB: CritterAnimator flips the body
             float wet = MaxWetness.Value > 0f ? Mathf.Clamp01(Wetness.Value / MaxWetness.Value) : 0f;
             _mpb ??= new MaterialPropertyBlock();
             for (int i = 0; i < _renderers.Length; i++)

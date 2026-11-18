@@ -53,9 +53,20 @@ namespace CarWash.Player
                 foreach (var r in _bodyRenderers) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
         }
 
+        /// <summary>PlayerAppearance: the active look's renderers (body + colour outline).</summary>
+        public void SetBodyRenderers(Renderer[] renderers)
+        {
+            _bodyRenderers = renderers ?? System.Array.Empty<Renderer>();
+            if (IsSpawned && IsOwner) SetOwnBodyVisible(_ownBodyVisible);
+            ApplyColor(ColorIndex.Value);
+        }
+
+        bool _ownBodyVisible;
+
         /// <summary>Owner: show the own body (third-person comfort camera) or only its shadow (first person).</summary>
         public void SetOwnBodyVisible(bool visible)
         {
+            _ownBodyVisible = visible;
             foreach (var r in _bodyRenderers) r.shadowCastingMode = visible ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
         }
 
@@ -136,6 +147,11 @@ namespace CarWash.Player
             var c = Colors[index % Colors.Length];
             foreach (var r in _bodyRenderers)
             {
+                if (r == null) continue;
+                // Quaternius looks keep their outfit colours: only the outline shell (and a Y Bot fallback body) takes the player colour
+                bool outline = r.sharedMaterial != null && r.sharedMaterial.name.Contains("Outline");
+                bool ybot = r.sharedMaterial != null && r.sharedMaterial.name.ToLower().Contains("alpha");
+                if (!outline && !ybot) continue;
                 for (int m = 0; m < r.sharedMaterials.Length; m++)
                 {
                     r.GetPropertyBlock(_mpb, m);

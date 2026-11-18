@@ -16,6 +16,7 @@ namespace CarWash.Net
             public NetworkObject prefab;
             public Vector3 position;
             public Vector3 euler;
+            [Tooltip("P7: dev yard content — not spawned in release builds")] public bool devOnly;
         }
 
         [SerializeField] private Entry[] _entries = Array.Empty<Entry>();
@@ -28,7 +29,7 @@ namespace CarWash.Net
             if (nm == null || !nm.IsServer) return;
             foreach (var e in _entries)
             {
-                if (e.prefab == null) continue;
+                if (e.prefab == null || (e.devOnly && !Core.DevFlags.DevContent)) continue;
                 var obj = Instantiate(e.prefab, e.position, Quaternion.Euler(e.euler));
                 obj.Spawn(true);
                 Spawned?.Invoke(obj);

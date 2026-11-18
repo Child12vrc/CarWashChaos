@@ -5,7 +5,7 @@ namespace CarWash.Core
     /// <summary>
     /// Dev-only test area east of the exit ramp (outside the customer flow): static dirty test cars, a test washer
     /// with its own reel, foam floor zone, cone row. Shared by LotBuilder (placement) and the autotests (positions).
-    /// DESIGN-GAP: strip from release builds in T7.3.
+    /// P7: release builds strip it (DevOnlyObject on the yard, devOnly spawn entries; DevFlags.DevContent).
     /// </summary>
     public static class DevYard
     {

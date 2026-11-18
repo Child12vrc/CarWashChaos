@@ -8,16 +8,22 @@ using UnityEngine.UI;
 namespace CarWash.UI
 {
     /// <summary>
-    /// Main menu (built in code): 호스트 / 참가(IP) / 종료. Command line -host / -join auto-start.
-    /// DESIGN-GAP: Lobby scene (ready, color) arrives in T4.1; until then host loads SudsyLot directly.
+    /// Main menu (built in code). P7 default flow = internet play through Unity Relay:
+    ///   호스트 (코드 발급) → 6-character join code (shown big in the lot by InviteCard, with a copy button)
+    ///   코드로 참가 (code field)
+    ///   고급 → IP로 호스트 (shows this PC's private IP:port) / IP로 참가 (LAN, port forwarding)
+    /// Command line: -host-relay | -joincode CODE | -host | -join IP (auto-start once).
     /// </summary>
     public class MainMenuUI : MonoBehaviour
     {
         public static MainMenuUI Instance { get; private set; }
         public Transform Root { get; private set; }
 
-        InputField _ip;
-        Text _status;
+        InputField _ip, _code;
+        Text _status, _myIp;
+        GameObject _main, _advanced;
+        Button[] _buttons;
+        bool _busy;
 
         void Awake()
         {
@@ -27,23 +33,53 @@ namespace CarWash.UI
             Root = canvas.transform;
             var c = new Vector2(0.5f, 0.5f);
             UiFactory.Panel("Bg", Root, c, Vector2.zero, new Vector2(4000, 4000), new Color(0.09f, 0.13f, 0.2f));
-            UiFactory.Label("Title", Root, "세차장 대소동", 96, new Vector2(0.5f, 0.75f), Vector2.zero, new Vector2(1400, 160));
-            UiFactory.Label("Sub", Root, "CarWashChaos (가제)", 32, new Vector2(0.5f, 0.66f), Vector2.zero, new Vector2(1000, 60), color: new Color(0.7f, 0.85f, 1f));
+            UiFactory.Label("Title", Root, "세차장 대소동", 96, new Vector2(0.5f, 0.8f), Vector2.zero, new Vector2(1400, 160));
+            UiFactory.Label("Sub", Root, "CarWashChaos (가제)  v" + Application.version, 32, new Vector2(0.5f, 0.71f), Vector2.zero, new Vector2(1000, 60), color: new Color(0.7f, 0.85f, 1f));
 
-            UiFactory.FramePanel("MenuPanel", Root, c, new Vector2(0, -60), new Vector2(620, 400), new Color(0.12f, 0.17f, 0.3f, 0.9f));
-            UiFactory.Button("Host", Root, "호스트 시작", c, new Vector2(0, 40), new Vector2(420, 80), Host);
-            _ip = UiFactory.Input("Ip", Root, "127.0.0.1", c, new Vector2(-110, -60), new Vector2(300, 70));
-            UiFactory.Button("Join", Root, "참가", c, new Vector2(160, -60), new Vector2(200, 70), Join);
-            UiFactory.Button("Quit", Root, "종료", c, new Vector2(0, -160), new Vector2(420, 70), Application.Quit);
-            _status = UiFactory.Label("Status", Root, "", 26, new Vector2(0.5f, 0.2f), Vector2.zero, new Vector2(1400, 60), color: new Color(1f, 0.85f, 0.5f));
+            // --- default: Relay code flow ---
+            _main = UiFactory.Rect("Main", Root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject;
+            var m = _main.transform;
+            UiFactory.FramePanel("MenuPanel", m, c, new Vector2(0, -90), new Vector2(720, 520), new Color(0.12f, 0.17f, 0.3f, 0.9f));
+            var bHost = UiFactory.Button("Host", m, "호스트 (참가 코드 발급)", c, new Vector2(0, 110), new Vector2(560, 84), HostRelay);
+            UiFactory.Label("CodeHint", m, "친구에게 받은 참가 코드", 22, c, new Vector2(-120, 30), new Vector2(320, 30), color: new Color(0.75f, 0.85f, 1f));
+            _code = UiFactory.Input("Code", m, "", c, new Vector2(-120, -20), new Vector2(320, 74));
+            _code.characterLimit = 12;
+            _code.textComponent.fontSize = 36;
+            _code.textComponent.alignment = TextAnchor.MiddleCenter;
+            var bJoin = UiFactory.Button("JoinCode", m, "코드로 참가", c, new Vector2(170, -20), new Vector2(240, 74), JoinRelay);
+            var bAdv = UiFactory.Button("Advanced", m, "고급 (IP로 플레이)", c, new Vector2(0, -130), new Vector2(560, 64), () => ShowAdvanced(true));
+            var bQuit = UiFactory.Button("Quit", m, "종료", c, new Vector2(0, -220), new Vector2(560, 64), Application.Quit);
+
+            // --- 고급: direct IP (LAN / port forwarding) ---
+            _advanced = UiFactory.Rect("Advanced", Root, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject;
+            var a = _advanced.transform;
+            UiFactory.FramePanel("AdvPanel", a, c, new Vector2(0, -90), new Vector2(820, 560), new Color(0.12f, 0.17f, 0.3f, 0.92f));
+            UiFactory.Label("AdvTitle", a, "고급 — IP로 플레이 (같은 공유기 / 포트 포워딩)", 26, c, new Vector2(0, 150), new Vector2(780, 40), color: new Color(0.75f, 0.85f, 1f));
+            var bIpHost = UiFactory.Button("IpHost", a, "IP로 호스트", c, new Vector2(0, 85), new Vector2(560, 74), HostIp);
+            _myIp = UiFactory.Label("MyIp", a, "", 24, c, new Vector2(0, 25), new Vector2(780, 36), color: new Color(1f, 0.9f, 0.55f));
+            _ip = UiFactory.Input("Ip", a, "127.0.0.1", c, new Vector2(-120, -50), new Vector2(340, 70));
+            var bIpJoin = UiFactory.Button("IpJoin", a, "IP로 참가", c, new Vector2(180, -50), new Vector2(220, 70), JoinIp);
+            UiFactory.Label("PortHint", a, $"포트 {NetSession.DefaultPort} (UDP). 인터넷 너머라면 기본 메뉴의 '참가 코드'를 쓰세요.", 20, c, new Vector2(0, -115), new Vector2(780, 30), color: new Color(1f, 1f, 1f, 0.7f));
+            var bBack = UiFactory.Button("Back", a, "뒤로", c, new Vector2(0, -200), new Vector2(320, 64), () => ShowAdvanced(false));
+
+            _buttons = new[] { bHost, bJoin, bAdv, bQuit, bIpHost, bIpJoin, bBack };
+            _status = UiFactory.Label("Status", Root, "", 28, new Vector2(0.5f, 0.1f), Vector2.zero, new Vector2(1600, 90), color: new Color(1f, 0.85f, 0.5f));
+            ShowAdvanced(false);
 
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
 
+        void ShowAdvanced(bool on)
+        {
+            _main.SetActive(!on);
+            _advanced.SetActive(on);
+            if (on) _myIp.text = $"내 사설 IP: {NetSession.LocalIPv4()} : {NetSession.DefaultPort}";
+        }
+
         static bool _autoStarted;
         /// <summary>-autoreconnect (dev/P1): after a lost connection, join the same address again automatically.</summary>
-        static bool AutoReconnect => System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-autoreconnect") >= 0;
+        static bool AutoReconnect => DevFlags.DevContent && System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-autoreconnect") >= 0;
 
         void Start()
         {
@@ -53,26 +89,72 @@ namespace CarWash.UI
             bool again = _autoStarted && AutoReconnect && NetSession.ArgJoin != null;
             if (_autoStarted && !again) return; // command-line auto start only once
             _autoStarted = true;
-            if (NetSession.ArgHost) Host();
-            else if (NetSession.ArgJoin != null) { _ip.text = NetSession.ArgJoin; if (again) Invoke(nameof(Join), 3f); else Join(); }
+            if (NetSession.ArgHostRelay) HostRelay();
+            else if (NetSession.ArgJoinCode != null) { _code.text = NetSession.ArgJoinCode; JoinRelay(); }
+            else if (NetSession.ArgHost) HostIp();
+            else if (NetSession.ArgJoin != null) { _ip.text = NetSession.ArgJoin; if (again) Invoke(nameof(JoinIp), 3f); else JoinIp(); }
         }
 
         NetSession Net => Services.Get<NetSession>();
 
-        void Host()
+        void SetBusy(bool busy)
         {
-            if (Net == null) { _status.text = "Bootstrap 씬에서 시작해 주세요"; return; }
-            if (!Net.Host()) { _status.text = "호스트 시작 실패 (포트 사용 중?)"; return; }
-            Services.Get<GameStateMachine>()?.TryChange(GameState.Lobby);
-            NetworkManager.Singleton.SceneManager.LoadScene(SceneNames.SudsyLot, LoadSceneMode.Single);
+            _busy = busy;
+            foreach (var b in _buttons) if (b != null) b.interactable = !busy;
         }
 
-        void Join()
+        bool CanStart()
         {
-            if (Net == null) { _status.text = "Bootstrap 씬에서 시작해 주세요"; return; }
+            if (_busy) return false;
+            if (Net == null) { _status.text = "Bootstrap 씬에서 시작해 주세요"; return false; }
+            return true;
+        }
+
+        async void HostRelay()
+        {
+            if (!CanStart()) return;
+            SetBusy(true);
+            _status.text = "참가 코드 발급 중…";
+            string err = await Net.HostRelay();
+            if (this == null) return;
+            SetBusy(false);
+            if (err != null) { _status.text = err; return; }
+            EnterLot();
+        }
+
+        async void JoinRelay()
+        {
+            if (!CanStart()) return;
+            string code = RelayConnector.NormalizeCode(_code.text);
+            if (!RelayConnector.IsValidCode(code)) { _status.text = $"참가 코드는 영문·숫자 {RelayConnector.CodeLength}자리입니다."; return; }
+            SetBusy(true);
+            _status.text = $"코드 {code} 로 접속 중…";
+            string err = await Net.JoinRelay(code);
+            if (this == null) return;
+            SetBusy(false);
+            if (err != null) { _status.text = err; return; }
+            Services.Get<GameStateMachine>()?.TryChange(GameState.Lobby);
+        }
+
+        void HostIp()
+        {
+            if (!CanStart()) return;
+            if (!Net.Host()) { _status.text = "호스트 시작 실패 (포트 사용 중?)"; return; }
+            EnterLot();
+        }
+
+        void JoinIp()
+        {
+            if (!CanStart()) return;
             _status.text = $"{_ip.text} 에 접속 중...";
-            if (!Net.Join(_ip.text)) _status.text = "접속 실패";
+            if (!Net.Join(_ip.text.Trim())) _status.text = "접속 실패";
             else Services.Get<GameStateMachine>()?.TryChange(GameState.Lobby);
+        }
+
+        void EnterLot()
+        {
+            Services.Get<GameStateMachine>()?.TryChange(GameState.Lobby);
+            NetworkManager.Singleton.SceneManager.LoadScene(SceneNames.SudsyLot, LoadSceneMode.Single);
         }
 
         void OnDestroy()

@@ -49,6 +49,8 @@ namespace CarWash.Editor
             // P3 ragdolls: no pushing players' capsules (own body!), held tools, triggers or interactables
             foreach (var l in new[] { Layers.Player, Layers.Tool, Layers.Trigger, Layers.Interactable, Layers.FPArms, Layers.FoamArea })
                 Physics.IgnoreLayerCollision(Layers.Ragdoll, l, true);
+            // GLB vehicle wash surfaces: raycast-only (spray / towel), never physical
+            for (int l = 0; l < 32; l++) Physics.IgnoreLayerCollision(Layers.WashSurface, l, true);
 
             Physics.defaultSolverIterations = 8;
             Physics.defaultSolverVelocityIterations = 2;

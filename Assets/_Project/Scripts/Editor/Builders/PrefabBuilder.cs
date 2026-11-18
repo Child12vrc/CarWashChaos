@@ -69,21 +69,16 @@ namespace CarWash.Editor
             cam.nearClipPlane = 0.05f; cam.fieldOfView = 90f; cam.enabled = false;
             camGo.GetComponent<AudioListener>().enabled = false;
 
-            // Third-person body (others see it; owner sees only its shadow)
-            var model = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(YBotPath));
-            PrefabUtility.UnpackPrefabInstance(model, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-            model.name = "Body";
-            model.transform.SetParent(root.transform, false);
-            foreach (var t in model.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = Layers.Player;
-            var anim = model.GetComponent<Animator>();
-            anim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(BodyControllerPath);
-            anim.applyRootMotion = false;
-            anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
-            // P3 ragdoll + P5 comfort camera
-            var ragBones = RagdollBuilder.Build(anim);
+            // Third-person body (others see it; owner sees only its shadow): every player look under "Body" (PlayerAppearance)
+            var bodyRoot = new GameObject("Body") { layer = Layers.Player }.transform;
+            bodyRoot.SetParent(root.transform, false);
+            var looks = PlayerLooks.Build(bodyRoot);
             var ragdoll = root.AddComponent<PlayerRagdoll>();
+            var appearance = root.AddComponent<PlayerAppearance>();
+            PlayerLooks.Wire(appearance, looks);
+            var anim = looks[0].animator;
             SceneBuilder.Set(ragdoll, "_animator", anim);
-            SetArray(ragdoll, "_bones", ragBones.Cast<Object>().ToArray());
+            SetArray(ragdoll, "_bones", looks[0].bones.Cast<Object>().ToArray());
             root.AddComponent<PlayerCameraRig>();
 
             SceneBuilder.Set(motor, "_data", data);
@@ -107,7 +102,7 @@ namespace CarWash.Editor
             SceneBuilder.Set(tools, "_look", look);
             SceneBuilder.Set(tools, "_grabber", grabber);
             SceneBuilder.Set(tools, "_inventory", inventory);
-            SetArray(net, "_bodyRenderers", model.GetComponentsInChildren<Renderer>(true).Cast<Object>().ToArray());
+            SetArray(net, "_bodyRenderers", looks[0].renderers.Cast<Object>().ToArray());
 
             var prefab = Save(root, PlayerPath);
             Debug.Log("[PrefabBuilder] Player prefab built");

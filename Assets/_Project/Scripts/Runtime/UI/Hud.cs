@@ -59,6 +59,8 @@ namespace CarWash.UI
             Bays.Build(Root);
             Lobby = gameObject.AddComponent<LobbyPanel>();
             Lobby.Build(Root);
+            Invite = gameObject.AddComponent<InviteCard>(); // P7: join code / IP
+            Invite.Build(Root);
             Pings = gameObject.AddComponent<PingMarkers>();
             Pings.Build(Root);
             DebugView = gameObject.AddComponent<DebugOverlay>();
@@ -68,6 +70,7 @@ namespace CarWash.UI
         }
 
         public LobbyPanel Lobby { get; private set; }
+        public InviteCard Invite { get; private set; }
         public PingMarkers Pings { get; private set; }
         public DebugOverlay DebugView { get; private set; }
         public SettingsMenu Menu { get; private set; }
@@ -93,7 +96,7 @@ namespace CarWash.UI
                 int n = Physics.RaycastNonAlloc(ray, _aimHits, range, Core.Layers.SprayMask, QueryTriggerInteraction.Ignore);
                 float best = float.MaxValue; Collider bestCol = null;
                 for (int i = 0; i < n; i++)
-                    if (_aimHits[i].distance < best && !_aimHits[i].collider.transform.IsChildOf(look.transform)) { best = _aimHits[i].distance; bestCol = _aimHits[i].collider; }
+                    if (_aimHits[i].distance < best && !_aimHits[i].collider.transform.IsChildOf(look.transform) && !Vehicles.VehicleHull.Is(_aimHits[i].collider)) { best = _aimHits[i].distance; bestCol = _aimHits[i].collider; }
                 onTarget = bestCol != null && bestCol.GetComponentInParent<Dirt.DirtNetSync>() != null;
             }
             CrosshairOnTarget = onTarget;

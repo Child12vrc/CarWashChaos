@@ -50,25 +50,36 @@ namespace CarWash.Editor
             var nt = root.AddComponent<NetworkTransform>();
             nt.SyncRotAngleX = nt.SyncRotAngleZ = false; nt.SyncScaleX = nt.SyncScaleY = nt.SyncScaleZ = false; nt.Interpolate = true;
 
-            var body = DirtTestBuilder.CreateCarVisual(shape, root.transform, out var painter, out var col);
-            body.layer = Layers.Vehicle; body.tag = Layers.TagDirtable;
-            var prof = VehicleMeshBuilder.Profile(shape, out float w);
-            float minZ = prof.Min(p => p.x), maxZ = prof.Max(p => p.x), maxY = prof.Max(p => p.y);
-
-            // doors: hinge at the front edge, panel extends backwards; trunk hinge at the rear top
-            var doorMat = GrayboxMaterials.Get("DoorPanel", new Color(0.3f, 0.32f, 0.36f));
-            float doorZ = Mathf.Lerp(minZ, maxZ, 0.62f), doorY = 0.55f + (shape == "B01" ? 1.0f : 0f);
-            var doors = new List<VehicleDoor>
+            DirtPainter painter;
+            Transform interior, surprise, driver;
+            float w, minZ, maxZ, maxY;
+            VehicleGlbBuilder.Parts glb = null;
+            string glbPath = VehicleGlbBuilder.GlbFor(d.id); // only the exact id's model (V01/V02/V03 now); others stay graybox
+            if (glbPath != null)
             {
-                Door(root.transform, "Door_L", new Vector3(-w * 0.5f - 0.04f, doorY, doorZ), new Vector3(0.06f, 0.7f, 1.1f), new Vector3(0, 0, -0.55f), new Vector3(0, -75f, 0), "운전석 문", doorMat),
-                Door(root.transform, "Door_R", new Vector3(w * 0.5f + 0.04f, doorY, doorZ), new Vector3(0.06f, 0.7f, 1.1f), new Vector3(0, 0, -0.55f), new Vector3(0, 75f, 0), "조수석 문", doorMat),
-                Door(root.transform, "Trunk", new Vector3(0, maxY * 0.72f, minZ - 0.04f), new Vector3(w * 0.8f, 0.5f, 0.06f), new Vector3(0, -0.25f, 0), new Vector3(-80f, 0, 0), "트렁크", doorMat),
-            };
+                glb = VehicleGlbBuilder.Build(glbPath, d.id, root.transform);
+                painter = glb.Painter;
+                interior = glb.Interior; surprise = glb.Surprise; driver = glb.Driver;
+                w = glb.BodyBounds.size.x; minZ = glb.Bounds.min.z; maxZ = glb.Bounds.max.z; maxY = glb.Bounds.max.y;
+            }
+            else
+            {
+                var body = DirtTestBuilder.CreateCarVisual(shape, root.transform, out painter, out _);
+                body.layer = Layers.Vehicle; body.tag = Layers.TagDirtable;
+                var prof = VehicleMeshBuilder.Profile(shape, out w);
+                minZ = prof.Min(p => p.x); maxZ = prof.Max(p => p.x); maxY = prof.Max(p => p.y);
 
-            Transform Socket(string n, Vector3 p) { var t = new GameObject(n).transform; t.SetParent(root.transform, false); t.localPosition = p; return t; }
-            var interior = Socket("Socket_Interior", new Vector3(0, doorY, doorZ - 0.5f));
-            var surprise = Socket("Socket_Surprise", new Vector3(0, maxY + 0.2f, 0));
-            var driver = Socket("Socket_Driver", new Vector3(-w * 0.25f, doorY + 0.3f, doorZ - 0.3f));
+                // doors: hinge at the front edge, panel extends backwards; trunk hinge at the rear top
+                var doorMat = GrayboxMaterials.Get("DoorPanel", new Color(0.3f, 0.32f, 0.36f));
+                float doorZ = Mathf.Lerp(minZ, maxZ, 0.62f), doorY = 0.55f + (shape == "B01" ? 1.0f : 0f);
+                Door(root.transform, "Door_L", new Vector3(-w * 0.5f - 0.04f, doorY, doorZ), new Vector3(0.06f, 0.7f, 1.1f), new Vector3(0, 0, -0.55f), new Vector3(0, -75f, 0), "운전석 문", doorMat);
+                Door(root.transform, "Door_R", new Vector3(w * 0.5f + 0.04f, doorY, doorZ), new Vector3(0.06f, 0.7f, 1.1f), new Vector3(0, 0, -0.55f), new Vector3(0, 75f, 0), "조수석 문", doorMat);
+                Door(root.transform, "Trunk", new Vector3(0, maxY * 0.72f, minZ - 0.04f), new Vector3(w * 0.8f, 0.5f, 0.06f), new Vector3(0, -0.25f, 0), new Vector3(-80f, 0, 0), "트렁크", doorMat);
+
+                interior = Socket(root.transform, "Socket_Interior", new Vector3(0, doorY, doorZ - 0.5f));
+                surprise = Socket(root.transform, "Socket_Surprise", new Vector3(0, maxY + 0.2f, 0));
+                driver = Socket(root.transform, "Socket_Driver", new Vector3(-w * 0.25f, doorY + 0.3f, doorZ - 0.3f));
+            }
 
             var sync = root.AddComponent<DirtNetSync>();
             SceneBuilder.Set(sync, "_painter", painter);
@@ -81,7 +92,14 @@ namespace CarWash.Editor
             SceneBuilder.Set(v, "_interior", interior);
             SceneBuilder.Set(v, "_surprise", surprise);
             SceneBuilder.Set(v, "_driver", driver);
-            var vso = new SerializedObject(v); vso.FindProperty("_dataId").stringValue = d.id; vso.ApplyModifiedPropertiesWithoutUndo();
+            var vso = new SerializedObject(v); vso.FindProperty("_dataId").stringValue = d.id;
+            if (glb != null)
+            {
+                var pr = vso.FindProperty("_paintRenderers"); var ps = vso.FindProperty("_paintSlots");
+                pr.arraySize = glb.PaintRenderers.Count; ps.arraySize = glb.PaintSlots.Count;
+                for (int i = 0; i < glb.PaintRenderers.Count; i++) { pr.GetArrayElementAtIndex(i).objectReferenceValue = glb.PaintRenderers[i]; ps.GetArrayElementAtIndex(i).intValue = glb.PaintSlots[i]; }
+            }
+            vso.ApplyModifiedPropertiesWithoutUndo();
 
             var obs = root.AddComponent<NavMeshObstacle>();
             obs.carving = true; obs.shape = NavMeshObstacleShape.Box;
@@ -89,6 +107,8 @@ namespace CarWash.Editor
             obs.carveOnlyStationary = true;
             return PrefabBuilder.Save(root, PathOf(d));
         }
+
+        static Transform Socket(Transform root, string n, Vector3 p) { var t = new GameObject(n).transform; t.SetParent(root, false); t.localPosition = p; return t; }
 
         static VehicleDoor Door(Transform parent, string name, Vector3 hingePos, Vector3 panelSize, Vector3 panelOffset, Vector3 openEuler, string label, Material m)
         {

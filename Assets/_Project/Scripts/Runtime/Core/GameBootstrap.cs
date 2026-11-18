@@ -26,7 +26,7 @@ namespace CarWash.Core
             // dev: -fps N caps the frame rate (P1 measurements at a realistic 60 fps; P2 settings own this for players)
             var argv = System.Environment.GetCommandLineArgs();
             int fi = System.Array.IndexOf(argv, "-fps");
-            if (fi >= 0 && fi + 1 < argv.Length && int.TryParse(argv[fi + 1], out int fps)) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = fps; }
+            if (DevFlags.DevContent && fi >= 0 && fi + 1 < argv.Length && int.TryParse(argv[fi + 1], out int fps)) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = fps; }
 
             Services.Clear();
             Flow = new GameStateMachine();
@@ -43,7 +43,7 @@ namespace CarWash.Core
             if (_audio) Services.Register(_audio);
             if (_skin) Services.Register(_skin);
             if (_net) Services.Register(_net);
-            if (DevAutopilot.Requested) gameObject.AddComponent<DevAutopilot>();
+            if (DevFlags.Autotest && DevAutopilot.Requested) gameObject.AddComponent<DevAutopilot>(); // P7: never in the shipped release
         }
 
         void Start()

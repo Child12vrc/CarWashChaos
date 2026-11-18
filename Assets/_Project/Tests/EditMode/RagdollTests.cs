@@ -37,12 +37,15 @@ namespace CarWash.Tests
             Assert.NotNull(p, "player prefab");
             var rag = p.GetComponent<PlayerRagdoll>();
             Assert.NotNull(rag);
-            var bodies = p.GetComponentsInChildren<Rigidbody>(true);
+            // every player look (PlayerAppearance) carries its own 11-bone ragdoll; check each one
+            var looks = p.GetComponentsInChildren<Animator>(true);
+            Assert.AreEqual(looks.Length * RagdollPose.BoneCount, p.GetComponentsInChildren<Rigidbody>(true).Length);
+            var bodies = looks[0].GetComponentsInChildren<Rigidbody>(true);
             Assert.AreEqual(RagdollPose.BoneCount, bodies.Length);
             Assert.IsTrue(bodies.All(b => b.isKinematic), "kinematic until knocked down");
             Assert.IsTrue(bodies.All(b => b.gameObject.layer == Layers.Ragdoll));
             Assert.IsTrue(bodies.All(b => b.GetComponent<Collider>() != null));
-            Assert.AreEqual(RagdollPose.BoneCount - 1, p.GetComponentsInChildren<CharacterJoint>(true).Length);
+            Assert.AreEqual(RagdollPose.BoneCount - 1, looks[0].GetComponentsInChildren<CharacterJoint>(true).Length);
             Assert.AreEqual(68f, bodies.Sum(b => b.mass), 1f);   // 15+15+5 + 2×(2.5+2) + 2×(7+5)
             Assert.NotNull(p.GetComponent<PlayerCameraRig>());
         }

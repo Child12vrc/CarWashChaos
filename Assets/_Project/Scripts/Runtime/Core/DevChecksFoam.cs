@@ -86,7 +86,8 @@ namespace CarWash.Core
             var tp = tool.transform.position;
             me.Motor.Teleport(new Vector3(tp.x, 0.05f, tp.z) + (tp.y > 0.5f ? new Vector3(0, 0, 1.2f) : new Vector3(0, 0, -1.2f)));
             yield return new WaitForSeconds(0.3f);
-            me.Look.LookAt(tool.transform.position);
+            var aimAt = tool.GetComponent<Collider>() != null ? tool.GetComponent<Collider>().bounds.center : tool.transform.position; // GLB: root = grip (edge of the towel)
+            me.Look.LookAt(aimAt);
             yield return new WaitForSeconds(0.25f);
             input.sInteract = true;
             { float tw = Time.time; while (tools.Equipped != tool && Time.time - tw < 4f) yield return null; } // P1: wait for the server round trip, not a fixed time

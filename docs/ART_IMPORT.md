@@ -66,3 +66,30 @@ Surface textures are seamless (checked by half-offset). Signs: alpha-cut quads (
 | Vehicles/V01_hatchback.glb | 1868 | 3.80 x 1.73 x 1.50 m |
 | Vehicles/V02_sedan.glb | 2940 | 4.6 x 1.8 x 1.45 m |
 | Vehicles/V03_pickup.glb | 3508 | 5.0 x 1.9 x 1.8 m, extra node HayBales; tailgate = Trunk (hinge at bottom) |
+| Vehicles/V04_minivan.glb | 2920 | 4.8 x 1.9 x 1.8 m |
+| Vehicles/B01_monster_truck.glb | 4832 | 5.2 x 3.0 x 3.2 m, wheel dia ~1.6 m, roof light bar |
+| Props/P_traffic_cone.glb | 186 | 0.5 m; origin bottom center (all props) |
+| Props/P_bucket.glb | 340 | 0.5 m tall with handle |
+| Props/P_tire.glb | 464 | lying flat, 0.65 m |
+| Props/P_trash_bag.glb | 166 | 0.63 m |
+| Props/P_caution_sign.glb | 94 | 0.9 m A-frame; node SignFace has planar UV 0-1 → put Art/Environment/Signs/sign_caution_slippery.png on it |
+| Props/P_crate.glb | 228 | 0.6 m cube |
+| Props/P_hay_bale.glb | 176 | 1.0 x 0.5 x 0.45 m |
+| Tools/T_pressure_washer_gun.glb | 260 | origin = grip, +Z forward; Socket_Nozzle (tip), Socket_HoseIn (back) |
+| Tools/T_foam_cannon.glb | 248 | origin = grip; Socket_Nozzle |
+| Tools/T_towel.glb | 216 | folded towel; Socket_Nozzle (wipe point) |
+| Tools/T_shop_vac.glb | 662 | canister on casters + hose; Socket_Nozzle at nozzle tip |
+| Tools/T_net_pole.glb | 568 | 1.87 m; Socket_Capture at hoop center |
+| Critters/C01_raccoon.glb | 926 | 0.75 m incl. tail; nodes Body, Head (pivot neck), Tail (pivot base), Leg_FL/FR/BL/BR (pivot hip/shoulder), Ear_L/R; Socket_Carry, Socket_Head; root node "Critter". No rig — animate by rotating nodes in code |
+| Critters/C05_possum.glb | 932 | 0.7 m incl. tail; same node set as raccoon (play-dead = roll Body 90° + legs up) |
+| Critters/C03_mud_slime.glb | 580 | 0.6 m blob; Body pivot bottom center (squash/stretch scale), Eye_L/R, Drip_1..3, Socket_Carry/Head |
+| Critters/C02_bee.glb | 506 | 0.14 m single bee; Body, Head, Wing_L/R (pivot at wing root → flap), Stinger; swarm = instance several |
+
+## Player characters (third-party, CC0) — `Art/ThirdParty/Quaternius/Characters/`
+Source: Quaternius "Ultimate Modular Men Pack" (Feb 2022) + "Ultimate Modular Women Pack" (Apr 2022), **Humanoid Rig** versions, CC0 1.0 (LICENSE_CC0_Quaternius.txt). Low-poly stylized, vertex/flat colors, ~same scale as YBot (≈1.8 m; verify), Unity Humanoid avatar compatible.
+| file | use |
+|---|---|
+| Men/Male_Worker.fbx, Women/Female_Worker.fbx | default car-wash staff look (hi-vis/work clothes) |
+| Men/Male_Casual.fbx, Male_Casual2.fbx, Women/Female_Casual.fbx | default player looks |
+| Men/Male_Punk, Male_Beach, Male_Farmer, Male_Suit; Women/Female_Punk, Female_Formal, Female_Suit | extra looks (lobby outfit picker / future cosmetics) |
+Integration: Rig = Humanoid (Create From This Model), Avatar per model; reuse existing Mixamo locomotion + animator controller via humanoid retargeting; rebuild ragdoll from Humanoid bones (RagdollBuilder already uses humanoid bone mapping); player color = tint on the shirt material/vertex-color region or keep colored outline/name tag if the mesh has no separable shirt. Lobby: each player picks one of the looks (default: P1 Male_Worker, P2 Female_Worker, P3 Male_Casual, P4 Female_Casual). Remove YBot from the shipped build once replaced (keep in project for reference).

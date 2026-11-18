@@ -40,6 +40,9 @@ namespace CarWash.Dirt
         /// <summary>Clip-space Y sign so that the texel written for UV2 v is the texel sampled at v.</summary>
         public static float FlipSign => FlipOverride != 0f ? FlipOverride : (SystemInfo.graphicsUVStartsAtTop ? -1f : 1f);
         public Mesh Mesh => _body.sharedMesh;
+        /// <summary>Dev checks only (texel readback): starting dirt (r mud, g grease, a coverage) and accumulated cleaning (r, g, b wet, a dried).</summary>
+        public RenderTexture DevInitRT => _init;
+        public RenderTexture DevCleanRT => _clean;
 
         RenderTexture _init, _clean, _prev, _foam, _eval;
         Material _paintMat, _evalMat;

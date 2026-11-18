@@ -27,7 +27,11 @@ namespace CarWash.Player
         {
             if (!IsSpawned || !IsOwner) return;
             FindTarget();
-            if (_input.InteractPressed && TargetObject != null) InteractRpc(TargetObject);
+            if (_input.InteractPressed && TargetObject != null)
+            {
+                bool aimedNb = Target is NetworkBehaviour;
+                InteractRpc(TargetObject, aimedNb, aimedNb ? new NetworkBehaviourReference((NetworkBehaviour)Target) : default);
+            }
         }
 
         void FindTarget()
@@ -50,10 +54,16 @@ namespace CarWash.Player
         public string PromptText() => Target != null ? "[E] " + Target.Prompt : null;
 
         [Rpc(SendTo.Server)]
-        void InteractRpc(NetworkObjectReference target)
+        void InteractRpc(NetworkObjectReference target, bool hasAimed, NetworkBehaviourReference aimed)
         {
             if (!target.TryGet(out var no)) return;
             if (Vector3.Distance(_look.Head.position, no.transform.position) > _data.balance.player.interactRange + 6f) return; // generous for big vehicles
+            // the aimed component itself (Door_R / Trunk on a car, not just the first door), when it belongs to that object
+            if (hasAimed && aimed.TryGet(out NetworkBehaviour nb) && nb.NetworkObject == no && nb is IInteractable aimedIt)
+            {
+                if (aimedIt.CanInteract(_self)) aimedIt.Interact(_self);
+                return;
+            }
             foreach (var it in no.GetComponentsInChildren<IInteractable>())
                 if (it.CanInteract(_self)) { it.Interact(_self); break; }
         }

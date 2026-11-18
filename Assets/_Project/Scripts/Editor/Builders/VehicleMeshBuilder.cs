@@ -73,6 +73,7 @@ namespace CarWash.Editor
             mesh.SetVertices(verts); mesh.SetNormals(norms); mesh.SetTriangles(tris, 0);
             mesh.RecalculateBounds();
             Unwrapping.GenerateSecondaryUVSet(mesh, new UnwrapParam { angleError = 0.08f, areaError = 0.15f, hardAngle = 60f, packMargin = 0.02f });
+            mesh.SetUVs(2, new Vector2[mesh.vertexCount]); // UV3 "unreachable" mask (DirtUnwrapPaint): graybox bodies are fully counted
 
             Directory.CreateDirectory(Dir);
             string path = PathOf(id);

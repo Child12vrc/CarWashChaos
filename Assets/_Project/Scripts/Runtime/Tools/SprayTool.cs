@@ -137,6 +137,7 @@ namespace CarWash.Tools
             {
                 if (Hits[i].distance >= bestD) continue;
                 if (HolderPlayer != null && Hits[i].collider.transform.IsChildOf(HolderPlayer.transform)) continue;
+                if (Vehicles.VehicleHull.Is(Hits[i].collider)) continue; // GLB cars: wash the exact body, not the physics boxes
                 best = Hits[i]; bestD = Hits[i].distance; found = true;
             }
             return found;

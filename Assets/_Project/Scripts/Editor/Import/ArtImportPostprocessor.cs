@@ -111,6 +111,44 @@ namespace CarWash.Editor
             ti.sRGBTexture = true;
         }
 
+        // ---------------- Player characters (docs/ART_IMPORT.md "Player characters") ----------------
+        public const string CharacterRoot = "Assets/_Project/Art/ThirdParty/Quaternius/Characters/";
+
+        /// <summary>Quaternius humanoid FBX: Rig = Humanoid, avatar created from each model, no clips of its own (the Mixamo
+        /// locomotion of the player controller retargets onto it), materials kept as imported (embedded).</summary>
+        void OnPreprocessModel()
+        {
+            if (!assetPath.StartsWith(CharacterRoot) || !(assetImporter is ModelImporter mi)) return;
+            ApplyCharacter(mi);
+        }
+
+        public static void ApplyCharacter(ModelImporter mi)
+        {
+            mi.animationType = ModelImporterAnimationType.Human;
+            mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            mi.importAnimation = false;
+            mi.importCameras = false;
+            mi.importLights = false;
+            mi.importBlendShapes = false;
+            mi.useFileScale = true;
+            mi.isReadable = false;
+            mi.optimizeGameObjects = false; // ragdoll + bone lookups need the transform hierarchy
+            mi.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+            mi.materialLocation = ModelImporterMaterialLocation.InPrefab;
+        }
+
+        /// <summary>Re-import the character FBX so the rule applies (CI Art step).</summary>
+        public static void ReimportCharacters()
+        {
+            if (!AssetDatabase.IsValidFolder(CharacterRoot.TrimEnd('/'))) return;
+            foreach (var guid in AssetDatabase.FindAssets("t:Model", new[] { CharacterRoot.TrimEnd('/') }))
+            {
+                var p = AssetDatabase.GUIDToAssetPath(guid);
+                if (AssetImporter.GetAtPath(p) is ModelImporter mi && (mi.animationType != ModelImporterAnimationType.Human || mi.importAnimation))
+                    AssetDatabase.ImportAsset(p, ImportAssetOptions.ForceUpdate);
+            }
+        }
+
         /// <summary>Re-import every art texture so the rules (and current table) apply. Menu + CI step.</summary>
         [MenuItem("CarWash/Build/Reimport Art")]
         public static void ReimportAll()
@@ -119,6 +157,7 @@ namespace CarWash.Editor
             foreach (var root in new[] { UiRoot, VfxRoot, EnvRoot })
                 foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { root.TrimEnd('/') }))
                     AssetDatabase.ImportAsset(AssetDatabase.GUIDToAssetPath(guid), ImportAssetOptions.ForceUpdate);
+            ReimportCharacters();
             Debug.Log($"[ArtImport] reimported art; {Borders.Count} 9-slice borders from {SpecPath}");
         }
     }
