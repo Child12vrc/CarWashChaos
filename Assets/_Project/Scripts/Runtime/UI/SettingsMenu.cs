@@ -41,11 +41,11 @@ namespace CarWash.UI
             var p = _panel.transform;
             var txt = UiFactory.Skin != null ? UiFactory.Skin.panelText : Color.white;
             UiFactory.Label("Title", p, "설정", 44, new Vector2(0.5f, 1f), new Vector2(0, -52), new Vector2(600, 60), color: txt);
-            string[] tabNames = { "화면", "소리", "조작", "키 설정" };
+            string[] tabNames = { "화면", "소리", "조작", "키 설정", "도움말" };
             for (int i = 0; i < tabNames.Length; i++)
             {
                 int ti = i;
-                UiFactory.Button("Tab" + i, p, tabNames[i], new Vector2(0.5f, 1f), new Vector2(-330 + i * 220, -120), new Vector2(200, 56), () => ShowTab(ti));
+                UiFactory.Button("Tab" + i, p, tabNames[i], new Vector2(0.5f, 1f), new Vector2(-400 + i * 200, -120), new Vector2(184, 56), () => ShowTab(ti));
                 var page = UiFactory.Rect("Page" + i, p, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject;
                 _tabs.Add(page);
             }
@@ -53,6 +53,7 @@ namespace CarWash.UI
             BuildSound(_tabs[1].transform, txt);
             BuildControls(_tabs[2].transform, txt);
             BuildKeys(_tabs[3].transform, txt);
+            BuildHelp(_tabs[4].transform, txt); // M4.6 D1
 
             var bottom = new Vector2(0.5f, 0f);
             UiFactory.Button("Unstuck", p, "끼임 방지", bottom, new Vector2(-300, 60), new Vector2(260, 64), () => { var me = Me; if (me != null) { me.RequestUnstuck(); _status.text = "확인 중…"; } });
@@ -153,6 +154,7 @@ namespace CarWash.UI
             });
             StepRow(page, 4, "전체 화면", c, () => S.Fullscreen ? "켜짐" : "꺼짐", _ => S.Fullscreen = !S.Fullscreen);
             StepRow(page, 5, "수직 동기화", c, () => S.VSync ? "켜짐" : "꺼짐", _ => S.VSync = !S.VSync);
+            SliderRow(page, 6, "UI 크기", c, 0.6f, 1.3f, () => S.UiScale, v => S.UiScale = Mathf.Round(v * 20f) / 20f, v => Mathf.RoundToInt(v * 100f) + "%"); // M4.6 D2
         }
 
         string ResolutionText()
@@ -170,6 +172,21 @@ namespace CarWash.UI
             SliderRow(page, 1, "음악", c, 0f, 1f, () => S.MusicVolume, v => S.MusicVolume = v, pct);
             SliderRow(page, 2, "효과음", c, 0f, 1f, () => S.SfxVolume, v => S.SfxVolume = v, pct);
             SliderRow(page, 3, "음성", c, 0f, 1f, () => S.VoiceVolume, v => S.VoiceVolume = v, pct);
+        }
+
+        /// <summary>M4.6 D1: 도움말 — goal, controls, tools, critters; restart the tutorial.</summary>
+        void BuildHelp(Transform page, Color c)
+        {
+            const string text =
+                "<b>목표</b>  손님 차를 씻어 돈을 벌고, 하루 끝 정산에서 임대료를 내요. 청결도가 높고 빠를수록 더 받아요.\n" +
+                "<b>하루 흐름</b>  대기실 [R] 준비 → 사무실 일정판 [E] 영업 시작 → 차가 베이에 들어오면 세차 → 베이 버튼 [E] 정산.\n" +
+                "<b>조작</b>  WASD 이동 · 마우스 시점 · Shift 달리기 · Space 점프 · Ctrl 앉기 · E 줍기/상호작용 · F 잡기(꾹: 던지기) · G 내려놓기 · 1-4 슬롯 · 휠 클릭 핑 · F3 연결 정보\n" +
+                "<b>도구</b>  고압 세척기(왼쪽 분사, 오른쪽 노즐 넓게/좁게, 호스 8 m) · 거품 대포(기름때는 거품 먼저) · 수건(마우스를 좌우로 문질러 물자국 제거) · 뜰채(기절한 동물 담기)\n" +
+                "<b>돌발 상황</b>  차에서 동물이 튀어나와요. 물을 뿌려 기절시키고 [E]나 뜰채로 잡아 동물 보호소 우리에 넣으면 보너스. 차 안 쓰레기는 주워서 버려요.\n" +
+                "<b>친구와</b>  호스트가 받은 6자리 참가 코드를 친구가 메인 메뉴에 입력. 쓰러진 친구는 F로 들어 옮길 수 있어요.";
+            var t = UiFactory.Label("HelpText", page, text, 25, new Vector2(0.5f, 0.5f), new Vector2(0, 10), new Vector2(900, 470), TextAnchor.UpperLeft, c);
+            t.supportRichText = true; t.horizontalOverflow = HorizontalWrapMode.Wrap; t.lineSpacing = 1.1f;
+            UiFactory.Button("Tutorial", page, "튜토리얼 다시 하기", new Vector2(0.5f, 0.5f), new Vector2(0, -255), new Vector2(320, 56), () => { TutorialPanel.Instance?.Restart(); SetOpen(false); });
         }
 
         void BuildControls(Transform page, Color c)

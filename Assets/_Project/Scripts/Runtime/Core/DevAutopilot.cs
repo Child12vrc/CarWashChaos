@@ -90,7 +90,9 @@ namespace CarWash.Core
             }
             if (ReleaseMode)
             {
+                if (DevChecksTutorial.Requested) StartCoroutine(DevChecksTutorial.Watch()); // M4.6 D1
                 yield return DevChecksRelease.Run(me);
+                if (DevChecksTutorial.Requested) yield return DevChecksTutorial.HelpAndScale(); // M4.6 D1/D2
                 Log("DONE");
                 yield break;
             }
