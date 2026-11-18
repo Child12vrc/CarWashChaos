@@ -53,6 +53,13 @@ namespace CarWash.Editor
             m.SetTexture("_BaseMap", tex);
             m.mainTexture = tex;
             m.SetTextureScale("_BaseMap", Vector2.one);
+            // M4.6 D5: lit, bumpy surfaces — normal map (hand-made *_normal.png or generated from the albedo), per-surface metal
+            var nrm = NormalMapGen.For(EnvTex + texFile, texFile.Contains("brick") ? 3f : texFile.Contains("metal") ? 2.5f : 1.6f);
+            if (nrm != null)
+            {
+                m.SetTexture("_BumpMap", nrm); m.SetFloat("_BumpScale", 1f); m.EnableKeyword("_NORMALMAP");
+            }
+            m.SetFloat("_Metallic", texFile.Contains("metal") ? 0.35f : 0f);
             TileMeters[m] = tileMeters;
             EditorUtility.SetDirty(m);
             return m;

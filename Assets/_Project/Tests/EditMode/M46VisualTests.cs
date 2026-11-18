@@ -56,3 +56,25 @@ namespace CarWash.Tests
         }
     }
 }
+
+namespace CarWash.Tests
+{
+    /// <summary>M4.6 D5: the textured lot surfaces are lit with normal maps (generated from the albedo when none is supplied).</summary>
+    public class M46MaterialTests
+    {
+        [TestCase("Brick")]
+        [TestCase("Asphalt")]
+        [TestCase("Concrete")]
+        [TestCase("BayWall")]
+        public void TexturedSurface_HasNormalMap(string mat)
+        {
+            var m = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Material>($"Assets/_Project/Art/Materials/Graybox/{mat}.mat");
+            NUnit.Framework.Assert.IsNotNull(m, mat);
+            var n = m.GetTexture("_BumpMap");
+            NUnit.Framework.Assert.IsNotNull(n, mat + " normal map");
+            NUnit.Framework.Assert.IsTrue(m.IsKeywordEnabled("_NORMALMAP"));
+            var ti = (UnityEditor.TextureImporter)UnityEditor.AssetImporter.GetAtPath(UnityEditor.AssetDatabase.GetAssetPath(n));
+            NUnit.Framework.Assert.AreEqual(UnityEditor.TextureImporterType.NormalMap, ti.textureType);
+        }
+    }
+}
