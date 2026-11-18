@@ -78,11 +78,27 @@ Rule: do tasks in order unless marked (parallel). One task ≈ one agent session
 - [x] v0.5 release build (Relay verified) + zip + GitHub push.
 - v0.5 (2026-11-19): Builds/Release/CarWashChaos_v0.5.zip (103 MB, README v0.5). Relay verified with the verify exe pair (-host-relay / -joincode): full W1D1 loop PASS (wash 79 → 90 %, paid, summary on both), tutorial finished. Network baseline re-checked with M4.7 E in (4P Relay + 150/30/5): remote speed jitter 2–4 %, 0 hitches, 0 snaps, host 28.6 KB/s. Screenshots + env before/after sheets + netload table in Builds/Release/verify_screenshots/v0.5.
 
-## M4.8 User feature requests (after M4.7) — keep measuring performance + network load every item (M4.7 netload baseline must hold)
-- [ ] (items pending — the request text has not arrived yet)
+## M4.8 Washing feel + physics (2026-11-19) — measure perf + network load per item against the M4.7 baseline; then intermediate build v0.6 (Relay) + zip + push
+- [ ] F1 Thick foam: foam cannon builds real volume on the car (UV2 foam mask as thickness: shell layers pushed along the normal, bubbly noise normals, soft white subsurface look) + a few foam clumps at the edges; foam slowly sags downward (gravity).
+- [ ] F2 Water rinses foam: where the stream hits, foam thins and peels off naturally; runoff joins the floor foam patches / water.
+- [ ] F3 Towel dries water: rubbing a wet car (drops / wet mask) dries it to a shine; drying everything gives a bonus (tip or finishing cleanliness) — design + apply.
+- [ ] F4 Driver NPC in the car: a Quaternius character in the driver's seat (sitting pose), hands on the wheel (IK), idle breathing (chest / shoulders, blinks / yawns), head looks at the nearest player (LookAt IK, limited + smooth, local only), random look per car, no overlap with trash / windows / doors; optional: angry when sprayed.
+- [ ] F5 Swing / knockdown / throw re-check in a real 2P release build (Q swing on players + critters, grab a downed player with F, carry, throw); game feel: hit-stop, knockback, sound hooks, camera shake, grab prompt UI; critters can be grabbed + thrown.
+- [ ] F6 Floppy physics: player ragdoll looser (loose joints, dangling limbs when carried); critters (_hy single mesh) wobble like jelly (spring-mass / vertex shader or a few virtual bones) when hit / thrown, and roll.
+- [ ] F7 Physics optimisation by measurement: ragdoll local (cosmetic) per client + only pelvis / state synced; fewer bones, sleep → back to animation; layer collision matrix, no colliders on decoration, Auto Sync Transforms off, sane fixed timestep / solver iterations; wobble / jelly / dangling in code (spring / Verlet, Jobs + Burst if worth it); foam / water on GPU. Profiler before / after (Physics.Simulate, scripts). Target 60 fps with 4 players + several critters.
+- [ ] G8 (pulled forward into v0.6) Wording: '베이' → '차고지' everywhere players read it; plain Korean for jargon (로비 → 대기실, 호스트 → 방 만들기, …, '참가 코드' stays); docs/GLOSSARY.md; display text only.
+- [ ] v0.6 intermediate build (Relay verified) + zip + GitHub push — for the user to test first.
 
-## M4.9 User requests (after M4.8)
-- [ ] (items pending — the request text has not arrived yet)
+## M4.9 World, customisation, UI, layout (2026-11-19) — then v0.7 (Relay) + zip + push
+- [ ] G1 Day → night with the business day (sun path morning → noon → sunset → night; sky / fog / ambient / post colour); at night street lamps, bay lights, signs and car headlights on (no baked GI, limited light count); stars; time from DayManager's synced values (no extra traffic); bays stay bright enough to wash.
+- [ ] G2 Moving clouds (sky shader noise or dome / billboards), tinted by time of day.
+- [ ] G3 Wardrobe: the personal locker opens a wardrobe — camera moves in front of my character (mirror / preview), pick 1 of 12 looks + player colour while seeing it; remove Z / X / C keys and the lobby look text; same preview in the Esc menu; remembered (PlayerPrefs) + synced.
+- [ ] G4 Nickname: main-menu input (required on first run, Korean IME, 2–12 chars, remembered) → name tags, summary, join / leave notices; verify Korean IME + no missing glyphs.
+- [ ] G5 UI rework: one top status bar — money $ / today's income / rent (remaining + reached colour) · reputation stars + number · clock / time left; bay cards with customer patience gauge, current clean % and target %; +$ / −$ popups; short text labels on every icon at first; remove clutter; keep the UI scale slider; check at 1920×1080, 1280×720, 2560×1440.
+- [ ] G6 Patience timers over cars (billboard ring shrinking clockwise + seconds, white → yellow → red, blink + angry emoji + warning sound at 10 s, '떠남! -평판' popup), queue + bay cars, small when far / edge arrows when off-screen, same value on the bay card; synced as server start time + limit only; audit the patience rules (too-early / unexplained leaving) + one line in tutorial / help.
+- [ ] G7 Bay lights + switch: ceiling fixtures (emissive LED bars) + real lights, a wall switch (E, click sound hook, shows its state), NetworkVariable (toggle only); on by default at night (G1); 1–2 lights per bay, shadows only where needed; clearly darker when off.
+- [ ] G9 Layout redesign as a Korean self-service car wash: 3 bays under one big canopy (dividers / curtains, big numbers 1·2·3, pay terminal + mode buttons per pillar, rotating ceiling boom arm, foam-brush holder, hose reel, centre drain grating); separate drying / vacuum area (canopy, vacuum pillars, mat rack + mat washer, air gun); entrance price board, info board, in / out arrows, no-entry + slow road markings; coin changer, vending machines, recycling bins, bench, parasol, CCTV, extinguisher, water tank / chemical drums, buckets, towel rack, slippery sign, hose reels, pipes, electrical box, AC units, planters, bicycle. Props as prefabs with simple procedural meshes first; list + sizes in ART_REQUESTS.md. Re-fit car paths, queue, spawns, bounds, tutorial spots, auto tests, GDD §11. First: a top-view layout proposal image for the user.
+- [ ] v0.7 release build (Relay verified) + zip + GitHub push.
 
 ## M5 Progression
 - [ ] T5.1 Shop terminal + U01-U10. AC: purchases persist across days, mults applied.
