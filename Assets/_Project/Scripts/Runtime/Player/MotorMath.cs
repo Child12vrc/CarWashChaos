@@ -26,6 +26,22 @@ namespace CarWash.Player
             return horizontalVel + wishDir * accelSpeed;
         }
 
+        /// <summary>
+        /// M4.6 B1: air control without the Quake strafe-jump gain — the wish velocity is added as usual, but the horizontal
+        /// speed may never grow past max(speed before, maxSpeed). Turning the mouse while holding W+A/D in the air used to stack
+        /// speed every frame (wish direction always ~perpendicular to the velocity → `current` ~0 → full accel added).
+        /// </summary>
+        public static Vector3 AirAccelerate(Vector3 horizontalVel, Vector3 wishDir, float wishSpeed, float accel, float maxSpeed, float dt)
+        {
+            float before = horizontalVel.magnitude;
+            var v = Accelerate(horizontalVel, wishDir, wishSpeed, accel, dt);
+            float cap = Mathf.Max(before, maxSpeed);
+            return v.sqrMagnitude > cap * cap ? v.normalized * cap : v;
+        }
+
+        /// <summary>Movement input as a unit-or-shorter vector (diagonals are not faster).</summary>
+        public static Vector2 ClampInput(Vector2 move) => move.sqrMagnitude > 1f ? move.normalized : move;
+
         /// <summary>Exponential decay of external (knockback) velocity at `rate` per second.</summary>
         public static Vector3 DecayKnockback(Vector3 ext, float rate, float dt)
         {

@@ -174,11 +174,20 @@ namespace CarWash.Player
         {
             if (Held == null) return;
             var g = Held;
-            // DESIGN-GAP: "throw impulse = charge*14" applied as velocity change scaled by mass (light props fly far, crates less).
-            float massScale = Mathf.Clamp(8f / Mathf.Max(0.1f, g.Mass), 0.3f, 1f);
-            Vector3 v = _motor.Velocity + _look.Head.forward * (charge * T.throwImpulse * massScale);
+            Vector3 v = PropThrowVelocity(_motor.Velocity, _look.Head.forward, charge, T.throwImpulse, g.Mass);
             g.ServerRelease(v);
             _held.Value = default;
+        }
+
+        /// <summary>M4.6 B2: props are thrown twice as hard as before (players thrown while downed keep the old force).</summary>
+        public const float PropThrowScale = 2f;
+
+        /// <summary>DESIGN-GAP: "throw impulse = charge*14" applied as a velocity change scaled by mass (light props fly far, crates
+        /// less), ×PropThrowScale since M4.6.</summary>
+        public static Vector3 PropThrowVelocity(Vector3 holderVelocity, Vector3 forward, float charge, float impulse, float mass)
+        {
+            float massScale = Mathf.Clamp(8f / Mathf.Max(0.1f, mass), 0.3f, 1f);
+            return holderVelocity + forward * (charge * impulse * PropThrowScale * massScale);
         }
 
         public override void OnNetworkDespawn()

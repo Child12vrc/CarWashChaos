@@ -81,7 +81,8 @@ namespace CarWash.Player
 
             // --- horizontal ---
             Vector3 h = new Vector3(_vel.x, 0f, _vel.z);
-            Vector3 wish = knocked ? Vector3.zero : transform.TransformDirection(new Vector3(_input.Move.x, 0f, _input.Move.y));
+            var move = MotorMath.ClampInput(_input.Move); // M4.6 B1: diagonal W+A/D no faster than W
+            Vector3 wish = knocked ? Vector3.zero : transform.TransformDirection(new Vector3(move.x, 0f, move.y));
             float wishSpeed = (Crouching ? t.crouchSpeed : (_input.Sprint && !Carrying ? t.sprintSpeed : t.walkSpeed)) * _status.SpeedMultiplier(t) * wish.magnitude;
             if (wish.sqrMagnitude > 0.0001f) wish.Normalize();
 
@@ -96,7 +97,8 @@ namespace CarWash.Player
             }
             else if (wishSpeed > 0f)
             {
-                h = MotorMath.Accelerate(h, wish, wishSpeed, t.airAccel, dt);
+                // M4.6 B1: air strafing can steer but never gains speed past the sprint maximum
+                h = MotorMath.AirAccelerate(h, wish, wishSpeed, t.airAccel, t.sprintSpeed * _status.SpeedMultiplier(t), dt);
             }
 
             // --- vertical ---
