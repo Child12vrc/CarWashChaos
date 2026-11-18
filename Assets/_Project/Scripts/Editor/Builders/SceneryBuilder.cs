@@ -134,7 +134,7 @@ namespace CarWash.Editor
             }
             var gt = GroundTextures.Grass(); // M4.7 E1: generated tileable grass on the stochastic ground shader
             var grass = GrayboxMaterials.Ground("Grass", Color.white, gt.albedo, gt.normal, gt.mask, 2.5f, 0.2f);
-            Box(root, "ParkGrass", new Vector3(Park.center.x, 0.02f, Park.center.y), new Vector3(Park.width, 0.04f, Park.height), grass);
+            Box(root, "ParkGrass", new Vector3(Park.center.x, 0.02f, Park.center.y), new Vector3(Park.width - 2.4f, 0.04f, Park.height - 2.4f), grass); // M4.10: kept off the road edges (coplanar)
         }
 
         static Material RoadMat => GrayboxMaterials.Textured("Road", new Color(0.5f, 0.5f, 0.53f), "tex_asphalt.png", 4f);
@@ -272,7 +272,7 @@ namespace CarWash.Editor
             {
                 float z0 = -11.5f, z1 = PlayArea.MaxZ;
                 Box(root, "FenceRailTop" + x, new Vector3(x, 2.3f, (z0 + z1) / 2f), new Vector3(0.06f, 0.06f, z1 - z0), post);
-                Box(root, "FenceMesh" + x, new Vector3(x, 1.2f, (z0 + z1) / 2f), new Vector3(0.03f, 2.2f, z1 - z0), mesh);
+                Box(root, "FenceMesh" + x, new Vector3(x, 1.17f, (z0 + z1) / 2f), new Vector3(0.03f, 2.14f, z1 - z0), mesh); // M4.10: stops under the rail (was coplanar inside it)
                 for (float z = z0; z <= z1 + 0.01f; z += 3f) Box(root, $"FencePost{x}_{z}", new Vector3(x, 1.25f, z), new Vector3(0.1f, 2.5f, 0.1f), post);
             }
             // south: low brick wall + railing beyond the sidewalk
@@ -437,16 +437,8 @@ namespace CarWash.Editor
                 GrayboxMaterials.Box(b, "Frame", new Vector3(0, 8.2f, 0.05f), new Vector3(9.4f, 4.4f, 0.3f), frame, collider: false);
                 var ad = ads[i % ads.Length];
                 GrayboxMaterials.Box(b, "Board", new Vector3(0, 8.2f, -0.12f), new Vector3(9f, 4f, 0.05f), Lit("Ad" + i, ad.bg, 0.3f), collider: false);
-                var txt = new GameObject("Text") { layer = Layers.Scenery };
-                txt.transform.SetParent(b, false);
-                txt.transform.localPosition = new Vector3(0, 8.2f, -0.17f);
-                txt.transform.localRotation = Quaternion.identity;
-                var tm = txt.AddComponent<TextMesh>();
-                tm.text = ad.text; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
-                tm.font = UI.UiFactory.Font; tm.fontSize = 64; tm.characterSize = 0.075f; tm.color = ad.fg; tm.fontStyle = FontStyle.Bold;
-                txt.GetComponent<MeshRenderer>().sharedMaterial = UI.UiFactory.Font.material;
-                // M4.6 B4: depth-tested text (the font's GUI material ignores depth → text showed through buildings)
-                SceneBuilder.Set(txt.AddComponent<Visual.WorldTextDepth>(), "_shader", Shader.Find("CarWash/WorldText"));
+                // M4.10 W2: baked, mipmapped text decal projected onto the board face (was a shimmering TextMesh)
+                TextDecals.Board(b, ad.text, new Vector3(0, 8.2f, -0.19f), Vector3.zero, 0.48f, ad.fg, 0.12f);
                 // TextMesh faces -Z: boards face the lot (their -Z side)
             }
         }

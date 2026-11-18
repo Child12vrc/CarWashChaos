@@ -13,7 +13,7 @@ Shader "CarWash/WorldText"
         Tags { "Queue" = "Transparent" "IgnoreProjector" = "True" "RenderType" = "Transparent" }
         Lighting Off Cull Off ZWrite Off ZTest LEqual
         Blend SrcAlpha OneMinusSrcAlpha
-        Offset -1, -1
+        Offset 0, -1
         Pass
         {
             CGPROGRAM

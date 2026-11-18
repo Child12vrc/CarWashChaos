@@ -66,7 +66,7 @@ namespace CarWash.Editor
             var camGo = new GameObject("FPCamera", typeof(Camera), typeof(AudioListener));
             camGo.transform.SetParent(head, false);
             var cam = camGo.GetComponent<Camera>();
-            cam.nearClipPlane = 0.05f; cam.fieldOfView = 90f; cam.enabled = false;
+            cam.nearClipPlane = 0.08f; cam.farClipPlane = 320f; cam.fieldOfView = 90f; cam.enabled = false; // M4.10: depth precision (fog ends at 190 m, skyline ring 110 m)
             camGo.GetComponent<AudioListener>().enabled = false;
 
             // Third-person body (others see it; owner sees only its shadow): every player look under "Body" (PlayerAppearance)

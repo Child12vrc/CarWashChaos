@@ -27,7 +27,8 @@ namespace CarWash.Tests
             try
             {
                 var texts = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<TextMesh>(true)).ToArray();
-                Assert.Greater(texts.Length, 0);
+                // M4.10: billboard text is baked into board decals now; any TextMesh left must still be depth-tested
+                Assert.Greater(scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<UnityEngine.Rendering.Universal.DecalProjector>(true)).Count(d => d.name == "BoardText"), 5);
                 foreach (var t in texts)
                 {
                     var d = t.GetComponent<Visual.WorldTextDepth>();

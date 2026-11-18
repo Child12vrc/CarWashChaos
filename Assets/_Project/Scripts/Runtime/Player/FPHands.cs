@@ -54,9 +54,34 @@ namespace CarWash.Player
             return go.transform;
         }
 
+        Camera _overlay;
+        /// <summary>M4.10 W3: the hands draw on their own overlay camera (URP camera stack, depth cleared, near 0.01) so they never
+        /// sink into a wall in front of the player; the main FP camera no longer renders the FPArms layer.</summary>
+        public Camera Overlay => _overlay;
+
+        void EnsureOverlay()
+        {
+            if (_overlay != null) return;
+            var main = PlayerLook.Local != null ? PlayerLook.Local.Camera : null;
+            if (main == null || !main.isActiveAndEnabled || !main.transform.IsChildOf(transform.root)) return;
+            var go = new GameObject("HandsCamera");
+            go.transform.SetParent(main.transform, false);
+            _overlay = go.AddComponent<Camera>();
+            _overlay.cullingMask = 1 << Core.Layers.FPArms;
+            _overlay.nearClipPlane = 0.01f; _overlay.farClipPlane = 3f; _overlay.fieldOfView = main.fieldOfView;
+            var od = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(_overlay);
+            od.renderType = UnityEngine.Rendering.Universal.CameraRenderType.Overlay;
+            od.renderShadows = false;
+            var md = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(main);
+            md.cameraStack.Add(_overlay);
+            main.cullingMask &= ~(1 << Core.Layers.FPArms);
+        }
+
         void LateUpdate()
         {
             if (_root == null) return;
+            EnsureOverlay();
+            if (_overlay != null && PlayerLook.Local != null && PlayerLook.Local.Camera != null) _overlay.fieldOfView = PlayerLook.Local.Camera.fieldOfView;
             var tool = _tools != null ? _tools.Equipped : null;
             var rag = _tools != null ? _tools.GetComponent<PlayerRagdoll>() : null;
             bool on = tool != null && !tool.Stowed && (rag == null || !rag.ControlsBody);

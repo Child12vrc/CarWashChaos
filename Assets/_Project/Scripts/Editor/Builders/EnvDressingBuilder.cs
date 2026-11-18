@@ -141,7 +141,7 @@ namespace CarWash.Editor
         }
 
         static readonly Dictionary<string, Material> DecalMats = new Dictionary<string, Material>();
-        static Material DecalMat(string kind)
+        internal static Material DecalMat(string kind)
         {
             if (DecalMats.TryGetValue(kind, out var m) && m != null) return m;
             Directory.CreateDirectory(DecalMatDir);

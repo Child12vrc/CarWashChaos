@@ -48,14 +48,21 @@ namespace CarWash.Editor
             return g;
         }
         /// <summary>World text on a board (faces local −Z, depth-tested like the billboards).</summary>
-        static void Txt(Transform t, string s, Vector3 c, float size, Color col, Vector3 euler = default)
+        /// <summary>M4.10: board text = a baked, mipmapped text decal projected onto the board face (+Z of <paramref name="euler"/> into
+        /// the surface; the old TextMesh shimmered and its depth offset let it show through meshes). <paramref name="size"/> is
+        /// the old TextMesh character size (line height ≈ size × 6.4 m).</summary>
+        static void Txt(Transform t, string s, Vector3 c, float size, Color col, Vector3 euler = default, float depth = 0.1f)
+            => TextDecals.Board(t, s, c, euler, size * 6.4f, col, depth);
+
+        /// <summary>A ground decal (EnvDressing texture kind) projected down, centred on the prop, <paramref name="size"/> = x × z.</summary>
+        static void Decal(Transform t, string kind, Vector2 size)
         {
-            var g = new GameObject("Text"); g.transform.SetParent(t, false); g.transform.localPosition = c; g.transform.localEulerAngles = euler;
-            var tm = g.AddComponent<TextMesh>();
-            tm.text = s; tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center;
-            tm.font = UI.UiFactory.Font; tm.fontSize = 64; tm.characterSize = size; tm.color = col; tm.fontStyle = FontStyle.Bold;
-            g.GetComponent<MeshRenderer>().sharedMaterial = UI.UiFactory.Font.material;
-            SceneBuilder.Set(g.AddComponent<Visual.WorldTextDepth>(), "_shader", Shader.Find("CarWash/WorldText"));
+            var go = new GameObject("Decal_" + kind); go.transform.SetParent(t, false);
+            go.transform.localPosition = new Vector3(0, 0.3f, 0); go.transform.localEulerAngles = new Vector3(90f, 0f, 0f);
+            var d = go.AddComponent<UnityEngine.Rendering.Universal.DecalProjector>();
+            d.material = EnvDressingBuilder.DecalMat(kind);
+            d.size = new Vector3(size.x, size.y, 0.7f); d.pivot = new Vector3(0, 0, 0.35f);
+            d.drawDistance = 90f; d.fadeScale = 0.9f;
         }
 
         // ------------------------------------------------------------------ prop catalog
@@ -109,8 +116,7 @@ namespace CarWash.Editor
             }),
             new PropDef("DrainGrate", "배수구 (바닥 중앙)", new Vector3(1.6f, 0.03f, 0.6f), false, "flush with the floor", t =>
             {
-                B(t, "Frame", new Vector3(0, 0.012f, 0), new Vector3(1.6f, 0.02f, 0.6f), Steel);
-                for (int i = 0; i < 9; i++) B(t, "Slot" + i, new Vector3(-0.64f + i * 0.16f, 0.018f, 0), new Vector3(0.07f, 0.02f, 0.5f), Dark);
+                Decal(t, "drain", new Vector2(1.6f, 0.6f)); // M4.10: a decal (the 2 cm boxes z-fought the bay floor)
             }),
             new PropDef("VacuumPillar", "진공 청소기 기둥", new Vector3(0.5f, 1.9f, 0.5f), true, "hose + nozzle on the side; coin box", t =>
             {
@@ -141,7 +147,7 @@ namespace CarWash.Editor
                 B(t, "Post", new Vector3(0, 0.75f, 0), new Vector3(0.12f, 1.5f, 0.12f), Steel);
                 B(t, "Box", new Vector3(0, 1.3f, -0.1f), new Vector3(0.28f, 0.3f, 0.12f), Blue);
                 for (int i = 0; i < 4; i++) C(t, "Coil" + i, new Vector3(0, 0.95f - i * 0.1f, -0.2f), new Vector3(0.22f, 0.012f, 0.22f), Yellow);
-                B(t, "Gun", new Vector3(0.12f, 1.12f, -0.2f), new Vector3(0.05f, 0.14f, 0.12f), Dark);
+                B(t, "Gun", new Vector3(0.18f, 1.12f, -0.2f), new Vector3(0.05f, 0.14f, 0.12f), Dark);
             }),
             new PropDef("RecycleBins", "분리수거함 (3칸)", new Vector3(1.5f, 1.0f, 0.5f), true, "캔 / 플라스틱 / 일반", t =>
             {
@@ -175,9 +181,7 @@ namespace CarWash.Editor
             }),
             new PropDef("RoadArrow", "노면 화살표", new Vector3(0.9f, 0.01f, 3f), false, "painted, points +Z", t =>
             {
-                B(t, "Shaft", new Vector3(0, 0.006f, -0.4f), new Vector3(0.3f, 0.01f, 2.0f), White);
-                var h1 = B(t, "HeadL", new Vector3(-0.22f, 0.006f, 0.85f), new Vector3(0.18f, 0.01f, 0.9f), White); h1.transform.localEulerAngles = new Vector3(0, 32f, 0);
-                var h2 = B(t, "HeadR", new Vector3(0.22f, 0.006f, 0.85f), new Vector3(0.18f, 0.01f, 0.9f), White); h2.transform.localEulerAngles = new Vector3(0, -32f, 0);
+                Decal(t, "arrow", new Vector2(0.9f, 3f)); // M4.10: painted = a decal (no slab z-fighting)
             }),
             new PropDef("CoinChanger", "동전교환기", new Vector3(0.6f, 1.6f, 0.5f), true, "front = -Z", t =>
             {
@@ -189,7 +193,7 @@ namespace CarWash.Editor
             new PropDef("VendingMachine", "자판기", new Vector3(1.0f, 1.9f, 0.8f), true, "glass front with drinks; front = -Z", t =>
             {
                 B(t, "Body", new Vector3(0, 0.95f, 0), new Vector3(1.0f, 1.9f, 0.8f), Red);
-                B(t, "Window", new Vector3(-0.12f, 1.15f, -0.41f), new Vector3(0.65f, 1.2f, 0.02f), Glass);
+                B(t, "Window", new Vector3(-0.12f, 1.15f, -0.42f), new Vector3(0.65f, 1.2f, 0.02f), Glass); // 3 cm proud (2 cm flickered at a distance)
                 var cans = new[] { Yellow, Blue, Green, White };
                 for (int r = 0; r < 4; r++) for (int i = 0; i < 4; i++) C(t, $"Can{r}{i}", new Vector3(-0.36f + i * 0.16f, 0.7f + r * 0.27f, -0.38f), new Vector3(0.08f, 0.07f, 0.08f), cans[(r + i) % 4]);
                 for (int i = 0; i < 4; i++) B(t, "Btn" + i, new Vector3(0.36f, 1.35f - i * 0.12f, -0.41f), new Vector3(0.1f, 0.06f, 0.02f), White);
@@ -244,13 +248,13 @@ namespace CarWash.Editor
                 B(t, "PostR", new Vector3(0.58f, 0.65f, 0), new Vector3(0.05f, 1.3f, 0.05f), Steel);
                 B(t, "Bar", new Vector3(0, 1.25f, 0), new Vector3(1.2f, 0.04f, 0.04f), Steel);
                 var cols = new[] { White, Blue, Yellow, White };
-                for (int i = 0; i < 4; i++) B(t, "Towel" + i, new Vector3(-0.42f + i * 0.28f, 1.0f, 0), new Vector3(0.24f, 0.5f, 0.03f), cols[i]);
+                for (int i = 0; i < 4; i++) B(t, "Towel" + i, new Vector3(-0.42f + i * 0.28f, 0.98f, 0.04f), new Vector3(0.24f, 0.5f, 0.02f), cols[i]); // hang in front of the bar
             }),
             new PropDef("SlipperySign", "미끄럼 주의 표지", new Vector3(0.4f, 0.7f, 0.5f), false, "yellow A-frame", t =>
             {
                 var a = B(t, "SideA", new Vector3(0, 0.33f, -0.1f), new Vector3(0.38f, 0.66f, 0.02f), Yellow); a.transform.localEulerAngles = new Vector3(-16, 0, 0);
                 var b = B(t, "SideB", new Vector3(0, 0.33f, 0.1f), new Vector3(0.38f, 0.66f, 0.02f), Yellow); b.transform.localEulerAngles = new Vector3(16, 0, 0);
-                Txt(t, "미끄럼\n주의", new Vector3(0, 0.38f, -0.2f), 0.009f, new Color(0.1f, 0.1f, 0.1f), new Vector3(-16, 0, 0));
+                Txt(t, "미끄럼\n주의", new Vector3(0, 0.38f, -0.125f), 0.009f, new Color(0.1f, 0.1f, 0.1f), new Vector3(-16, 0, 0));
             }),
             new PropDef("Pipes", "배관 (벽 따라)", new Vector3(6f, 0.3f, 0.25f), false, "two pipes along local X with brackets", t =>
             {
@@ -268,7 +272,7 @@ namespace CarWash.Editor
             {
                 B(t, "Body", new Vector3(0, 0.35f, 0), new Vector3(0.9f, 0.7f, 0.35f), White);
                 C(t, "Fan", new Vector3(-0.15f, 0.35f, -0.18f), new Vector3(0.5f, 0.02f, 0.5f), Dark, new Vector3(90, 0, 0));
-                B(t, "Feet", new Vector3(0, 0.02f, 0), new Vector3(0.95f, 0.04f, 0.4f), Steel);
+                B(t, "Feet", new Vector3(0, 0.035f, 0), new Vector3(0.95f, 0.07f, 0.4f), Steel); // top clear of the 2.5–5 cm ground slabs
             }),
             new PropDef("Planter", "화분 (플랜터)", new Vector3(0.8f, 0.9f, 0.8f), true, "", t =>
             {
@@ -344,14 +348,17 @@ namespace CarWash.Editor
             GrayboxMaterials.Box(c, "Roof", new Vector3(cx, CanopyY + 0.15f, cz), new Vector3(w, 0.3f, d), roof);
             B(c, "FasciaN", new Vector3(cx, CanopyY - 0.05f, z1), new Vector3(w + 0.1f, 0.75f, 0.12f), fascia);
             B(c, "FasciaS", new Vector3(cx, CanopyY - 0.05f, z0), new Vector3(w + 0.1f, 0.75f, 0.12f), fascia);
-            B(c, "StripeN", new Vector3(cx, CanopyY - 0.32f, z1 + 0.07f), new Vector3(w + 0.1f, 0.08f, 0.02f), Yellow);
-            B(c, "StripeS", new Vector3(cx, CanopyY - 0.32f, z0 - 0.07f), new Vector3(w + 0.1f, 0.08f, 0.02f), Yellow);
+            B(c, "StripeN", new Vector3(cx, CanopyY - 0.32f, z1 + 0.08f), new Vector3(w + 0.14f, 0.08f, 0.04f), Yellow);   // M4.10: 4 cm proud of the fascia
+            B(c, "StripeS", new Vector3(cx, CanopyY - 0.32f, z0 - 0.08f), new Vector3(w + 0.14f, 0.08f, 0.04f), Yellow);
             foreach (float x in new[] { -12.2f, -4f, 4f, 12.2f })
                 foreach (float z in new[] { z0 + 0.3f, z1 - 0.3f })
                     GrayboxMaterials.Box(c, $"Pillar_{x}_{z}", new Vector3(x, CanopyY / 2f, z), new Vector3(0.35f, CanopyY, 0.35f), Steel);
             // the big name on the north fascia (readable from the feed lane / queue)
-            var name = new GameObject("CanopyName").transform; name.SetParent(c, false); name.position = new Vector3(cx, CanopyY - 0.05f, z1 + 0.08f); name.rotation = Quaternion.Euler(0, 180f, 0);
-            Txt(name, "셀프 세차장  ·  SUDSY", Vector3.zero, 0.05f, Color.white);
+            // M4.10: the name on its own roof sign (on the fascia it collided with the bay plates 1·2·3)
+            var sign = GrayboxMaterials.Box(c, "RoofSign", new Vector3(cx, CanopyY + 0.75f, z1 - 0.4f), new Vector3(7.2f, 0.9f, 0.16f), fascia, collider: false).transform;
+            B(c, "RoofSignPostL", new Vector3(cx - 3f, CanopyY + 0.4f, z1 - 0.4f), new Vector3(0.1f, 0.5f, 0.1f), Steel);
+            B(c, "RoofSignPostR", new Vector3(cx + 3f, CanopyY + 0.4f, z1 - 0.4f), new Vector3(0.1f, 0.5f, 0.1f), Steel);
+            TextDecals.Board(c, "셀프 세차장 · SUDSY", new Vector3(cx, CanopyY + 0.75f, z1 - 0.4f + 0.08f), new Vector3(0, 180f, 0), 0.52f, Color.white, 0.06f);
         }
 
         static void BayProps(Transform root, Bay b)
@@ -364,9 +371,7 @@ namespace CarWash.Editor
             Place(g, "HoseReelDrum", c + new Vector3(-2.88f, 1.65f, 0f), -90f, 0f);    // above the hose socket
             Place(g, "DrainGrate", c + new Vector3(0, 0.005f, 0f), 0f, 0f);
             // big bay number painted on the floor at the entrance (read by drivers coming in from the north)
-            var num = new GameObject("FloorNumber" + n).transform; num.SetParent(g, false);
-            num.position = c + new Vector3(0, 0.02f, 3.4f); num.rotation = Quaternion.Euler(90f, 180f, 0f);
-            Txt(num, n.ToString(), Vector3.zero, 0.3f, new Color(1f, 1f, 1f, 0.85f));
+            TextDecals.Floor(g, n.ToString(), c + new Vector3(0, 0, 3.2f), 180f, 1.3f, new Color(1f, 1f, 1f, 0.9f), 1.8f);
             Footprints.Add((c, 3.2f)); // the whole bay stays clear of random dressing
         }
 
@@ -402,27 +407,23 @@ namespace CarWash.Editor
             Place(g, "RoadArrow", new Vector3(LotBuilder.QueueX, 0.004f, -3f), 0f, 0f);
             Place(g, "RoadArrow", new Vector3(14f, 0.004f, -5f), 90f, 0f);
             Place(g, "RoadArrow", new Vector3(RampX, 0.004f, -9.2f), 180f, 0f);
-            Floor(g, "서행", new Vector3(LotBuilder.QueueX, 0.02f, -8f), 0f, 0.16f);
-            Floor(g, "입구", new Vector3(LotBuilder.QueueX, 0.02f, -12.4f), 0f, 0.14f);
-            Floor(g, "출구", new Vector3(RampX, 0.02f, -12.2f), 180f, 0.14f);
+            Floor(g, "서행", new Vector3(LotBuilder.QueueX, 0f, -7.75f), 0f, 1.9f); // between the queue marks at z -5 and -10.5
+            Floor(g, "입구", new Vector3(LotBuilder.QueueX, 0f, -12.0f), 0f, 2.2f);
+            Floor(g, "출구", new Vector3(RampX, 0f, -11.8f), 180f, 2.2f);
             Place(g, "NoEntrySign", new Vector3(RampX + 2.1f, 0, -12.6f), 0f, 0.5f);  // faces the road: no driving in through the exit
         }
 
         /// <summary>Painted text on the asphalt, read by a driver heading along <paramref name="yaw"/>.</summary>
-        static void Floor(Transform g, string s, Vector3 p, float yaw, float size)
-        {
-            var t = new GameObject("Paint_" + s).transform; t.SetParent(g, false);
-            t.position = p; t.rotation = Quaternion.Euler(90f, yaw, 0f);
-            Txt(t, s, Vector3.zero, size, new Color(1f, 1f, 1f, 0.9f));
-        }
+        static void Floor(Transform g, string s, Vector3 p, float yaw, float width) => TextDecals.Floor(g, s, p, yaw, width, new Color(1f, 1f, 1f, 0.92f));
 
         static void OfficeSide(Transform root)
         {
             var g = new GameObject("OfficeSide").transform; g.SetParent(root, false);
             var o = LotBuilder.OfficeCenter; // office box: x -16…-8, z -13…-7
-            Place(g, "VendingMachine", new Vector3(o.x - 2.6f, 0, -6.55f), 180f);
-            Place(g, "VendingMachine", new Vector3(o.x - 1.5f, 0, -6.55f), 180f);
-            Place(g, "CoinChanger", new Vector3(o.x - 0.5f, 0, -6.6f), 180f);
+            // M4.10: kept clear of the day board (x -14.7…-12.3) and the shop terminal (x -9.9…-9.1)
+            Place(g, "VendingMachine", new Vector3(-15.45f, 0, -6.55f), 180f);
+            Place(g, "VendingMachine", new Vector3(-11.6f, 0, -6.55f), 180f);
+            Place(g, "CoinChanger", new Vector3(-10.6f, 0, -6.7f), 180f);
             Place(g, "Bench", new Vector3(-17.6f, 0, -12.6f), 90f);
             Place(g, "Parasol", new Vector3(-17.6f, 0, -10.9f), 0f, 1.0f);
             Place(g, "Bicycle", new Vector3(-14.5f, 0, -13.6f), 0f);

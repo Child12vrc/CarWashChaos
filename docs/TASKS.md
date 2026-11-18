@@ -360,3 +360,40 @@ M4.9 G9 (2026-11-19):
 - Kept: spawns, bounds, the tutorial text ('차고지 1 왼쪽 벽 가운데의 세척기' is still true), lockers and the office.
 
 v0.7 (2026-11-19, M4.9 G1–G9): Builds/Release/CarWashChaos_v0.7.zip (107 MB, README v0.7 with the new features; the Z/X/C keys were replaced by the wardrobe in the text). Relay verified with the verify exe pair (-host-relay / -joincode CC8LKL): full W1D1 loop PASS (wash 71 → 85 %, paid, summary on both; temporary nicknames 손님NN in the lobby rows). Network against the v0.6 baseline (4P Relay + 150/30/5, 45 s): host sends 23.7 KB/s (v0.6: 29.3), remote speed jitter 2.0–4.7 % on clients, 0 hitches, 0 snaps; about 66 fps on every instance (frame rate capped). Screenshots (layout sheets, night, wardrobe, rings, status bar at 2560, bay lights, summary with names) and the netload log are in Builds/Release/verify_screenshots/v0.7.
+
+## M4.10 Visual correctness: clipping, world text, floor markings (2026-11-19, user feedback on v0.7, top priority) — then v0.8 (Relay) + zip + push
+- [x] W1 World-text audit: list every TextMesh / world text / billboard / name tag / patience ring with its shader, ZTest and queue. All world text that is not deliberate on-top UI is depth-tested (CarWash/WorldText, LEqual, no slope offset). Clear rules for name tags and rings when hidden behind walls (distance, hidden → faded marker / edge arrow). EditMode guard: new world text must use WorldText.
+- [x] W2 Floor and sign text: pre-rendered high-res textures (mipmaps, 16× anisotropic, trilinear) as decals. Floor markings stretched along the driving direction (real road-paint proportions). Board and fascia text done the same way.
+- [x] W3 Clipping detector: scan static renderers for coplanar overlapping faces (≤ 2 cm: slabs, decals vs floor, canopy vs dividers, props vs walls, boards vs text) and props buried in walls / props / cars; fix by offset / merge / removal. Check ragdoll / player vs walls, the FP camera near / far planes (near 0.05–0.1, far only as far as needed) and hands on their own camera / layer.
+- [x] W4 Before / after screenshots: close-ups of the problem spots plus 8 eye-level directions.
+- [ ] v0.8 release build (Relay verified) + zip + GitHub push.
+
+M4.10 (2026-11-19, user feedback on v0.7):
+- Audit tool: `Editor/ClipAudit` (menu CarWash/Audit) produces three lists:
+  - **coplanar faces:** same-direction faces of different materials whose overlap is ≥ 0.25 m² within 2 cm, or smaller details within 0.5 cm;
+  - **buried props:** a prop sunk more than 3 cm into another object's solid collider (combined dressing meshes and deliberately mounted props are skipped);
+  - **unsafe world text.**
+- Before the fixes: 645 raw pairs, 335 after removing same-material / ground-resting faces. The worst were ground slabs 0–2 cm apart (road ↔ queue lane 0.1 cm, exit lane ↔ ramp 0 cm, city road segments ↔ grass/ground), drain-grate boxes ↔ bay floor, road-arrow boxes, LED bar ↔ housing, canopy stripes ↔ fascia, fence mesh ↔ rail, vending window ↔ body, towel rack, air gun, and the AC-unit feet. Real bug found: the vending machines hid the office day board.
+- Fixes:
+  - `GroundLayers`: thin ground slabs get fixed tops by kind — roads 2.5 cm, lanes 5 cm, bay floors 5 cm (they never overlap lanes), dev pad 7.5 cm. DESIGN-GAP: cars on bay floors sit 5 cm into the slab (was 2 cm).
+  - 53 painted markings (lines, queue marks, puddles, dev foam zone) became shared solid-colour decals.
+  - Drain grates and road arrows became decals; LED bar 4 cm below the housing; canopy stripes 4 cm proud; fence mesh stops under the rail; park grass trimmed off the road edges; prop details moved apart; vending machines and coin changer moved off the day board.
+  - Result: 0 coplanar pairs, 0 buried props.
+- World text:
+  - Audit: 0 TextMesh left in the lot.
+  - All static text is baked by `TextDecals`: glyphs copied from the UI font atlas at 160–256 px into textures with mipmaps, 16× anisotropic, trilinear filtering, uncompressed.
+  - Road lettering ('입구 / 서행 / 출구', bay numbers): floor decals stretched 2.5× (numbers 1.8×) along the driving direction.
+  - Board text (price / info board, coin changer, slippery sign, billboards, the new roof sign '셀프 세차장 · SUDSY' — moved off the fascia where it collided with the bay plates): decals projected onto the board face. They cannot z-fight and are hidden by anything in front.
+  - `CarWash/WorldText` lost its slope depth offset (`Offset -1,-1` → `0,-1`); the slope term pulled text through meshes at grazing angles — the cause of ③.
+- Rules for always-on markers:
+  - Name tags: depth-tested (WorldText material on the world-space UI text), hidden beyond 30 m.
+  - Patience rings: on screen and blocked by static world (Default / Scenery, not cars) → 75 % size, 40 % opacity; a warning (≤10 s) always stays full; off-screen → edge arrow; never drawn over the top status bar.
+- Camera:
+  - FP camera near 0.05 → 0.08 and far 1000 → 320 (fog ends at 190 m), for depth precision.
+  - Hands moved to their own URP overlay camera (FPArms only, near 0.01, depth cleared), so they never sink into walls; the main camera no longer draws FPArms.
+  - Ragdoll / player vs walls: layer collisions are confirmed on (test).
+- Tests:
+  - M410Tests: shader has no slope offset; every TextMesh is depth-tested, and any code adding one must add WorldTextDepth; baked text textures are mipmapped / aniso 16 / trilinear; floor text is stretched; 0 coplanar, 0 buried; camera planes; overlay hands camera; ragdoll layer collisions.
+  - M46 billboard test now checks the board decals. 207 green.
+- Screenshots: before / after — 10 close-ups of the problem spots plus 8 eye-level directions at 3 spots (`views.sh before|after`, close-up list in `DevChecksViews.Closeups`).
+- Gameplay re-check: 2-player loop PASS; routes 94 segments, 0 blocked; NavMesh complete.

@@ -194,9 +194,11 @@ namespace CarWash.UI
             UpdateRings(dm, show);
         }
 
-        class Ring { public RectTransform root; public Image bg, fill, face, arrow; public Text secs; public bool warned; public Vehicle car; public float phaseStart; }
+        class Ring { public RectTransform root; public Image bg, fill, face, arrow; public Text secs; public CanvasGroup group; public bool warned; public Vehicle car; public float phaseStart; }
         readonly List<Ring> _rings = new List<Ring>();
         public const float WarnSeconds = 10f;
+        /// <summary>What hides a ring (static world: walls, canopy, props), never the car itself.</summary>
+        static readonly int OccluderMask = (1 << Layers.Default) | (1 << Layers.Scenery);
         /// <summary>Dev check: "V02 queue 31s white" per visible ring.</summary>
         public readonly List<string> RingInfo = new List<string>();
 
@@ -204,6 +206,7 @@ namespace CarWash.UI
         {
             var r = new Ring();
             r.root = UiFactory.Rect("PatienceRing", _root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96));
+            r.group = r.root.gameObject.AddComponent<CanvasGroup>(); r.group.blocksRaycasts = false; r.group.interactable = false;
             r.bg = UiFactory.Panel("Bg", r.root, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96), new Color(0f, 0f, 0f, 0.45f));
             r.bg.sprite = UiSprites.Disc; r.bg.raycastTarget = false;
             r.fill = UiFactory.Panel("Fill", r.root, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(96, 96), Color.white);
@@ -250,11 +253,17 @@ namespace CarWash.UI
                     // off-screen: only queue cars, and bay cars that are running out — no clutter for calm cars
                     if (!onScreen && !queue && frac > 0.25f) { n--; continue; }
                     r.root.gameObject.SetActive(true);
+                    bool hidden = false;
                     Vector2 local;
                     if (onScreen)
                     {
                         RectTransformUtility.ScreenPointToLocalPointInRectangle(_root, sp, null, out local);
+                        local.y = Mathf.Min(local.y, size.y * 0.5f - 130f); // M4.10: never over the top status bar
                         r.root.localScale = Vector3.one * Mathf.Clamp(14f / Mathf.Max(1f, dist), 0.45f, 1f);
+                        // M4.10 W1 rule: behind a wall / roof / prop (not the car itself) → smaller + faded "there is a car there"
+                        // marker; a warning (≤10 s) stays full so a leaving customer is never missed
+                        hidden = Physics.Linecast(cam.transform.position, world, OccluderMask, QueryTriggerInteraction.Ignore);
+                        if (hidden && !warn) r.root.localScale *= 0.75f;
                         r.arrow.enabled = false;
                     }
                     else
@@ -277,6 +286,8 @@ namespace CarWash.UI
                     bool blinkOff = warn && left > 0f && Mathf.Repeat(Time.time * 3f, 1f) < 0.35f;
                     r.fill.fillAmount = left > 0f ? frac : 1f;
                     r.fill.color = blinkOff ? new Color(col.r, col.g, col.b, 0.25f) : col;
+                    float ga = hidden && !warn ? 0.4f : 1f;
+                    r.group.alpha = ga;
                     r.arrow.color = col;
                     int s = Mathf.CeilToInt(Mathf.Abs(left));
                     r.secs.text = left >= 0f ? s.ToString() : "+" + s;
@@ -288,7 +299,7 @@ namespace CarWash.UI
                         r.warned = true;
                         Services.Get<AudioService>()?.Play3D("patience_warn", v.transform.position); // sound hook
                     }
-                    RingInfo.Add($"{v.DataId} {(queue ? "queue" : "bay")} {(left >= 0f ? "" : "+")}{s}s {(left < 0f || warn || frac <= 0.25f ? "red" : frac <= 0.5f ? "yellow" : "white")}{(warn ? " WARN" : "")}{(onScreen ? "" : " edge")} scale {r.root.localScale.x:0.00}");
+                    RingInfo.Add($"{v.DataId} {(queue ? "queue" : "bay")} {(left >= 0f ? "" : "+")}{s}s {(left < 0f || warn || frac <= 0.25f ? "red" : frac <= 0.5f ? "yellow" : "white")}{(warn ? " WARN" : "")}{(onScreen ? "" : " edge")}{(hidden ? " hidden" : "")} scale {r.root.localScale.x:0.00}");
                 }
             }
             for (int i = n; i < _rings.Count; i++) _rings[i].root.gameObject.SetActive(false);

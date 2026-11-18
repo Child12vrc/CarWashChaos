@@ -87,6 +87,7 @@ namespace CarWash.Editor
             SelfWashBuilder.Build(env, bays);   // M4.9 G9: canopy, bay props, vacuum area, entrance boards, small props
             EnvDressingBuilder.Build(env);        // M4.7 E2/E3: decals + set dressing (combined meshes, off every route)
             EnvironmentBuilder.DayNight(env);    // M4.9 G1/G2: local day → night (sky, sun, fog, post, lamps / signs glow)
+            GroundLayers.Apply(env);            // M4.10 W3: ground slabs on fixed heights by kind, painted markings → decals (no z-fighting)
             var lotPaths = BuildPaths(bays);
             BuildCustomers(lotPaths);
             BuildSpawner();
@@ -210,7 +211,7 @@ namespace CarWash.Editor
             foreach (float x in new[] { -1.45f, 1.45f })
             {
                 GrayboxMaterials.Box(root, "LedHousing", new Vector3(x, 4.27f, 0f), new Vector3(0.22f, 0.06f, 4.6f), GrayboxMaterials.Get("Panel", new Color(0.25f, 0.3f, 0.4f)), collider: false);
-                bars.Add(GrayboxMaterials.Box(root, "LedBar", new Vector3(x, 4.235f, 0f), new Vector3(0.14f, 0.02f, 4.4f), off, collider: false).GetComponent<Renderer>());
+                bars.Add(GrayboxMaterials.Box(root, "LedBar", new Vector3(x, 4.215f, 0f), new Vector3(0.14f, 0.03f, 4.4f), off, collider: false).GetComponent<Renderer>());
                 var lg = new GameObject("BayLight") { layer = b.gameObject.layer }; lg.transform.SetParent(root, false);
                 lg.transform.localPosition = new Vector3(x, 4.18f, 0f); lg.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 var l = lg.AddComponent<Light>();

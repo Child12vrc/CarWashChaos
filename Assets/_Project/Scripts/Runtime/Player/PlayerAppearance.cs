@@ -144,6 +144,10 @@ namespace CarWash.Player
             _tagText.fontSize = 40;
             _tagText.fontStyle = FontStyle.Bold;
             _tagText.alignment = TextAnchor.MiddleCenter;
+            // M4.10 W1 rule: name tags are world text → depth-tested like every other world text (hidden behind walls; the
+            // colour outline still shows where a teammate is), and hidden beyond 30 m
+            var ws = Shader.Find("CarWash/WorldText");
+            if (ws != null) _tagText.material = new Material(ws) { name = "NameTag (WorldText)" };
             _tag = go.transform;
         }
 
@@ -159,6 +163,7 @@ namespace CarWash.Player
             _tag.position = anchor;
             var cam = Camera.main != null ? Camera.main : (PlayerLook.Local != null ? PlayerLook.Local.Camera : null);
             if (cam != null) _tag.rotation = Quaternion.LookRotation(_tag.position - cam.transform.position);
+            if (cam != null) _tagText.enabled = (cam.transform.position - _tag.position).sqrMagnitude < 30f * 30f;
         }
 
         /// <summary>Dev / tests: is the name tag shown, and with which text.</summary>
