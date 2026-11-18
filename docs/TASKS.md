@@ -75,7 +75,8 @@ Rule: do tasks in order unless marked (parallel). One task ≈ one agent session
 - [x] E2 Pattern-breaking decals: cracks, oil stains, tyre marks, drains, manholes, lane lines, water marks.
 - [x] E3 Set dressing: grass clumps / weeds along walls and fences, gravel / stones, leaves, grass in concrete cracks, bay-corner stains / limescale, pallets, drums, hoses, cones, rubbish, flyers — random rotation / scale, no colliders on decoration, instanced / batched; never block play routes or the car path.
 - [x] E4 Before / after screenshots: eye height, 8 directions.
-- [ ] v0.5 release build (Relay verified) + zip + GitHub push.
+- [x] v0.5 release build (Relay verified) + zip + GitHub push.
+- v0.5 (2026-11-19): Builds/Release/CarWashChaos_v0.5.zip (103 MB, README v0.5). Relay verified with the verify exe pair (-host-relay / -joincode): full W1D1 loop PASS (wash 79 → 90 %, paid, summary on both), tutorial finished. Network baseline re-checked with M4.7 E in (4P Relay + 150/30/5): remote speed jitter 2–4 %, 0 hitches, 0 snaps, host 28.6 KB/s. Screenshots + env before/after sheets + netload table in Builds/Release/verify_screenshots/v0.5.
 
 ## M4.8 User feature requests (after M4.7) — keep measuring performance + network load every item (M4.7 netload baseline must hold)
 - [ ] (items pending — the request text has not arrived yet)
