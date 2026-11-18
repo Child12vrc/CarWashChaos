@@ -16,7 +16,7 @@ namespace CarWash.Editor
     public static class ReleaseBuild
     {
         public const string Product = "CarWashChaos";
-        public const string Version = "0.3";
+        public const string Version = "0.4";
         public const string ReleaseDir = "Builds/Release/" + Product;
         public const string VerifyDir = "Builds/ReleaseVerify/" + Product;
         public const string ZipPath = "Builds/Release/" + Product + "_v" + Version + ".zip";

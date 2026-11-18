@@ -62,7 +62,8 @@ Rule: do tasks in order unless marked (parallel). One task ≈ one agent session
 - [x] D6 Wash feedback shader: dirty = noisy rough matte dust with normals; washed = smooth glossy reflective; UV2 dirt map as soft mask; fresh-clean sparkle. Same network sync.
 - [x] D7 Water feedback: wet darkening + gloss on floors / walls / objects that dries, puddle decals, light objects nudged by the stream (host physics).
 - [x] D8 Tools really held: attached to the hand bones (two-hand IK), visible in first person, swing action + animation (swing / spray poses) networked; swings hit (knockdown / critter stun).
-- [ ] v0.4 release build (Relay verified) + zip + GitHub push.
+- [x] v0.4 release build (Relay verified) + zip + GitHub push.
+- v0.4 (2026-11-19): Builds/Release/CarWashChaos_v0.4.zip (72 MB, README v0.4). Relay verified with the verify exe pair (-host-relay / -joincode, asia-northeast1): full W1D1 loop PASS (tutorial 5/5, UI scale 0.6/1.2), and the swing check over Relay (FP hands, remote two-hand IK 0.04 / 0.064 m, swing arc seen, host knocked down). Screenshots in Builds/Release/verify_screenshots/v0.4.
 
 ## M5 Progression
 - [ ] T5.1 Shop terminal + U01-U10. AC: purchases persist across days, mults applied.
