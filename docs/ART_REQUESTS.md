@@ -44,3 +44,30 @@ panel_main (rounded rect, outline, soft inner shadow), btn_primary / btn_hover /
 
 ## Batch E — later
 DONE: upgrade icons U01-U10 + tool unlock icons (E1,E2). TODO: title logo art (text added in-engine), main menu background illustration, Steam capsule art (needs real text → handled separately).
+
+## Batch F — 3D model upgrades (M4.6 D4, 2026-11-18) — sourced by the user (GPT / free CC0 assets), wired by the agent
+Ranked by how crude they look *in normal play* (what players stare at most first). Drop the file at the path, keep the node rules, and the builders pick it up on the next CI run (graybox / procedural stays as the fallback; nothing else needs changing).
+
+| # | what | why it stands out | drop-in path & rules |
+|---|---|---|---|
+| 1 | **Car interiors** (per type) | every door opening shows the procedural box cabin (M4.6 D3) | `Art/Models/Interiors/Interior_<V01…B01>.glb` or one `Interior_Default.glb`; origin = cabin floor centre, +Z forward, fits a cabin ~1.4 m wide (scaled to the car); seats / dash / wheel / door cards; no colliders needed |
+| 2 | **Bay building** (walls, roof, shutters, hose reel, button panel) | players spend the whole day inside a bay; today: flat boxes + a texture | `Art/Models/Generated/Lot/Bay.glb`: 6 m × 10 m footprint, open N/S ends, nodes `ShutterN`/`ShutterS` (roll up along +Y), `Socket_HoseReel` (west wall, middle), `Socket_ButtonPanel` (east wall); keep the 3.6 m roof height |
+| 3 | **Office + lockers + day board + shop terminal** | spawn point and start of every day (lockers are plain boxes) | `Lot/Office.glb` (8 × 6 m), `Lot/Locker.glb` (0.8 × 2 × 0.5 m), `Lot/DayBoard.glb` (2.4 × 1.2 m board, front −Z), `Lot/Terminal.glb` |
+| 4 | **Interior trash** (cup, bottle, wrapper, fries box, diaper) | primitive cylinders / cubes, seen up close when picked up | `Art/Models/Generated/Props/T_<cup|bottle|wrapper|fries|diaper>.glb`, origin = bottom centre, ≤ 0.2 m |
+| 5 | **Mud slime + bee** (part-node GLBs) | look much cruder next to the Hunyuan raccoon / possum | `Critters/C03_mud_slime_hy.glb`, `C02_bee_hy.glb`: same format as the raccoon _hy (one mesh, PBR, faces +Z); slime: squash pivot = bottom centre |
+| 6 | **Dumpster, vent, animal-control cage, vacuum pedestal** | flat boxes in the alley / by the office | `Lot/Dumpster.glb` (3 × 1.5 × 1.8 m), `Lot/Vent.glb`, `Lot/Cage.glb` (2.2 m cube, door on −Z, `Socket_Inside`) |
+| 7 | **Vehicles V01-V04, B01** | clean but low-poly (2-5k tris) next to 50k-tri critters | same file names / node contract as now (Body with UV2 not required any more — the dirt UV2 is regenerated; Door_L/Door_R/Trunk hinge pivots, Glass, Wheel_*, Socket_*) |
+| 8 | **Graybox vehicles V05-V08, B02-B04** | only from week 2 on, so later | `Vehicles/<id>_<name>.glb`, same contract as V01 |
+| 9 | **Scenery** (trees, street lamps, utility poles, parked-car variety) | mid-distance, already readable | `Art/Models/Generated/Scenery/Tree_A.glb` … (origin at the base), LOD-friendly (< 2k tris each) |
+| 10 | **First-person hands** | M4.6 D8 attaches tools to the character's hands; a nicer FP arm mesh would help | Humanoid arms or reuse the Quaternius character (no extra file needed) |
+
+## Batch G — PBR maps (M4.6 D5) — wanted from the user, the agent generates stand-ins meanwhile
+The editor tool `CarWash/Build/Generate Normal Maps` makes `<name>_n.png` normal maps from the albedo luminance (stand-ins, flagged `generated` in ART_IMPORT.md). Hand-made / AI maps are better for:
+| texture | needs | notes |
+|---|---|---|
+| tex_asphalt.png | normal + roughness (smoothness in A) + AO | cracks, aggregate; 1024, tiling |
+| tex_concrete_wet.png | normal + roughness (puddle areas glossy) | 1024, tiling |
+| tex_brick.png | normal + height + AO | mortar depth matters most |
+| tex_metal_blue.png | normal + metallic/roughness | corrugation ridges |
+| Car body dirt | dirt albedo + normal (grime noise) | 512 tiling, used by the wash shader's dirty layer |
+| Fabric / plastic (interiors) | small tiling normal | 256 |
