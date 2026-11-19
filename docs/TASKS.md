@@ -366,7 +366,7 @@ v0.7 (2026-11-19, M4.9 G1–G9): Builds/Release/CarWashChaos_v0.7.zip (107 MB, R
 - [x] W2 Floor and sign text: pre-rendered high-res textures (mipmaps, 16× anisotropic, trilinear) as decals. Floor markings stretched along the driving direction (real road-paint proportions). Board and fascia text done the same way.
 - [x] W3 Clipping detector: scan static renderers for coplanar overlapping faces (≤ 2 cm: slabs, decals vs floor, canopy vs dividers, props vs walls, boards vs text) and props buried in walls / props / cars; fix by offset / merge / removal. Check ragdoll / player vs walls, the FP camera near / far planes (near 0.05–0.1, far only as far as needed) and hands on their own camera / layer.
 - [x] W4 Before / after screenshots: close-ups of the problem spots plus 8 eye-level directions.
-- [ ] v0.8 release build (Relay verified) + zip + GitHub push.
+- [x] v0.8 release build (Relay verified) + zip + GitHub push.
 
 M4.10 (2026-11-19, user feedback on v0.7):
 - Audit tool: `Editor/ClipAudit` (menu CarWash/Audit) produces three lists:
@@ -397,3 +397,5 @@ M4.10 (2026-11-19, user feedback on v0.7):
   - M46 billboard test now checks the board decals. 207 green.
 - Screenshots: before / after — 10 close-ups of the problem spots plus 8 eye-level directions at 3 spots (`views.sh before|after`, close-up list in `DevChecksViews.Closeups`).
 - Gameplay re-check: 2-player loop PASS; routes 94 segments, 0 blocked; NavMesh complete.
+
+v0.8 (2026-11-19, M4.10): Builds/Release/CarWashChaos_v0.8.zip (README v0.8). Relay verified with the verify exe pair (-joincode N8PPFQ): full W1D1 loop PASS (wash 79 → 91 %, paid, summary). The build grew 231 → 258 MB because of the uncompressed baked text textures. Before / after close-up sheets, 8-direction sheets and the hands-camera shot are in Builds/Release/verify_screenshots/v0.8.
