@@ -175,6 +175,26 @@ Materials, at most 2–3 per prop and shared by every prop:
 | SW_BoomArm.glb | 2212 | 0.30 × 1.65 × 2.96 | origin = ceiling mount. `Pivot` = plate + column + bearing. `Arm` = node at y −0.72: truss beam along +Z, counterweight, hose with clips, rotary joint and a hose drop to y −1.62 |
 | SW_FoamBrushHolder.glb | 1604 | 0.40 × 1.06 × 0.22 | wall at +Z. `Holder` = plate + foam sign + cradle + drip shelf; `Brush` = handle + head + pink bristles + foam blobs + hose |
 | SW_HoseReelDrum.glb | 2880 | 0.61 × 0.96 × 0.35 | origin = drum centre. `Bracket` (wall at +Z), `Drum` (spins about Z: solid back flange, spoked front flange, wound hose, crank), `HoseOut` (drops to y −0.66) |
+| SW_Canopy.glb | 7792 | 24.97 × 5.71 × 11.5 | visual for SelfWashBuilder.Canopy (keep its colliders). Origin = ground under the roof centre = world (0, 0, 4). Nodes: `Roof`, `Fascia`, `Pillars` (with hazard bump guards), `Lights`, `RoofSign` (blank, TextDecal), `Gutters` |
+| SW_VacCanopy.glb | 3868 | 11.44 × 3.46 × 5.5 | origin = VacuumZone centre (25.25, 0, −9.4); same node set without the sign |
+| SW_VacuumPillar / VendingMachine / CoinChanger | 1244 / 736 / 828 | as specced | VendingMachine adds a `Glass` node (MAT_PropGlass); CoinChanger keeps a blank plate for its "동전교환" decal |
+| SW_MatRack … SW_Bicycle (21 props, see ART_REQUESTS delivery status) | 300–3100 each | ≈ the graybox sizes | same frames as the graybox; boards keep blank faces where the TextDecals go |
+
+## Lot, critter and scenery models (Batch F #3–#6, #9, 2026-11-19) — `Art/Models/Generated/{Lot,Props,Critters,Scenery}/` (generators `_scripts/props_lot.py`, `props_critters.py`, `props_scenery.py`; built with `build_props.py`)
+All of these are self-made and use the same shared materials as the props (MAT_PropAtlas / MAT_PropMetal / MAT_PropGlass). Trees and bushes use `MAT_PropFoliage` (dark leaf green). Pivot = bottom / base centre and front = −Z, unless the table says otherwise.
+
+| file | tris | notes |
+|---|---|---|
+| Lot/Office.glb | 2268 | 8 × 6 m shell, 3 m walls + parapet; door + window + striped awning + blank sign on −Z. LotBuilder's office faces +Z → rotate 180° |
+| Lot/Locker.glb | 984 | `Cabinet` + `Door` (origin = hinge on −X) |
+| Lot/DayBoard.glb | 664 | origin = board centre, wall side at +Z; blank white surface for the UI |
+| Lot/Terminal.glb | 608 | kiosk with a tilted screen, keyboard ledge, card reader |
+| Props/T_cup, T_bottle, T_wrapper, T_fries, T_diaper | 136–260 | interior trash, ≤ 0.23 m |
+| Critters/C02_bee_v2.glb | 1904 | C02_bee contract (root `Critter`, `Body`, `Head`, `Stinger`, `Wing_L/R`, `Socket_Carry`, `Socket_Head`), faces +Z |
+| Critters/C02_bee_hy.glb | 1904 | the same bee as one node `Bee` |
+| Lot/Dumpster, Vent, Cage | 1160 / 472 / 1176 | Cage: `Frame`, `Door` (hinge origin), `Sign`, `Socket_Inside`; its door is on −Z |
+| Scenery/Tree_A, Tree_B, Tree_C, Bush_A | 840 / 152 / 516 / 428 | faceted low-poly foliage |
+| Scenery/StreetLamp, UtilityPole | 468 / 1368 | lamp arm and head towards −Z; pole cables along X |
 
 
 ## PBR texture sets (third-party, CC0 — Poly Haven, no attribution required) — `Art/ThirdParty/PolyHaven/<set>/`
@@ -198,3 +218,34 @@ Source: Quaternius "Ultimate Modular Men Pack" (Feb 2022) + "Ultimate Modular Wo
 | Men/Male_Casual.fbx, Male_Casual2.fbx, Women/Female_Casual.fbx | default player looks |
 | Men/Male_Punk, Male_Beach, Male_Farmer, Male_Suit; Women/Female_Punk, Female_Formal, Female_Suit | extra looks (lobby outfit picker / future cosmetics) |
 Integration: Rig = Humanoid (Create From This Model), Avatar per model; reuse existing Mixamo locomotion + animator controller via humanoid retargeting; rebuild ragdoll from Humanoid bones (RagdollBuilder already uses humanoid bone mapping); player color = tint on the shirt material/vertex-color region or keep colored outline/name tag if the mesh has no separable shirt. Lobby: each player picks one of the looks (default: P1 Male_Worker, P2 Female_Worker, P3 Male_Casual, P4 Female_Casual). Remove YBot from the shipped build once replaced (keep in project for reference).
+
+## Vehicles v2 — Batch F #8 (2026-11-19) — generated from scratch (`_scripts/vehicles_gen.py` bodies + `vehicles_deco.py` character parts, then the same `vehicles_v2.py` pass)
+All seven follow the v2 contract above: `Body` (UV2, no overlap), `Glass`, `Door_L/R` + `Trunk` (hinge origins), `Wheel_*`, `Headlight_±1`, `Taillight_±1`, `Grille`, `Bumper_*`, `LicensePlate_*`, `Mirror_*` under the doors, `Socket_*`. The paint material is `Paint_<id>` (base colour below; VehiclePaint recolours it). Interiors for the cabin vehicles: `Interiors/Interior_<id>.glb`, built by the same fitter. Their cabin box is VehicleBuilder's formula on the new Glass, and the interior has 0 overlaps with the v2 body and doors.
+
+| file | size L × W × H (m) | cabin / interior | character parts (Exterior_Parts nodes) |
+|---|---|---|---|
+| V05_ice_cream_truck_v2.glb | 4.9 × 2.0 × 4.6 (cone) | cab, 2 seats (no rear row) | `IceCream` (roof cone + 3 scoops + sprinkles), `ServingWindow` (right side: glass, counter, pink/white awning, menu, pink stripes), `Speaker`; Trunk = rear door (top hinge); paint white |
+| V06_hearse_v2.glb | 5.3 × 1.9 × 1.7 | long cabin, 2 seats + **`Coffin`** in the back (rows disabled) | `RearQuarters` (black padded panels, chrome landau bars, chrome belt line); Trunk = tailgate; paint black |
+| V07_garbage_truck_v2.glb | 6.0 × 2.4 × 3.0 | cab-over cab, 2 seats; 6 wheels (`Wheel_RL2/RR2`) | `TruckDetails` (orange beacons, steps, grab bars, rear step, box ribs, rams, hazard band, hopper mouth with bags); Trunk = rear hopper lid; paint green |
+| B02_circus_trailer_v2.glb | 6.0 × 2.4 × 3.6 | same cab as V07 | `CircusDetails` (pennant valance, bulbs, stars, stripe, tent dome + flag); Trunk = rear doors (clowns); paint red |
+| V08_tank_v2.glb | 6.1 (+ barrel) × 2.5 × 2.9 | **none** | Body = hull + turret (dirtable). `Barrel` (pivot at the mantlet, for traverse / elevation), `Tracks` (6 road wheels per side, sprocket, idler, linked track, fenders), `TankDetails` (stars, antenna, jerry cans, loader hatch). Trunk = commander hatch (C09) |
+| B03_swamp_airboat_v2.glb | 6.6 × 2.3 × 3.3 | **none** | Body = flat hull on `Trailer` (rails, bunks, tongue, fenders, 2 axles); `Deck` (raised driver seat, passenger bench, bow rail, engine); `FanCage` (rings, struts, red rudders); **`Propeller`** (spins about Unity Z, origin at the hub) |
+| B04_crashed_ufo_v2.glb | Ø 4.6, tilted 12° | **none** (Glass = dome) | Body = saucer; `UfoDetails` (rim lights, 3 legs with one broken, antenna, pilot seat + console under the dome); Trunk = side hatch |
+
+Unity notes:
+- No-cabin vehicles have no Door_L/R. VehicleGlbBuilder logs a warning, and VehicleSpawner's "nearest side door" trash link needs a fallback (V08 and B04 have trashCount 0; B03 has 2).
+- For V08 / B03 / B04 the procedural interior would be built inside the hull or dome. Skip it for these ids.
+
+## Tools v2 (2026-11-19) — `Art/Models/Generated/Tools/<name>_v2.glb` (generator `_scripts/props_tools.py`)
+These use the same node names, origin (grip) and sockets as v1, so ToolBuilder can switch files by name.
+
+| file | tris | added detail |
+|---|---|---|
+| T_pressure_washer_gun_v2 | 1552 | angled grip with finger grooves + butt cap, housing top rib + side badges + safety lever, curved red trigger, round guard, steel swivel + rubber boot at `Socket_HoseIn`, steel lance with a ribbed blue sleeve, quick coupler + hex tip + colour-coded orifice |
+| T_foam_cannon_v2 | 1420 | ribbed grip + steel inlet, brass-yellow head with a red ratio dial and fan knob, ribbed bottle with a foam-level band + label, steel neck + fan horn with a slot |
+| T_towel_v2 | 360 | towel-print atlas tile on both folds, rolled fold, blue hem stitches |
+| T_shop_vac_v2 | 2340 | ribbed red canister, lid with latches + power switch, loop handle, 4 casters, corrugated hose, crevice tool |
+| T_net_pole_v2 | 1064 | foam grip + end cap, steel + yellow telescopic pole with a lock collar, hoop yoke, net bag with mesh rings |
+
+## Street parked cars (2026-11-19) — `Art/Models/Generated/Scenery/ParkedCar_{Compact,Sedan,SUV,Taxi}.glb` (generator `_scripts/props_parked.py`)
+These are low-poly decoration. Each car has 4 nodes: `Body`, `Glass` (opaque navy, so nothing needs to sit behind it), `Details` (lamps, bumpers, plates, grille, mirrors) and `Wheels`. They have no colliders. The origin is at ground centre and the front is +Z. They use MAT_PropAtlas only.

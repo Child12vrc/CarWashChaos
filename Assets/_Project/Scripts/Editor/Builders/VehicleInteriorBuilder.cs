@@ -24,11 +24,15 @@ namespace CarWash.Editor
         /// <summary>Cabin box in vehicle-local space: x half-width, floor / belt / roof heights, rear / front z.</summary>
         public struct Cabin { public float halfW, floorY, beltY, roofY, rearZ, frontZ; }
 
+        static readonly HashSet<string> NoCabin = new HashSet<string> { "V08", "B03", "B04" };
+
         public static Transform[] Build(Transform root, string id, Cabin c)
         {
             var group = new GameObject("Interior") { layer = Layers.Vehicle }.transform;
             group.SetParent(root, false);
             string custom = new[] { $"{ModelDir}/Interior_{id}.glb", $"{ModelDir}/Interior_Default.glb" }.FirstOrDefault(File.Exists);
+            // Batch F #8: the tank, airboat and UFO have no cabin — no procedural seats inside the hull / dome (ART_IMPORT)
+            if (custom == null && NoCabin.Contains(id)) return System.Array.Empty<Transform>();
             if (custom != null && AssetDatabase.LoadAssetAtPath<GameObject>(custom) != null)
             {
                 var m = GlbKit.Model(custom, group, Layers.Vehicle, new Vector3(0f, c.floorY, (c.rearZ + c.frontZ) * 0.5f));

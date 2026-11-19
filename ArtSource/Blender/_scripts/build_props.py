@@ -11,10 +11,24 @@ import parts_lib as L
 import props_lib as PL
 import export_all
 import props_selfwash
+import props_selfwash2
+import props_selfwash3
+import props_lot
+import props_critters
+import props_scenery
+import props_tools
+import props_parked
 
 PREV = os.path.join(L.PROJ, r"docs\art_preview")
 REGISTRY = {}
 REGISTRY.update(props_selfwash.PROPS)
+REGISTRY.update(props_selfwash2.PROPS)
+REGISTRY.update(props_selfwash3.PROPS)
+REGISTRY.update(props_lot.PROPS)
+REGISTRY.update(props_critters.PROPS)
+REGISTRY.update(props_scenery.PROPS)
+REGISTRY.update(props_tools.PROPS)
+REGISTRY.update(props_parked.PROPS)
 ARGS = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 
 
@@ -35,7 +49,7 @@ def build(pid):
     socks = L.collection("Sockets")
     exp = L.collection("Export")
     ecol = L.collection("EXP_" + pid, exp, export_path=spec["export"], zero_root=0)
-    root = bpy.data.objects.new(pid, None)
+    root = bpy.data.objects.new(spec.get("root", pid), None)
     root.empty_display_size = 0.2
     model.objects.link(root)
     ecol.objects.link(root)
@@ -67,7 +81,7 @@ def build(pid):
     size_u = (mx.x - mn.x, mx.z - mn.z, mx.y - mn.y)  # Unity W × H × D
     centre = (mn + mx) / 2
     diag = (mx - mn).length
-    eye = centre + Vector((-0.55, 1.0, 0.55)).normalized() * max(1.6, diag * 1.6)
+    eye = centre + Vector(spec.get("view", (-0.55, 1.0, 0.55))).normalized() * max(0.3, diag * 1.7)
     L.preview_setup(target=centre, eye=eye, lens=40)
     blend = os.path.join(L.BLEND, spec["folder"], pid + ".blend")
     L.save_blend(blend)

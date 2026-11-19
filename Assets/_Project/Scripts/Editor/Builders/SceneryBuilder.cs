@@ -300,6 +300,16 @@ namespace CarWash.Editor
                 c.transform.localScale = Vector3.one * Rand(1.6f, 2.3f) * s;
                 c.GetComponent<MeshRenderer>().sharedMaterial = m;
             }
+            // Blender trees (Batch F #9): same random draws above (layout unchanged), the look is Tree_A / B / C by position
+            var kinds = new[] { "Tree_A", "Tree_B", "Tree_C" }.Where(k => GlbKit.Find("Scenery", k) != null).ToArray();
+            if (kinds.Length > 0)
+            {
+                foreach (var r in t.GetComponentsInChildren<MeshRenderer>(true)) { Object.DestroyImmediate(r.GetComponent<MeshFilter>()); Object.DestroyImmediate(r); }
+                string k = kinds[Mathf.Abs(Mathf.FloorToInt(p.x * 7.3f + p.z * 3.1f)) % kinds.Length];
+                var holder = new GameObject("Model") { layer = Layers.Scenery }.transform; holder.SetParent(t, false);
+                holder.localRotation = Quaternion.Euler(0f, Mathf.Repeat(p.x * 37f + p.z * 11f, 360f), 0f); holder.localScale = Vector3.one * s;
+                GlbKit.Model(GlbKit.Find("Scenery", k), holder, Layers.Scenery, Vector3.zero);
+            }
         }
 
         static void Trees(Transform root)
@@ -329,11 +339,26 @@ namespace CarWash.Editor
             var pole = Lit("LampPole", new Color(0.3f, 0.32f, 0.35f), 0.5f);
             var head = Lit("LampHead", new Color(1f, 0.95f, 0.8f), 0.8f);
             var l = new GameObject("Lamp") { layer = Layers.Scenery }.transform; l.SetParent(root, false); l.position = p; l.rotation = Quaternion.Euler(0, yaw, 0);
-            var a = GrayboxMaterials.Box(l, "Pole", new Vector3(0, 3.5f, 0), new Vector3(0.14f, 7f, 0.14f), pole, collider: false);
-            GrayboxMaterials.Box(l, "Arm", new Vector3(0, 6.9f, 0.8f), new Vector3(0.1f, 0.1f, 1.6f), pole, collider: false);
-            GrayboxMaterials.Box(l, "Head", new Vector3(0, 6.8f, 1.5f), new Vector3(0.35f, 0.15f, 0.6f), head, collider: false);
+            string lampGlb = GlbKit.Find("Scenery", "StreetLamp");
+            Vector3 lightLocal = new Vector3(0, 6.65f, 1.5f);
+            if (lampGlb != null)
+            {
+                // Blender street lamp (arm + head towards −Z → turned 180° so it reaches over the road like the graybox); the
+                // glowing lens stays ours (the model's head is atlas-shaded and cannot glow on its own), just under its head
+                var holder = new GameObject("Model") { layer = Layers.Scenery }.transform; holder.SetParent(l, false);
+                holder.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                GlbKit.Model(lampGlb, holder, Layers.Scenery, Vector3.zero);
+                GrayboxMaterials.Box(l, "Head", new Vector3(0, 7.065f, 1.65f), new Vector3(0.24f, 0.02f, 0.56f), head, collider: false);
+                lightLocal = new Vector3(0, 6.98f, 1.65f);
+            }
+            else
+            {
+                GrayboxMaterials.Box(l, "Pole", new Vector3(0, 3.5f, 0), new Vector3(0.14f, 7f, 0.14f), pole, collider: false);
+                GrayboxMaterials.Box(l, "Arm", new Vector3(0, 6.9f, 0.8f), new Vector3(0.1f, 0.1f, 1.6f), pole, collider: false);
+                GrayboxMaterials.Box(l, "Head", new Vector3(0, 6.8f, 1.5f), new Vector3(0.35f, 0.15f, 0.6f), head, collider: false);
+            }
             // M4.9 G1: a real light under the head at night (no shadows); lamps switch on one by one
-            var hp = l.TransformPoint(new Vector3(0, 6.65f, 1.5f));
+            var hp = l.TransformPoint(lightLocal);
             EnvironmentBuilder.NightSpot(l, "LampLight", hp, hp + Vector3.down * 5f + l.forward * 1.2f, 18f, 45f, new Color(1f, 0.82f, 0.58f), 0.3f + Mathf.Repeat(p.x * 0.37f + p.z * 0.11f, 1f) * 0.12f, 115f);
         }
 
@@ -359,6 +384,15 @@ namespace CarWash.Editor
             for (float x = -66f; x <= 70f; x += 17f)
             {
                 var p = new Vector3(x, 0, 21.5f);
+                string poleGlb = GlbKit.Find("Scenery", "UtilityPole");
+                if (poleGlb != null)
+                {
+                    // Blender pole (10 m, cross-arms 8.1–9.6 m, cables along X): wires hang from its upper arm
+                    var holder = new GameObject("Pole" + x) { layer = Layers.Scenery }.transform; holder.SetParent(poles, false); holder.position = p;
+                    GlbKit.Model(poleGlb, holder, Layers.Scenery, Vector3.zero);
+                    tops.Add(p + Vector3.up * 9.55f);
+                    continue;
+                }
                 Box(poles, "Pole" + x, p + Vector3.up * 4.5f, new Vector3(0.28f, 9f, 0.28f), wood);
                 Box(poles, "Cross" + x, p + Vector3.up * 8.4f, new Vector3(2.2f, 0.16f, 0.16f), wood);
                 tops.Add(p + Vector3.up * 8.5f);
@@ -383,7 +417,10 @@ namespace CarWash.Editor
         static void ParkedCars(Transform root)
         {
             var cars = new GameObject("ParkedCars").transform; cars.SetParent(root, false);
-            var models = new[] { "V01", "V02", "V03", "V04" }.Select(VehicleGlbBuilder.GlbFor).Where(p => p != null).Select(p => AssetDatabase.LoadAssetAtPath<GameObject>(p)).ToArray();
+            // Blender street cars (decor, low poly): ParkedCar_Compact / Sedan / SUV / Taxi; else the customer GLBs
+            var parked = new[] { "ParkedCar_Compact", "ParkedCar_Sedan", "ParkedCar_SUV", "ParkedCar_Taxi" }.Select(n => GlbKit.Find("Scenery", n)).Where(p => p != null).ToArray();
+            var models = (parked.Length > 0 ? parked : new[] { "V01", "V02", "V03", "V04" }.Select(VehicleGlbBuilder.GlbFor).Where(p => p != null).ToArray())
+                .Select(p => AssetDatabase.LoadAssetAtPath<GameObject>(p)).ToArray();
             if (models.Length == 0) return;
             var tints = new[] { new Color(0.85f, 0.2f, 0.2f), new Color(0.95f, 0.95f, 0.95f), new Color(0.15f, 0.15f, 0.18f), new Color(0.3f, 0.55f, 0.85f), new Color(0.9f, 0.75f, 0.2f), new Color(0.4f, 0.6f, 0.4f) };
             void Car(Vector3 p, float yaw)

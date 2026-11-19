@@ -14,6 +14,8 @@ import parts_lib as L
 from parts_lib import P, G, box, clamp
 import export_all
 import vehicles_v2
+import vehicles_gen as VG
+import vehicles_deco as VD
 
 PROJ = L.PROJ
 VEH = os.path.join(PROJ, r"Assets\_Project\Art\Models\Generated\Vehicles")
@@ -28,10 +30,14 @@ LINKED = ["SteeringWheel", "SteeringColumn", "InstrumentCluster", "Vent_Round", 
 
 
 class Car:
-    def __init__(s, file):
+    def __init__(s, file, gen=None):
         bpy.ops.wm.read_factory_settings(use_empty=True)
-        bpy.ops.import_scene.gltf(filepath=os.path.join(VEH, file + ".glb"))
+        if gen:
+            gen()  # Batch F #8: procedural v1-style node set
+        else:
+            bpy.ops.import_scene.gltf(filepath=os.path.join(VEH, file + ".glb"))
         s.objs = {o.name: o for o in bpy.data.objects}
+        s.nocabin = gen is not None and gen.__name__.upper() in VG.NOCABIN
         body = L.collection("Body")
         socks = L.collection("Sockets")
         for o in list(bpy.data.objects):
@@ -50,8 +56,12 @@ class Car:
             bm.transform(o.matrix_world)
             s.trees[o.name] = BVHTree.FromBMesh(bm)
             bm.free()
-        g0, g1 = s.bb(s.objs["Glass"])
         b0, b1 = s.bb(s.objs["Body"])
+        if "Glass" in s.objs and not s.nocabin:
+            g0, g1 = s.bb(s.objs["Glass"])
+        else:  # no cabin: a nominal box in the upper body (only used for preview framing)
+            g0 = Vector((b0.x + 0.2, b0.y + 0.6, b1.z - 0.5))
+            g1 = Vector((b1.x - 0.2, b1.y - 0.6, b1.z))
         s.g0, s.g1, s.b0, s.b1 = g0, g1, b0, b1
         s.halfW = min(g1.x - g0.x, b1.x - b0.x) * 0.5 - 0.1
         s.beltY, s.roofY = g0.z, g1.z
@@ -155,8 +165,9 @@ def assemble(car, cid, meshes):
         rows.append((max(rz + 0.4, fsz - 0.95), 0.48))
         if rows[0][0] - 0.95 - (rz - 0.1) > 0.35:
             rows.append((rows[0][0] - 0.95, 0.48))
-    elif cid not in ("V03", "B01"):  # compact bench (hatchback / sedan)
+    elif cid in VG.COMPACT_BENCH:  # compact bench (hatchback / sedan)
         rows.append((fsz - 0.25 - 0.17 - 0.17, 0.34))
+    rows = rows[:VG.MAX_ROWS.get(cid, 9)]
     for i, (rf, D) in enumerate(rows):
         nm = "RearBench" if i == 0 else f"RearBench_{i + 1}"
         done = False
@@ -283,8 +294,28 @@ def door_cards(car):
     return res
 
 
-def run(cid, file, blend_name):
-    car = Car(file)
+def run_nocabin(car, cid, file, blend_name):
+    L.link_library(LINKED)
+    L.collection("Export")
+    _, rep, _ = vehicles_v2.build_v2(car, cid, file, 0.0, cabin=False)
+    VD.DECO[cid](car, None)
+    c = (car.b0 + car.b1) / 2
+    tgt = Vector((0, c.y, (car.b0.z + car.b1.z) / 2))
+    L.preview_setup(target=tgt, eye=tgt + Vector((car.b1.x + 3.2, -3.6, 1.8)), lens=30)
+    blend = os.path.join(L.BLEND, "Vehicles", blend_name + ".blend")
+    L.save_blend(blend)
+    out = export_all.export_current()
+    print(f"### {cid} (no cabin) → {os.path.relpath(blend, PROJ)}  exports {out}")
+    for r in rep:
+        print("    " + r)
+    if RENDER:
+        vehicles_v2.render_v2(car, cid, {}, tgt, PREV)
+
+
+def run(cid, file, blend_name, gen=None):
+    car = Car(file, gen)
+    if car.nocabin:
+        return run_nocabin(car, cid, file, blend_name)
     meshes = L.link_library(LINKED)
     icol = L.collection("Interior", export_path=f"Assets/_Project/Art/Models/Interiors/Interior_{cid}.glb", zero_root=1)
     isock = L.collection("Interior_Sockets", icol)
@@ -352,6 +383,8 @@ def run(cid, file, blend_name):
 
     _, rep2, doors_v2 = vehicles_v2.build_v2(car, cid, file, car.frontZ)  # exterior v2 in the same .blend
     rep += rep2
+    if cid in VD.DECO:
+        VD.DECO[cid](car, info)
     tri = sum(L.tris(o) for o, _ in made.values() if o.type == 'MESH')
     xs = [(o.matrix_world @ v.co).x for o, _ in made.values() if o.type == 'MESH' for v in o.data.vertices]
     tgt = P(0.0, fmid + 0.1, (car.floorY + car.beltY) / 2 + 0.1)
@@ -434,3 +467,8 @@ for cid, f, bn in CARS:
     if ONLY and cid not in ONLY:
         continue
     run(cid, f, bn)
+for cid, gen in VG.GEN.items():
+    if (ONLY and cid not in ONLY) or (not ONLY and "new" not in ARGS):
+        continue
+    f, bn = VG.FILES[cid]
+    run(cid, f, bn, gen)

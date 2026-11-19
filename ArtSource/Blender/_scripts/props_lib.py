@@ -277,6 +277,7 @@ def prop_mats():
         "PropAtlas": ((1, 1, 1), 0.55, 0.0, 1.0, True),
         "PropMetal": ((0.72, 0.74, 0.77), 0.32, 0.85, 1.0, False),
         "PropGlass": ((0.70, 0.86, 0.95), 0.05, 0.0, 0.35, False),
+        "PropFoliage": ((0.17, 0.42, 0.16), 0.9, 0.0, 1.0, False),
     }.items():
         m = bpy.data.materials.new("MAT_" + name)
         try:
@@ -353,7 +354,7 @@ class PG:
             for f in tbm.faces:
                 for l in f.loops:  # tiny box projection inside the swatch (keeps UVs non-degenerate)
                     c = l.vert.co
-                    l[lay].uv = (fc[0] + (c.x + c.y) * 0.004, fc[1] + (c.z + c.y) * 0.004)
+                    l[lay].uv = (fc[0] + ((c.x + c.y) % 1.0) * 0.02 - 0.01, fc[1] + ((c.z + c.y) % 1.0) * 0.02 - 0.01)  # stays inside the cell
         if M is not None:
             tbm.transform(M)
         if mat not in s.mats:

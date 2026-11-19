@@ -258,7 +258,7 @@ def mirror(b0, b1, side):
 
 
 # ---------------------------------------------------------------- main
-def build_v2(car, cid, file_stem, cabin_front_z):
+def build_v2(car, cid, file_stem, cabin_front_z, cabin=True):
     """car = build_interiors.Car (v1 imported). Returns (collection, report lines, door objects)."""
     rep = []
     objs = dict(car.objs)
@@ -299,11 +299,11 @@ def build_v2(car, cid, file_stem, cabin_front_z):
     body = _world_copy(body1, "Body")
     _link(body, body_c)
     cav_lo = fl - 0.045
-    cutters = [_box_obj("CUT_Cabin", Vector((-(hw + 0.01), g0.y + 0.03, cav_lo)), Vector((hw + 0.01, g1.y - 0.03, g0.z - 0.005)), bmat)]
+    cutters = [] if not cabin else [_box_obj("CUT_Cabin", Vector((-(hw + 0.01), g0.y + 0.03, cav_lo)), Vector((hw + 0.01, g1.y - 0.03, max(g0.z - 0.005, deck + 0.03))), bmat)]
     openings = {}
     for dn in ("Door_L", "Door_R", "Door_Rear_L", "Door_Rear_R"):
         d = objs.get(dn)
-        if not d:
+        if not d or not cabin:
             continue
         d0, d1 = car.bb(d)
         side = 1 if (d0.x + d1.x) > 0 else -1
@@ -312,7 +312,8 @@ def build_v2(car, cid, file_stem, cabin_front_z):
         mx = Vector((outer if side > 0 else -(hw + 0.005), d1.y, g0.z + 0.004))
         openings[dn] = (mn, mx, side, d)
         cutters.append(_box_obj("CUT_" + dn, mn, mx, bmat))
-    _boolean(body, cutters, 'DIFFERENCE')
+    if cutters:
+        _boolean(body, cutters, 'DIFFERENCE')
 
     # ---- Doors = body chunk in the opening (flush skin, thickness, inner face) + v1 window frame on the hatchback
     doors = {}
@@ -380,7 +381,7 @@ def build_v2(car, cid, file_stem, cabin_front_z):
             c.name = n
             c.data.name = "SM_" + n
             (body_c if n in ("Glass", "Trunk") or n.startswith("Door") else ext_c).objects.link(c)
-            if n == "Glass":
+            if n == "Glass" and cabin:
                 bm = bmesh.new()
                 bm.from_mesh(c.data)
                 bmesh.ops.delete(bm, geom=[f for f in bm.faces if abs(f.normal.z) > 0.9], context='FACES')
@@ -436,7 +437,7 @@ def build_v2(car, cid, file_stem, cabin_front_z):
     wz = g0.z + 0.035
     hits = [car.ray(Vector((x, car.yc, wz)), Vector((0, -1, 0)), only=["Glass"]) for x in (0.0,)]
     hits2 = car.ray(Vector((0, car.yc, wz + 0.12)), Vector((0, -1, 0)), only=["Glass"])
-    if hits[0] and hits2:
+    if cabin and hits[0] and hits2:
         y0, y1 = hits[0][2].y, hits2[2].y
         ang = math.atan2(0.12, y1 - y0)  # windscreen slope
         R = Matrix.Rotation(-(math.pi / 2 - ang), 4, 'X')

@@ -87,7 +87,7 @@ namespace CarWash.Editor
         static Transform GlbShape(string toolId, GameObject root)
         {
             if (!Glb.TryGetValue(toolId, out var g)) return null;
-            string path = GlbKit.Find("Tools", g.file);
+            string path = GlbKit.Find("Tools", g.file + "_v2") ?? GlbKit.Find("Tools", g.file); // Blender v2 tools: same nodes / sockets / origin
             if (path == null) return null;
             var model = GlbKit.Model(path, root.transform, Layers.Tool);
             if (toolId == "T06")

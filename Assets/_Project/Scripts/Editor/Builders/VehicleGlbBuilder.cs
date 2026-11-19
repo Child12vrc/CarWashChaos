@@ -70,7 +70,7 @@ namespace CarWash.Editor
             var bodyMat = bodyMr.sharedMaterials.FirstOrDefault();
             if (!bodyMf.sharedMesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.TexCoord1))
                 throw new System.Exception(glbPath + ": Body has no TEXCOORD_1 (UV2) — dirt needs it");
-            var mesh = MergedCopy(bodyMf.sharedMesh, $"{MeshDir}/{id}_Body.asset");
+            var mesh = MergedCopy(bodyMf.sharedMesh, $"{MeshDir}/{id}_Body.asset", bodyT, model.transform);
             bodyMf.sharedMesh = mesh;
             bodyMr.sharedMaterials = new[] { DirtTestBuilder.VehicleMaterial() };
             bodyT.gameObject.layer = Layers.WashSurface;
@@ -116,6 +116,10 @@ namespace CarWash.Editor
                 so.FindProperty("_openEuler").vector3Value = OpenEuler(t.localPosition, b.center, node == "Trunk");
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
+
+            // Batch F #8 airboat: the propeller turns (hub origin, about local Z)
+            var prop = VehicleInteriorBuilder.Deep(model.transform, "Propeller");
+            if (prop != null) prop.gameObject.AddComponent<Visual.Spinner>().Init(Vector3.forward, 540f);
 
             // --- physics hull: lower body + cabin boxes ---
             var bodyB = mesh.bounds;
@@ -196,11 +200,26 @@ namespace CarWash.Editor
         /// through the windscreen, a 3 m monster-truck roof). DirtUnwrapPaint leaves them out of the clean % like the underside, so 100 % is always
         /// reachable. Returns the hidden share of the counted UV2 area.
         /// </summary>
-        public static float BakeReachability(Mesh m)
+        public static float BakeReachability(Mesh m, Transform bodyT = null, Transform model = null)
         {
             var probe = new GameObject("ReachProbe") { hideFlags = HideFlags.HideAndDontSave };
             var mc = probe.AddComponent<MeshCollider>();
             mc.sharedMesh = m;
+            // v2 cars (door openings): every other part (closed doors / trunk, glass, mirrors, bumpers, wheels…) also blocks the
+            // view — the jambs, sills and recesses behind closed panels and the cabin seen through the glass are not washable
+            // from outside, so they are left out of the clean % (v2 V01 was stuck at 91 %)
+            _blockers.Clear();
+            if (bodyT != null && model != null)
+                foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true))
+                {
+                    if (mf.transform == bodyT || mf.sharedMesh == null) continue;
+                    var mat = bodyT.worldToLocalMatrix * mf.transform.localToWorldMatrix; // into body-local space (= m's space)
+                    var go = new GameObject("Blocker") { hideFlags = HideFlags.HideAndDontSave };
+                    go.transform.SetPositionAndRotation(mat.GetPosition(), mat.rotation);
+                    go.transform.localScale = mat.lossyScale;
+                    var bc = go.AddComponent<MeshCollider>(); bc.sharedMesh = mf.sharedMesh;
+                    _blockers.Add(bc);
+                }
             Physics.SyncTransforms();
             var b = m.bounds;
             var eyes = new List<Vector3>();
@@ -237,6 +256,8 @@ namespace CarWash.Editor
                 hiddenTris.Add(i / 3);
             }
             Object.DestroyImmediate(probe);
+            foreach (var b2 in _blockers) if (b2 != null) Object.DestroyImmediate(b2.gameObject);
+            _blockers.Clear();
             SplitHidden(m, hiddenTris);
             return total > 0f ? hidden / total : 0f;
         }
@@ -283,6 +304,8 @@ namespace CarWash.Editor
             m.RecalculateBounds();
         }
 
+        static readonly List<MeshCollider> _blockers = new List<MeshCollider>();
+
         static bool Reach(MeshCollider mc, List<Vector3> eyes, Vector3 c)
         {
             bool spray = false;
@@ -290,7 +313,11 @@ namespace CarWash.Editor
             {
                 var d = c - e; float dist = d.magnitude;
                 if (dist > 6f || (spray && dist > TowelReach)) continue;
-                if (!mc.Raycast(new Ray(e, d / dist), out var hit, dist + 0.05f) || (hit.point - c).magnitude > SprayTolerance) continue;
+                var ray = new Ray(e, d / dist);
+                if (!mc.Raycast(ray, out var hit, dist + 0.05f) || (hit.point - c).magnitude > SprayTolerance) continue;
+                bool blocked = false;
+                foreach (var bl in _blockers) if (bl.Raycast(ray, out _, hit.distance - 0.03f)) { blocked = true; break; }
+                if (blocked) continue;
                 spray = true;
                 if (dist <= TowelReach) return true;
             }
@@ -298,7 +325,7 @@ namespace CarWash.Editor
         }
 
         /// <summary>Copy of the imported body with every submesh merged into submesh 0 (saved as an asset of ours).</summary>
-        static Mesh MergedCopy(Mesh src, string path)
+        static Mesh MergedCopy(Mesh src, string path, Transform bodyT = null, Transform model = null)
         {
             Directory.CreateDirectory(MeshDir);
             var m = Object.Instantiate(src);
@@ -314,7 +341,7 @@ namespace CarWash.Editor
             UnwrapParam.SetDefaults(out var up);
             up.packMargin = 4f / 512f;
             Unwrapping.GenerateSecondaryUVSet(m, up);
-            float hidden = BakeReachability(m);
+            float hidden = BakeReachability(m, bodyT, model);
             Debug.Log($"[VehicleGlb] {m.name}: {hidden * 100f:0.00}% of the counted UV2 area is out of every player's reach → not counted");
             var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if (existing != null) { EditorUtility.CopySerialized(m, existing); Object.DestroyImmediate(m); EditorUtility.SetDirty(existing); return existing; }

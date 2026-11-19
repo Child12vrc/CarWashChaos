@@ -305,6 +305,10 @@ namespace CarWash.Editor
                 string glb = GlbKit.Find("SelfWash", "SW_" + d.id);
                 if (glb != null)
                 {
+                    // keep the graybox build's decals (board text, painted marks): the Blender boards leave blank faces for them
+                    d.build(root.transform);
+                    foreach (Transform ch in root.transform.Cast<Transform>().ToArray())
+                        if (ch.GetComponent<UnityEngine.Rendering.Universal.DecalProjector>() == null) Object.DestroyImmediate(ch.gameObject);
                     var model = GlbKit.Model(glb, root.transform, Layers.Scenery, Vector3.zero);
                     var arm = VehicleInteriorBuilder.Deep(model.transform, "Arm");
                     if (d.id == "BoomArm" && arm != null) arm.gameObject.AddComponent<Visual.BoomSway>(); // the arm swings, the mount stays
@@ -403,6 +407,37 @@ namespace CarWash.Editor
             B(c, "RoofSignPostL", new Vector3(cx - 3f, CanopyY + 0.4f, z1 - 0.4f), new Vector3(0.1f, 0.5f, 0.1f), Steel);
             B(c, "RoofSignPostR", new Vector3(cx + 3f, CanopyY + 0.4f, z1 - 0.4f), new Vector3(0.1f, 0.5f, 0.1f), Steel);
             TextDecals.Board(c, "셀프 세차장 · SUDSY", new Vector3(cx, CanopyY + 0.75f, z1 - 0.4f + 0.08f), new Vector3(0, 180f, 0), 0.52f, Color.white, 0.06f);
+            ModelOver(c, "SW_Canopy", new Vector3(0f, 0f, 4f), "셀프 세차장 · SUDSY");
+        }
+
+        /// <summary>
+        /// Blender canopy / vacuum canopy (visual only, ART_REQUESTS): our boxes keep their colliders, their looks go; the model
+        /// sits at <paramref name="origin"/>. Its `Lights` fittings are hidden (our switchable LED bars are the working lights)
+        /// and the roof-sign text decal moves onto its blank `RoofSign` board (front = +Z, towards the feed lane).
+        /// </summary>
+        static void ModelOver(Transform group, string id, Vector3 origin, string signText = null)
+        {
+            string glb = GlbKit.Find("SelfWash", id);
+            if (glb == null) return;
+            foreach (var r in group.GetComponentsInChildren<MeshRenderer>(true).ToArray())
+            {
+                var mf = r.GetComponent<MeshFilter>();
+                Object.DestroyImmediate(r); if (mf != null) Object.DestroyImmediate(mf);
+            }
+            foreach (var d in group.GetComponentsInChildren<UnityEngine.Rendering.Universal.DecalProjector>(true).ToArray()) Object.DestroyImmediate(d.gameObject);
+            var holder = new GameObject("Model_" + id) { layer = group.gameObject.layer }.transform;
+            holder.SetParent(group, true); holder.position = origin; holder.rotation = Quaternion.identity;
+            var model = GlbKit.Model(glb, holder, Layers.Default, Vector3.zero);
+            var lights = VehicleInteriorBuilder.Deep(model.transform, "Lights");
+            if (lights != null) lights.gameObject.SetActive(false);
+            var sign = signText != null ? VehicleInteriorBuilder.Deep(model.transform, "RoofSign") : null;
+            var sr = sign != null ? sign.GetComponentInChildren<Renderer>() : null;
+            if (sr != null)
+            {
+                var b = sr.bounds;
+                // the blank face is the model's front (−Z, towards the bays): project from there along +Z
+                TextDecals.Board(group, signText, new Vector3(b.center.x, b.center.y, b.min.z - 0.03f), Vector3.zero, Mathf.Min(0.52f, b.size.y * 0.6f), Color.white, b.size.z + 0.08f);
+            }
         }
 
         static void BayProps(Transform root, Bay b)
@@ -438,6 +473,19 @@ namespace CarWash.Editor
             Place(g, "TowelRack", new Vector3(z.xMax - 0.9f, 0, z.yMin + 0.6f), 180f);
             EnvironmentBuilder.NightSpot(g, "VacLight", new Vector3(cx, 3.12f, cz), new Vector3(cx, 0f, cz), 9f, 12f, new Color(1f, 0.95f, 0.85f), 0.38f, 130f);
             Footprints.Add((new Vector3(cx, 0, cz), 4.5f));
+            // Blender vacuum canopy (visual only; origin = the zone centre): our roof / posts / ceiling keep only their colliders
+            string vglb = GlbKit.Find("SelfWash", "SW_VacCanopy");
+            if (vglb != null)
+            {
+                foreach (Transform ch in g.Cast<Transform>().ToArray())
+                    if (ch.name.StartsWith("VacRoof") || ch.name.StartsWith("VacPost") || ch.name.StartsWith("VacCeiling"))
+                    {
+                        var r = ch.GetComponent<MeshRenderer>(); var mf = ch.GetComponent<MeshFilter>();
+                        if (r != null) Object.DestroyImmediate(r); if (mf != null) Object.DestroyImmediate(mf);
+                    }
+                var holder = new GameObject("Model_SW_VacCanopy").transform; holder.SetParent(g, true); holder.position = new Vector3(cx, 0f, cz);
+                GlbKit.Model(vglb, holder, Layers.Default, Vector3.zero);
+            }
         }
 
         static void Entrance(Transform root)
@@ -470,7 +518,7 @@ namespace CarWash.Editor
             Place(g, "VendingMachine", new Vector3(-11.6f, 0, -6.55f), 180f);
             Place(g, "CoinChanger", new Vector3(-10.6f, 0, -6.7f), 180f);
             Place(g, "Bench", new Vector3(-17.6f, 0, -12.6f), 90f);
-            Place(g, "Parasol", new Vector3(-17.6f, 0, -10.9f), 0f, 1.0f);
+            Place(g, "Parasol", new Vector3(-17.6f, 0, -10.6f), 0f, 1.0f); // the Blender parasol is wider: clear of the bench
             Place(g, "Bicycle", new Vector3(-14.5f, 0, -13.6f), 0f);
             Place(g, "AcUnit", new Vector3(-11.4f, 0, -13.35f), 0f);
             Place(g, "ElectricBox", new Vector3(-9.6f, 0.3f, -13.18f), 0f, 0.3f);

@@ -67,6 +67,7 @@ namespace CarWash.Vehicles
         bool DoorOpen()
         {
             var doors = _vehicle.Doors;
+            if (DoorIndex.Value < 0) return true; // no side door (airboat deck, tank, UFO): the trash lies in the open
             int i = DoorIndex.Value;
             return i >= 0 && i < doors.Count && doors[i].Open.Value;
         }

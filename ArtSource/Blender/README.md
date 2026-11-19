@@ -95,3 +95,27 @@ Blender 5.0 기준입니다(Steam 설치: `C:\Program Files (x86)\Steam\steamapp
 | Vehicles/V03_Pickup.blend | Vehicle_v2 | Generated/Vehicles/V03_pickup_v2.glb |
 | Vehicles/V04_Minivan.blend | Vehicle_v2 | Generated/Vehicles/V04_minivan_v2.glb |
 | Vehicles/B01_MonsterTruck.blend | Vehicle_v2 | Generated/Vehicles/B01_monster_truck_v2.glb |
+
+### 건물·소품·생물·풍경 (모두 `_scripts/build_props.py`로 생성)
+| .blend 폴더 | 내용 | 정의 파일 | .glb 경로 (Assets/_Project/Art/Models/Generated/…) |
+|---|---|---|---|
+| Buildings/ | SW_Canopy, SW_VacCanopy, Office | props_selfwash2.py, props_lot.py | SelfWash/, Lot/ |
+| Props/CarWash/ | SW_* 셀프세차 소품 28종 | props_selfwash.py, props_selfwash2.py, props_selfwash3.py | SelfWash/SW_<id>.glb |
+| Props/Office/ | Locker, DayBoard, Terminal | props_lot.py | Lot/ |
+| Props/Street/ | Dumpster, Vent, Cage, 실내 쓰레기 T_* | props_lot.py | Lot/, Props/ |
+| Critters/ | C02_bee_v2, C02_bee_hy | props_critters.py | Critters/ |
+| Scenery/ | Tree_A/B/C, Bush_A, StreetLamp, UtilityPole, ParkedCar_* | props_scenery.py, props_parked.py | Scenery/ |
+| Props/Tools/ | 도구 v2 5종 (T_*_v2) | props_tools.py | Tools/<name>_v2.glb |
+
+소품 하나만 다시 만들기: `blender -b --factory-startup --python ArtSource/Blender/_scripts/build_props.py -- <id> [<id> …]`
+나뭇잎 재질은 `MAT_PropFoliage`(짙은 초록)입니다.
+
+### Batch F #8 차량 (원본 GLB 없이 생성)
+`Vehicles/V05_IceCreamTruck.blend`, `V06_Hearse`, `V07_GarbageTruck`, `V08_Tank`, `B02_CircusTrailer`, `B03_SwampAirboat`, `B04_CrashedUFO`
+- 생성 로직은 세 파일에 나뉘어 있습니다.
+  - `_scripts/vehicles_gen.py`: v1 형태의 바디
+  - `_scripts/vehicles_deco.py`: 차종별 장식
+  - `vehicles_v2.py`: 문 구멍·부품 처리
+- 다시 만들기: `blender -b --factory-startup --python _scripts/build_interiors.py -- V05 V06 …`
+  (인자 없이 실행하면 V01~B01만 만들고, `new`를 붙이면 신규 차종도 함께 만듭니다.)
+- V08·B03·B04는 캐빈이 없어서 실내 GLB가 없습니다.

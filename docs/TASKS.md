@@ -418,3 +418,29 @@ Art wiring (2026-11-19): Blender props SW_PayTerminal / BoomArm (BoomSway on its
 Canopy underside (user report: it read as a dark red-brown "red sky"): the cause was DayNightCycle's SH ambient, where the "ground − equator" lobe was negative and lost the most blue, so every down-facing surface turned dark red-brown. Now: a neutral grey ground bounce plus one symmetric sky lobe. Added light metal ceiling panels under the canopy and the vacuum roof (generated texture: 0.3 m strips with seams, 1.2 m joints, mipmapped, aniso 8, smoothness 0.55, metallic 0.12) with a faint night glow standing in for the LED bounce. The LED housings / bars moved right under the panel. ClipAudit stays at 0. Checked by day and at 20:30 (`canopy_up` close-up).
 
 v0.8.2 (2026-11-19): v2 cars + Blender self-wash props + canopy ceiling / ambient fix. Builds/Release/CarWashChaos_v0.8.2.zip (112 MB). Relay verified (-joincode 7F69FC): full W1D1 loop PASS (V01 wash 70 → 90 %, paid, summary). Screenshots (interiors, canopy up day / night, before / after) are in Builds/Release/verify_screenshots/v0.8.2.
+
+Blender bulk delivery wiring + v2 wash fix (2026-11-19):
+- v2 wash at 91 % (v0.8.2 regression), two causes:
+  1. The v2 door openings exposed jambs, sills and the cabin interior. BakeReachability now also blocks rays with every other model part (closed doors / trunk, glass, mirrors, wheels…), so those faces leave the clean % and the initial dirt: 2.8–9.2 m² per car, 0 m² of outer skin.
+  2. The test bot's stand capsule (bottom 0.04 m) hit the M4.10 5 cm bay floor, so the towel never got close (test-only bug).
+- Re-check (2-player `-autotest-glb`): V01 125 s, V02 125 s, V03 277 s, V04 166 s → 100 % OK, all faster than v1 (144 / 155 / 380 / 225 s). Doors OK on all five.
+- Surprise critters popped out at a fixed y 0.05 = the M4.10 floor top, so they fell under the lot (logged y −1.95; the test marked them OK because they were outside the hull). Now they spawn 5 cm above the ground found by raycast, and the test flags "under the ground" as BAD.
+- Props, buildings, trash, critters:
+  - SelfWash props (30): the GLB is used when present; board text decals are kept from the graybox build (blank faces).
+  - SW_Canopy / SW_VacCanopy: visual only; our boxes keep their colliders, the model's light fittings are hidden (our switchable LED bars stay), and the roof-sign text goes on the board's blank −Z face.
+  - Lot: Office / Terminal / DayBoard / Locker×4 / Dumpster / Vent / Cage via `LotModels` (graybox keeps colliders + triggers; office / locker / day board / terminal / cage turned 180°; "사무실" / "동물 보호소" sign decals). The locker `Door` swings 100° while its wardrobe is open.
+  - Trash T_*: models on the primitive physics shapes.
+  - Bee: C02_bee_v2.
+- Scenery and tools:
+  - Tree_A/B/C (same layout), StreetLamp (our glowing lens and light under its head), UtilityPole (wires at 9.55 m), ParkedCar_* for the street cars.
+  - Tools: `<file>_v2.glb` preferred. The shop vac is not a held tool (the vacuum station was removed in G9), so its wider hose cannot cover the FP view; check again when T04 is built.
+- Batch F #8 (V05–V08, B02–B04 v2):
+  - All 12 vehicles now use their newest `_vN`.
+  - V08 / B03 / B04 have no side doors: trash with door index −1 lies in the open (TrashItem.DoorOpen → true; B03 = 2 pieces); no procedural cabin and no driver for them.
+  - The B03 propeller spins (`Visual.Spinner`).
+  - Reachability masks: 0–43 % per car.
+- Checks:
+  - Wardrobe on the new locker: 6/6 OK and the door opens 100° / closes to 0°.
+  - Critters → new cage: raccoon net + possum by hand, +$15 each.
+  - Routes 94 / 0 blocked; NavMesh OK. CI 208 green (GlbVehicleTests now asserts every vehicle on v2 and no cabin / doors on the 3 doorless ones).
+- Performance vs v0.7, 4 instances on one PC, uncapped: host 95.5 → 79.1 fps at 13:00 and 90.3 → 71.3 at 20:30 (p50 9.8 → 12.2 ms). Every instance stays above 60 fps. Follow-up: static batching / LOD for the GLB props.

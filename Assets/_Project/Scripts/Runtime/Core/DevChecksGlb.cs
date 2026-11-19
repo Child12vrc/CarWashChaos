@@ -202,7 +202,8 @@ namespace CarWash.Core
                 for (float z = -6f; z <= 6f; z += 0.35f)
                 {
                     var p = c.position + c.right * x + c.forward * z;
-                    if (Physics.CheckCapsule(new Vector3(p.x, 0.4f, p.z), new Vector3(p.x, 1.6f, p.z), 0.36f, mask, QueryTriggerInteraction.Ignore)) continue;
+                    // capsule bottom 0.5 m: the M4.10 ground slabs (bay floors 5 cm) must not count as obstacles
+                    if (Physics.CheckCapsule(new Vector3(p.x, 0.5f, p.z), new Vector3(p.x, 1.6f, p.z), 0.36f, mask, QueryTriggerInteraction.Ignore)) continue;
                     list.Add(new Vector3(p.x, 0.05f, p.z));
                 }
             return list.ToArray();
@@ -213,6 +214,7 @@ namespace CarWash.Core
         {
             var body = car.Dirt.Painter.GetComponent<Collider>();
             int unseen = 0;
+            int rFar = 0, rMiss = 0, rBlocked = 0; var blockers = new Dictionary<string, int>();
             foreach (var pt in points)
             {
                 pt.from.Clear();
@@ -224,13 +226,14 @@ namespace CarWash.Core
                         if (pt.from.Count >= 6) break;
                         var eye = stands[s] + Vector3.up * Heights[h];
                         var d = pt.p - eye; float dist = d.magnitude;
-                        if (dist > reach || dist < 0.3f) continue;
-                        if (!body.Raycast(new Ray(eye, d / dist), out var hit, dist + 0.05f) || (hit.point - pt.p).magnitude > 0.12f) continue; // = VehicleGlbBuilder.SprayTolerance
-                        if (Physics.Raycast(eye, d / dist, hit.distance - 0.05f, (1 << Layers.Default) | (1 << Layers.WashSurface), QueryTriggerInteraction.Ignore)) continue;
+                        if (dist > reach || dist < 0.3f) { rFar++; continue; }
+                        if (!body.Raycast(new Ray(eye, d / dist), out var hit, dist + 0.05f) || (hit.point - pt.p).magnitude > 0.12f) { rMiss++; continue; } // = VehicleGlbBuilder.SprayTolerance
+                        if (Physics.Raycast(eye, d / dist, out var bh, hit.distance - 0.05f, (1 << Layers.Default) | (1 << Layers.WashSurface), QueryTriggerInteraction.Ignore)) { rBlocked++; blockers[bh.collider.name] = blockers.TryGetValue(bh.collider.name, out var bc) ? bc + 1 : 1; continue; }
                         pt.from.Add((s, h));
                     }
                 if (pt.from.Count == 0) unseen++;
             }
+            Log($"plan (reach {reach:0.0}): far {rFar}, body-miss {rMiss}, blocked {rBlocked} by " + string.Join(", ", blockers.OrderByDescending(kv => kv.Value).Take(4).Select(kv => kv.Key + " " + kv.Value)));
             return unseen;
         }
 

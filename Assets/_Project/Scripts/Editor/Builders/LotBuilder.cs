@@ -87,6 +87,7 @@ namespace CarWash.Editor
             SelfWashBuilder.Build(env, bays);   // M4.9 G9: canopy, bay props, vacuum area, entrance boards, small props
             EnvDressingBuilder.Build(env);        // M4.7 E2/E3: decals + set dressing (combined meshes, off every route)
             EnvironmentBuilder.DayNight(env);    // M4.9 G1/G2: local day → night (sky, sun, fog, post, lamps / signs glow)
+            LotModels.Apply(env);               // Blender lot models (office, terminal, day board, lockers, cage, dumpster, vent)
             GroundLayers.Apply(env);            // M4.10 W3: ground slabs on fixed heights by kind, painted markings → decals (no z-fighting)
             var lotPaths = BuildPaths(bays);
             BuildCustomers(lotPaths);

@@ -73,12 +73,23 @@ namespace CarWash.Tests
         }
 
         [Test]
-        public void UnmodelledVehiclesStayGraybox()
+        public void EveryVehicle_UsesItsNewestModel_DoorlessOnesHaveNoCabin()
         {
-            Assert.IsNull(VehicleGlbBuilder.GlbFor("V05"));
-            var go = Prefab("V05");
-            Assert.IsNull(go.transform.Find("Model"));
-            Assert.AreEqual(Layers.Vehicle, go.GetComponentInChildren<DirtPainter>(true).gameObject.layer);
+            // Batch F #7 / #8: all 12 vehicles are modelled now; the newest revision (_vN) wins
+            foreach (var id in new[] { "V01", "V02", "V03", "V04", "V05", "V06", "V07", "V08", "B01", "B02", "B03", "B04" })
+            {
+                var glb = VehicleGlbBuilder.GlbFor(id);
+                Assert.IsNotNull(glb, id);
+                StringAssert.EndsWith("_v2.glb", glb, id);
+                Assert.IsNotNull(Prefab(id).transform.Find("Model"), id);
+            }
+            // tank / airboat / UFO: no side doors, no procedural cabin (seats would sit inside the hull / dome), so no driver
+            foreach (var id in new[] { "V08", "B03", "B04" })
+            {
+                var go = Prefab(id);
+                Assert.IsFalse(go.GetComponentsInChildren<Vehicles.VehicleDoor>(true).Any(d => !d.IsTrunk), id);
+                Assert.IsNull(go.transform.Find("Interior/DriverSeat"), id);
+            }
         }
 
         [Test]

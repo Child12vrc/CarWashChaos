@@ -84,31 +84,31 @@ Each one is a prefab under `Assets/_Project/Prefabs/Props/SelfWash/SW_<id>.prefa
 | SW_FoamBrushHolder | 폼브러시 거치대 | 0.4 × 1.3 × 0.25 | none | **Blender model in use** — wall-mounted; front = -Z |
 | SW_HoseReelDrum | 호스 릴 | 0.6 × 0.6 × 0.3 | none | **Blender model in use** — wall-mounted drum; axis along Z |
 | SW_DrainGrate | 배수구 (바닥 중앙) | 1.6 × 0.03 × 0.6 | none | flush with the floor |
-| SW_VacuumPillar | 진공 청소기 기둥 | 0.5 × 1.9 × 0.5 | box | hose + nozzle on the side; coin box |
-| SW_MatRack | 매트 거치대 | 1.6 × 1.4 × 0.5 | box | 3 car mats hanging on a bar |
-| SW_MatWasher | 매트 세척기 | 0.9 × 1.1 × 0.7 | box | box with a mat slot + rollers; front = -Z |
-| SW_AirGun | 에어건 | 0.4 × 1.5 × 0.4 | none | post + coiled hose + gun |
-| SW_RecycleBins | 분리수거함 (3칸) | 1.5 × 1 × 0.5 | box | 캔 / 플라스틱 / 일반 |
-| SW_PriceBoard | 가격표 간판 (입구) | 2.4 × 3.2 × 0.2 | box | two posts + board; text faces -Z |
-| SW_InfoBoard | 이용 안내판 | 1.6 × 2.2 × 0.15 | box | text faces -Z |
-| SW_NoEntrySign | 진입금지 표지 | 0.7 × 2.2 × 0.1 | none | red disc + white bar; faces -Z |
+| SW_VacuumPillar | 진공 청소기 기둥 | 0.5 × 1.9 × 0.5 | box | **Blender model in use** — hose + nozzle on the side; coin box |
+| SW_MatRack | 매트 거치대 | 1.6 × 1.4 × 0.5 | box | **Blender model in use** — 3 car mats hanging on a bar |
+| SW_MatWasher | 매트 세척기 | 0.9 × 1.1 × 0.7 | box | **Blender model in use** — box with a mat slot + rollers; front = -Z |
+| SW_AirGun | 에어건 | 0.4 × 1.5 × 0.4 | none | **Blender model in use** — post + coiled hose + gun |
+| SW_RecycleBins | 분리수거함 (3칸) | 1.5 × 1 × 0.5 | box | **Blender model in use** — 캔 / 플라스틱 / 일반 |
+| SW_PriceBoard | 가격표 간판 (입구) | 2.4 × 3.2 × 0.2 | box | **Blender model in use** — two posts + board; text faces -Z |
+| SW_InfoBoard | 이용 안내판 | 1.6 × 2.2 × 0.15 | box | **Blender model in use** — text faces -Z |
+| SW_NoEntrySign | 진입금지 표지 | 0.7 × 2.2 × 0.1 | none | **Blender model in use** — red disc + white bar; faces -Z |
 | SW_RoadArrow | 노면 화살표 | 0.9 × 0.01 × 3 | none | painted, points +Z |
-| SW_CoinChanger | 동전교환기 | 0.6 × 1.6 × 0.5 | box | front = -Z |
-| SW_VendingMachine | 자판기 | 1 × 1.9 × 0.8 | box | glass front with drinks; front = -Z |
-| SW_Bench | 벤치 | 1.6 × 0.85 × 0.5 | box | front = -Z |
-| SW_Parasol | 파라솔 + 테이블 | 2.2 × 2.4 × 2.2 | none | round table + umbrella |
-| SW_Cctv | CCTV 카메라 | 0.3 × 0.25 × 0.45 | none | wall / pillar mount; looks along -Z |
-| SW_Extinguisher | 소화기 | 0.2 × 0.62 × 0.2 | none |  |
-| SW_WaterTank | 물탱크 | 1.8 × 2.4 × 1.8 | box | big plastic tank on a stand + ladder |
-| SW_ChemDrum | 약품 드럼통 | 0.6 × 0.9 × 0.6 | box | blue drum with a label |
-| SW_BucketStack | 버킷 (쌓아 둔 것) | 0.4 × 0.6 × 0.4 | none |  |
-| SW_TowelRack | 수건 걸이 | 1.2 × 1.3 × 0.4 | none | frame + 4 towels |
-| SW_SlipperySign | 미끄럼 주의 표지 | 0.4 × 0.7 × 0.5 | none | yellow A-frame |
-| SW_Pipes | 배관 (벽 따라) | 6 × 0.3 × 0.25 | none | two pipes along local X with brackets |
-| SW_ElectricBox | 전기 박스 | 0.7 × 1 × 0.3 | none | wall box; front = -Z |
-| SW_AcUnit | 에어컨 실외기 | 0.9 × 0.7 × 0.35 | box | fan grille on the front (-Z) |
-| SW_Planter | 화분 (플랜터) | 0.8 × 0.9 × 0.8 | box |  |
-| SW_Bicycle | 자전거 | 1.7 × 1 × 0.5 | none | along local X |
+| SW_CoinChanger | 동전교환기 | 0.6 × 1.6 × 0.5 | box | **Blender model in use** — front = -Z |
+| SW_VendingMachine | 자판기 | 1 × 1.9 × 0.8 | box | **Blender model in use** — glass front with drinks; front = -Z |
+| SW_Bench | 벤치 | 1.6 × 0.85 × 0.5 | box | **Blender model in use** — front = -Z |
+| SW_Parasol | 파라솔 + 테이블 | 2.2 × 2.4 × 2.2 | none | **Blender model in use** — round table + umbrella |
+| SW_Cctv | CCTV 카메라 | 0.3 × 0.25 × 0.45 | none | **Blender model in use** — wall / pillar mount; looks along -Z |
+| SW_Extinguisher | 소화기 | 0.2 × 0.62 × 0.2 | none | **Blender model in use** —  |
+| SW_WaterTank | 물탱크 | 1.8 × 2.4 × 1.8 | box | **Blender model in use** — big plastic tank on a stand + ladder |
+| SW_ChemDrum | 약품 드럼통 | 0.6 × 0.9 × 0.6 | box | **Blender model in use** — blue drum with a label |
+| SW_BucketStack | 버킷 (쌓아 둔 것) | 0.4 × 0.6 × 0.4 | none | **Blender model in use** —  |
+| SW_TowelRack | 수건 걸이 | 1.2 × 1.3 × 0.4 | none | **Blender model in use** — frame + 4 towels |
+| SW_SlipperySign | 미끄럼 주의 표지 | 0.4 × 0.7 × 0.5 | none | **Blender model in use** — yellow A-frame |
+| SW_Pipes | 배관 (벽 따라) | 6 × 0.3 × 0.25 | none | **Blender model in use** — two pipes along local X with brackets |
+| SW_ElectricBox | 전기 박스 | 0.7 × 1 × 0.3 | none | **Blender model in use** — wall box; front = -Z |
+| SW_AcUnit | 에어컨 실외기 | 0.9 × 0.7 × 0.35 | box | **Blender model in use** — fan grille on the front (-Z) |
+| SW_Planter | 화분 (플랜터) | 0.8 × 0.9 × 0.8 | box | **Blender model in use** —  |
+| SW_Bicycle | 자전거 | 1.7 × 1 × 0.5 | none | **Blender model in use** — along local X |
 
 Also wanted: the canopy (one roof over 3 bays, 24.8 × 11.2 m, height 4.3 m, blue fascia with the name), the drying / vacuum area canopy (11.3 × 5.2 m, height 3.35 m), and the angry-face icon and ring / arrow sprites for the patience timers (G6, currently drawn in code by `UiSprites`).
 <!-- /G9 self-wash props -->
@@ -124,3 +124,20 @@ Status: DELIVERED means the file is in place and the Unity session can wire it. 
 | SW_HoseReelDrum | DELIVERED 2026-11-19 | …/SelfWash/SW_HoseReelDrum.glb | origin = drum centre (like the graybox); `Bracket` (wall plate back at z 0.155), `Drum` (spins about local Z), `HoseOut` (static drop to y −0.66) |
 | SW_DrainGrate | skipped | — | already a decal since M4.10 (a mesh would z-fight the floor again) |
 | Batch F #7 vehicles v2 (V01–V04, B01) | DELIVERED 2026-11-19 | Art/Models/Generated/Vehicles/<file>_v2.glb (e.g. V01_hatchback_v2.glb); v1 files untouched | **opt-in:** VehicleGlbBuilder.GlbFor picks the first `id_*.glb` alphabetically, which is still v1 → prefer `*_v2.glb`. Same node contract. With v2, skip InteriorDoors_<id>.glb and VehicleInteriorBuilder.DoorTrim (the cards are now `DoorDetail_*` under each door). See ART_IMPORT "Vehicles v2" |
+| SW_Canopy | DELIVERED 2026-11-19 | …/SelfWash/SW_Canopy.glb (source ArtSource/Blender/Buildings/SW_Canopy.blend) | visual only: keep SelfWashBuilder.Canopy's colliders. Origin = ground under the roof centre = world (0, 0, 4.0). Nodes: `Roof` (+ ceiling panels), `Fascia` (N/S/E/W, yellow stripe), `Pillars` (x ±12.2 / ±4, z ±5.3, footings, hazard guards), `Lights` (9 fittings), `RoofSign` (blank board at z +5.2, y 4.75: keep the TextDecal), `Gutters` |
+| SW_VacCanopy | DELIVERED 2026-11-19 | …/SelfWash/SW_VacCanopy.glb (Buildings/SW_VacCanopy.blend) | visual only. Origin = VacuumZone centre (25.25, 0, −9.4); posts at x ±5.05, z ±2.0; roof at 3.3–3.45 (graybox 3.35) |
+| SW_VacuumPillar | DELIVERED 2026-11-19 | …/SelfWash/SW_VacuumPillar.glb | pivot bottom centre, front −Z; `Body` + `Hose` (loop on +X up to the holster with the nozzle) |
+| SW_VendingMachine | DELIVERED 2026-11-19 | …/SelfWash/SW_VendingMachine.glb | `Body` + `Glass` (MAT_PropGlass in front of the drink shelves) |
+| SW_CoinChanger | DELIVERED 2026-11-19 | …/SelfWash/SW_CoinChanger.glb | `Body`; the cream name plate at y 1.42 z −0.255 is left blank for the existing "동전교환" TextDecal |
+| SW_MatRack, SW_MatWasher, SW_AirGun, SW_RecycleBins, SW_PriceBoard, SW_InfoBoard, SW_NoEntrySign, SW_Bench, SW_Parasol, SW_Cctv, SW_Extinguisher, SW_WaterTank, SW_ChemDrum, SW_BucketStack, SW_TowelRack, SW_SlipperySign, SW_Pipes, SW_ElectricBox, SW_AcUnit, SW_Planter, SW_Bicycle | DELIVERED 2026-11-19 | …/SelfWash/SW_<id>.glb (sources Props/CarWash/SW_<id>.blend) | every one keeps its graybox frame (pivot, front −Z, Cctv origin = wall mount, Pipes at y 1.3 / 1.55 along X, Bicycle along X); boards (PriceBoard / InfoBoard / CoinChanger / SlipperySign) keep blank faces where the existing TextDecals go; 300–3100 tris each |
+| SW_RoadArrow | skipped | — | decal since M4.10 |
+| Batch F #3 office set: Lot/Office, Lot/Locker, Lot/DayBoard, Lot/Terminal | DELIVERED 2026-11-19 | Art/Models/Generated/Lot/*.glb (sources Buildings/Office.blend, Props/Office/*.blend) | all **front = −Z**, pivot bottom centre, except DayBoard: origin = board centre, wall side at +Z 0.025. LotBuilder's office / lockers / board / terminal face +Z (towards the lot) → rotate 180° about Y. Office = 8 × 6 m shell (+ 0.3 m parapet, awning to z −3.8): `Shell` `Front` `Glass` `Awning` `Sign` (blank navy board for a "사무실" decal) `Roof` `Side`; keep its box collider. Locker: `Cabinet` + `Door` (origin = hinge on the −X edge, swings about Y) |
+| Batch F #4 trash: Props/T_cup, T_bottle, T_wrapper, T_fries, T_diaper | DELIVERED 2026-11-19 | Art/Models/Generated/Props/T_*.glb | origin bottom centre, 0.05–0.23 m, 136–260 tris |
+| Batch F #5 bee: Critters/C02_bee_v2.glb (+ C02_bee_hy.glb) | DELIVERED 2026-11-19 | Art/Models/Generated/Critters/ | v2 = the same contract as C02_bee.glb (root `Critter`, `Body` at (0, 0.038, 0.009 → Unity z −0.009), children `Head` (+`Socket_Head`), `Stinger`, `Wing_L/R` pivot at the wing root, `Socket_Carry`), faces +Z, 1904 tris, wings MAT_PropGlass → a drop-in for BeeFlock. `_hy` = the same bee as one mesh (no wing flap), upright, no X+90 node rotation |
+| Batch F #6: Lot/Dumpster, Lot/Vent, Lot/Cage | DELIVERED 2026-11-19 | Art/Models/Generated/Lot/*.glb | pivot bottom centre, front −Z. Dumpster `Body` + `Lid` (two lids, one half-open). Cage: `Frame`, `Door` (open gate leaf, origin = hinge at (−1.05, 0, −1.08)), `Sign` (blank, for a decal), **`Socket_Inside`**; door on −Z per the request (LotBuilder's cage opens to +Z → rotate 180°). Vent: rain-hat stack up to 1.75 m |
+| Batch F #9 scenery: Scenery/Tree_A (round broadleaf 5.5 m), Tree_B (conifer 5.7 m), Tree_C (street tree in a grate 4.7 m), Bush_A, StreetLamp (7.3 m, arm + LED head towards −Z), UtilityPole (10 m, cross-arms, transformer, cable stubs along X) | DELIVERED 2026-11-19 | Art/Models/Generated/Scenery/*.glb (sources Scenery/*.blend) | origin = base centre; 150–1400 tris; foliage = MAT_PropFoliage, so trees can share one material. Parked-car variety: reuse the v2 vehicles |
+| Batch F #2 bay building | superseded | — | the bays are now the G9 canopy + dividers → SW_Canopy covers it |
+| Batch F #8 graybox vehicles V05–V08, B02–B04 | open | — | next: same v2 pipeline from scratch (no v1 GLB to start from) |
+| Batch F #8 vehicles: V05 ice-cream truck, V06 hearse, V07 garbage truck, V08 tank, B02 circus trailer, B03 swamp airboat, B04 crashed UFO | DELIVERED 2026-11-19 | Art/Models/Generated/Vehicles/<id>_<name>_v2.glb + Interiors/Interior_<id>.glb (V05/V06/V07/B02) | same v2 node contract; no v1 existed → generated v1-style bodies (sources Vehicles/<id>_<Name>.blend). **V08 / B03 / B04 have no cabin**: no doors, no Interior GLB (skip VehicleInteriorBuilder or keep its hidden procedural cabin); trunk = turret hatch (V08, C09 pops out) / side hatch (B04); B03 has no Trunk; the trash spots must sit on its `Deck` seats. See ART_IMPORT "Vehicles v2 — Batch F #8" |
+| Tools v2: T_pressure_washer_gun_v2, T_foam_cannon_v2, T_towel_v2, T_shop_vac_v2, T_net_pole_v2 | DELIVERED 2026-11-19 | Art/Models/Generated/Tools/<name>_v2.glb (sources Props/Tools/*.blend) | same node names, origin (= grip) and sockets as v1 (Socket_Nozzle / Socket_HoseIn / Socket_Capture at the v1 positions), forward +Z; legacy material names kept + MAT_PropMetal (steel lance, couplers) / MAT_PropAtlas (towel print); 360–2340 tris. Shop vac hose now reaches 0.66 m wide (v1 0.45) |
+| Street parked cars: Scenery/ParkedCar_Compact, ParkedCar_Sedan, ParkedCar_SUV, ParkedCar_Taxi | DELIVERED 2026-11-19 | Art/Models/Generated/Scenery/ParkedCar_*.glb | decoration only: sealed body, opaque dark glass, no doors / interior / UV2. Origin ground centre, front +Z like the customer cars; 1250–1720 tris; nodes `Body` `Glass` `Details` `Wheels` (+ `TaxiSign`); atlas swatches → recolour by swapping the swatch or tinting `Body` |

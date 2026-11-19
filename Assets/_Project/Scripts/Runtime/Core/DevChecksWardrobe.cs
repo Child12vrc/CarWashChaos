@@ -37,6 +37,7 @@ namespace CarWash.Core
             if (!WardrobeUI.IsOpen) { input.scripted = false; yield break; }
             yield return new WaitForSeconds(1.2f);
             ScreenCapture.CaptureScreenshot("autotest_wardrobe_open.png");
+            Log($"locker door: model door={(locker.Door != null)} angle {locker.DoorAngle:0} deg while open → {(locker.Door == null || locker.DoorAngle > 90f ? "OK" : "FAIL")}");
             yield return new WaitForSeconds(0.3f);
             var w = WardrobeUI.Instance;
             int before = app.Look.Value, target = (before + 5) % app.Count;
@@ -59,7 +60,9 @@ namespace CarWash.Core
             yield return new WaitForSeconds(0.3f);
             WardrobeUI.Close();
             yield return null;
+            yield return new WaitForSeconds(0.6f);
             Log($"closed: open={WardrobeUI.IsOpen}, cursor {Cursor.lockState}, my body look active={app.Current?.root.activeSelf}");
+            Log($"locker door after close: angle {locker.DoorAngle:0} deg");
             // from the Esc menu
             UI.SettingsMenu.Toggle();
             yield return new WaitForSeconds(0.3f);

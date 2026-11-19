@@ -163,7 +163,7 @@ namespace CarWash.Editor
         /// <summary>Swarm = SwarmSize C02_bee instances under "Bees" (BeeFlock orbits + wing flaps them).</summary>
         static float GlbBees(Transform visual, GameObject root)
         {
-            string p = GlbKit.Find("Critters", "C02_bee");
+            string p = GlbKit.Find("Critters", "C02_bee_v2") ?? GlbKit.Find("Critters", "C02_bee"); // v2 = same node contract (wings flap), Blender Batch F #5
             if (p == null) return Bees(visual, root);
             var centre = new GameObject("Bees") { layer = Layers.Critter }.transform;
             centre.SetParent(visual, false);

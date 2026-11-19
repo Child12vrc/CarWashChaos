@@ -87,7 +87,7 @@ namespace CarWash.Core
                                 if (d < 0.001f) inside = true;
                                 gap = Mathf.Min(gap, d);
                             }
-                        ok = hull != null && !inside && p.y < 0.6f;
+                        ok = hull != null && !inside && p.y < 0.6f && p.y > -0.05f; // on the ground, not under it
                         where = $"car {car.DataId} insideHull={inside} gapToHull={gap:0.00}m";
                     }
                     Log($"surprise critter {c.name} at {p.ToString("F2")} {where} → {(ok ? "OK" : "BAD")}");

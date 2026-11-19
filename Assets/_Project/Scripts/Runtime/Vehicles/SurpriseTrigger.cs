@@ -88,7 +88,7 @@ namespace CarWash.Vehicles
             // out of the door opening, on the ground
             var p = door.transform.position;
             var side = Vector3.ProjectOnPlane(p - _v.transform.position, Vector3.up).normalized;
-            Fire(new Vector3(p.x, 0.05f, p.z) + side * 0.6f, "door " + door.name);
+            Fire(OnGround(p + side * 0.6f), "door " + door.name);
         }
 
         void Update()
@@ -110,8 +110,16 @@ namespace CarWash.Vehicles
         Vector3 BesideCar()
         {
             var s = _v.SurpriseSocket != null ? _v.SurpriseSocket.position : _v.transform.position;
-            var p = s + _v.transform.right * 1.6f;
-            return new Vector3(p.x, 0.05f, p.z);
+            return OnGround(s + _v.transform.right * 1.6f);
+        }
+
+        /// <summary>5 cm above the walkable ground under <paramref name="p"/> (bay floors / lanes sit 2.5–5 cm up since M4.10: a
+        /// fixed y 0.05 spawned critters inside the floor slab and they dropped under the lot).</summary>
+        static Vector3 OnGround(Vector3 p)
+        {
+            int mask = 1 << Core.Layers.Default;
+            float y = Physics.Raycast(new Vector3(p.x, 1f, p.z), Vector3.down, out var hit, 3f, mask, QueryTriggerInteraction.Ignore) ? hit.point.y : 0f;
+            return new Vector3(p.x, y + 0.05f, p.z);
         }
 
         /// <summary>Server (dev/boss): fire now.</summary>

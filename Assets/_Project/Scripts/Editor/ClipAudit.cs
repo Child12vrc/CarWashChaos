@@ -123,7 +123,7 @@ namespace CarWash.Editor
         }
 
         /// <summary>Props that are meant to touch / sink slightly into what they hang on.</summary>
-        public static readonly string[] Mounted = { "FoamBrushHolder", "HoseReelDrum", "Cctv", "ElectricBox", "Pipes", "Extinguisher", "BoomArm" };
+        public static readonly string[] Mounted = { "FoamBrushHolder", "HoseReelDrum", "Cctv", "ElectricBox", "Pipes", "Extinguisher", "BoomArm", "Parasol" }; // Parasol: the shade overhangs (its AABB is not its shape)
 
         static BoxCollider _probe;
         static Collider BoxOf(Renderer r)

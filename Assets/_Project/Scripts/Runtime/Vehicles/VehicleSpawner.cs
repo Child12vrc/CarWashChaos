@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using CarWash.Data;
 using Unity.Netcode;
@@ -44,7 +45,8 @@ namespace CarWash.Vehicles
         void SpawnTrash(Vehicle v)
         {
             var d = v.Data;
-            if (d == null || _trashPrefabs.Length == 0 || v.Doors.Count == 0) return;
+            if (d == null || _trashPrefabs.Length == 0) return;
+            if (!v.Doors.Any(dd => !dd.IsTrunk)) { SpawnTrashDoorless(v, d.trashCount); return; } // no side doors (Batch F #8 tank / airboat / UFO)
             int sideDoors = 0;
             foreach (var door in v.Doors) if (!door.IsTrunk) sideDoors++;
             var spots = v.TrashSpots;
@@ -76,6 +78,25 @@ namespace CarWash.Vehicles
                 v.Trash.Add(item);
             }
         }
+        /// <summary>Batch F #8: vehicles without doors (V08 tank, B03 airboat, B04 UFO) — trash lies in the open cabin / deck
+        /// (the interior trash spots, else around Socket_Interior), always visible (TrashItem.DoorOpen → true, door index −1).</summary>
+        void SpawnTrashDoorless(Vehicle v, int count)
+        {
+            var spots = v.TrashSpots;
+            Vector3 basePos = v.InteriorSocket != null ? v.transform.InverseTransformPoint(v.InteriorSocket.position) : new Vector3(0f, 1f, 0f);
+            for (int i = 0; i < count; i++)
+            {
+                var local = spots.Count > 0
+                    ? v.transform.InverseTransformPoint(spots[i % spots.Count].position) + new Vector3(0f, 0.04f * (i / spots.Count), 0f)
+                    : basePos + new Vector3((i % 2 == 0 ? -0.25f : 0.25f), 0.05f, -0.2f * (i / 2));
+                var t = Instantiate(_trashPrefabs[Random.Range(0, _trashPrefabs.Length)], v.transform.TransformPoint(local), v.transform.rotation * Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
+                var item = t.GetComponent<TrashItem>();
+                item.ServerAttach(v, local, -1);
+                t.Spawn(true);
+                v.Trash.Add(item);
+            }
+        }
+
         static int NearestSideDoor(Vehicle v, Vector3 p)
         {
             int best = 0; float bd = float.MaxValue;

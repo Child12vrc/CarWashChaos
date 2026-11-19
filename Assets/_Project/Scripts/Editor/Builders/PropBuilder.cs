@@ -68,6 +68,17 @@ namespace CarWash.Editor
             go.layer = Layers.Prop;
             go.transform.localScale = s.size;
             go.GetComponent<Renderer>().sharedMaterial = GrayboxMaterials.Get("Prop_" + s.id, s.color);
+            // Blender interior trash (Batch F #4, Props/T_cup…): the primitive stays as the physics shape, the model is the look
+            // (pivot = bottom centre; counter-scaled because the primitive carries its size in its own scale)
+            string tglb = trash ? GlbKit.Find("Props", "T_" + s.id.Substring("Trash_".Length).ToLowerInvariant()) : null;
+            if (tglb != null)
+            {
+                go.GetComponent<MeshRenderer>().enabled = false;
+                var holder = new GameObject("Look").transform; holder.SetParent(go.transform, false);
+                holder.localPosition = new Vector3(0f, s.shape == PrimitiveType.Cylinder ? -1f : -0.5f, 0f);
+                holder.localScale = new Vector3(1f / s.size.x, 1f / s.size.y, 1f / s.size.z);
+                GlbKit.Model(tglb, holder, Layers.Prop, Vector3.zero);
+            }
             if (s.shape == PrimitiveType.Cylinder)
             {
                 // primitive cylinder has a capsule collider; a convex mesh gives proper flat-bottom physics
