@@ -116,7 +116,7 @@ namespace CarWash.Editor
             foreach (var bx in bays) { D("water", new Vector3(bx + R(-0.8f, 0.8f), 0, R(-2.5f, -1.2f)), R(1.6f, 2.4f), R(2.5f, 3.5f), R(-10f, 10f)); D("water", new Vector3(bx + R(-2f, 2f), 0, R(0.5f, 8f)), R(1f, 1.6f), R(1f, 1.6f), R(0, 360)); }
             // manholes on the road / lot, a drain in each bay + gutters at the curb
             D("manhole", new Vector3(-10f, 0, -16.6f), 0.9f, 0.9f, 0f); D("manhole", new Vector3(17.5f, 0, -14.6f), 0.9f, 0.9f, 37f); D("manhole", new Vector3(-2f, 0, 14.6f), 0.9f, 0.9f, 12f);
-            foreach (var bx in bays) D("drain", new Vector3(bx, 0, 4.2f), 0.6f, 1.4f, 0f);
+            // (bay centre drains: the SW_DrainGrate prop of SelfWashBuilder, G9 — not doubled here)
             D("drain", new Vector3(-24f, 0, -18.1f), 1.2f, 0.45f, 0f); D("drain", new Vector3(10f, 0, -18.1f), 1.2f, 0.45f, 0f); D("drain", new Vector3(28f, 0, -18.1f), 1.2f, 0.45f, 0f);
             // bay corners: grime / limescale where the walls meet the floor
             foreach (var bx in bays)

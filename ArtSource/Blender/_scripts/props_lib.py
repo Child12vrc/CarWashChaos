@@ -26,7 +26,7 @@ SW = {
 SW_KEYS = list(SW)
 BIG = ["screen", "btn_water", "btn_foam", "btn_wax", "btn_rinse", "hazard", "vending", "coinpanel"]
 SMALL = ["rc_can", "rc_plastic", "rc_general", "vent", "fan", "keypad", "lens", "drumlabel",
-         "warning", "coin", "vac", "towel", "electric", "matgrid", "grate", "brand"]
+         "warning", "coin", "vac", "towel", "electric", "plate", "grate", "brand"]
 
 
 def rect_of(name):
@@ -211,6 +211,25 @@ def draw_tile(name, n):
     elif name == "electric":
         _paint(img, np.ones_like(x, bool), SW["yellow"])
         _paint(img, _poly(x, y, [(.56, .88), (.3, .46), (.48, .46), (.42, .12), (.7, .56), (.52, .56)]), SW["black"])
+    elif name == "plate":  # Korean-style white plate "12가 3456" (drawn squashed: the tile is stretched ~4.7:1 on the plate)
+        _paint(img, np.ones_like(x, bool), SW["dark"])
+        _paint(img, _rrect(x, y, .015, .06, .985, .94, .03), (0.97, 0.97, 0.97))
+        segs = {"1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd", "6": "afgedc"}
+        def digit(ch, x0, w=.085, y0=.2, h=.6, t=.022, tv=.09):
+            ym = y0 + h / 2
+            R = {"a": (x0, y0 + h - tv, x0 + w, y0 + h), "g": (x0, ym - tv / 2, x0 + w, ym + tv / 2), "d": (x0, y0, x0 + w, y0 + tv),
+                 "f": (x0, ym, x0 + t, y0 + h), "b": (x0 + w - t, ym, x0 + w, y0 + h), "e": (x0, y0, x0 + t, ym), "c": (x0 + w - t, y0, x0 + w, ym)}
+            for s in segs[ch]:
+                a = R[s]
+                _paint(img, (x >= a[0]) & (x <= a[2]) & (y >= a[1]) & (y <= a[3]), (0.08, 0.08, 0.1))
+        for ch, x0 in zip("12", (.06, .17)):
+            digit(ch, x0)
+        # 가: ㄱ + ㅏ
+        ink = (0.08, 0.08, 0.1)
+        _paint(img, ((x >= .30) & (x <= .37) & (y >= .71) & (y <= .8)) | ((x >= .35) & (x <= .37) & (y >= .3) & (y <= .8)), ink)
+        _paint(img, ((x >= .41) & (x <= .43) & (y >= .2) & (y <= .8)) | ((x >= .43) & (x <= .46) & (y >= .46) & (y <= .54)), ink)
+        for ch, x0 in zip("3456", (.52, .63, .74, .85)):
+            digit(ch, x0)
     elif name == "matgrid":
         _paint(img, np.ones_like(x, bool), SW["dark"])
         _paint(img, ((x * 10) % 1 < .5) ^ ((y * 10) % 1 < .5), SW["black"], 0.6)
@@ -355,8 +374,10 @@ class PG:
         return s.add(L.t_box(size, bev, seg), uv, M)
 
     def cyl(s, center, r, depth, uv=("sw", "grey"), seg=16, axis="Z", r2=None, rot=None):
-        R = {"Z": Matrix(), "Y": L.RX90, "X": L.RY90}[axis]
-        return s.add(L.t_cyl(r, depth, seg, r2), uv, Matrix.Translation(center) @ (rot or Matrix()) @ R)
+        R = {"Z": Matrix(), "Y": Matrix.Rotation(math.radians(-90), 4, 'X'), "X": L.RY90}[axis]
+        tbm = L.t_cyl(r, depth, seg, r2)
+        tbm.transform(R)  # axis first, so tile UVs see the real cap direction
+        return s.add(tbm, uv, Matrix.Translation(center) @ (rot or Matrix()))
 
     def obj(s, col, name=None, matrix=None):
         name = name or s.name

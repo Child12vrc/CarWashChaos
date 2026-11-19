@@ -291,6 +291,8 @@ namespace CarWash.Editor
         };
 
         public static string PathOf(string id) => $"{PropDir}/SW_{id}.prefab";
+        /// <summary>True when the Blender model for this prop is in place (it replaces the procedural mesh).</summary>
+        public static bool HasModel(string id) => GlbKit.Find("SelfWash", "SW_" + id) != null;
 
         /// <summary>(Re)builds every prop prefab.</summary>
         public static void BuildPrefabs()
@@ -299,7 +301,15 @@ namespace CarWash.Editor
             foreach (var d in Catalog)
             {
                 var root = new GameObject("SW_" + d.id) { layer = Layers.Scenery };
-                d.build(root.transform);
+                // Blender model delivered (ART_REQUESTS "Art delivery status"): same pivot / front −Z as the graybox → swap 1:1
+                string glb = GlbKit.Find("SelfWash", "SW_" + d.id);
+                if (glb != null)
+                {
+                    var model = GlbKit.Model(glb, root.transform, Layers.Scenery, Vector3.zero);
+                    var arm = VehicleInteriorBuilder.Deep(model.transform, "Arm");
+                    if (d.id == "BoomArm" && arm != null) arm.gameObject.AddComponent<Visual.BoomSway>(); // the arm swings, the mount stays
+                }
+                else d.build(root.transform);
                 foreach (var t in root.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = Layers.Scenery;
                 foreach (var r in root.GetComponentsInChildren<Renderer>(true)) r.shadowCastingMode = d.size.y < 0.3f ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.On;
                 if (d.solid)
@@ -473,7 +483,7 @@ namespace CarWash.Editor
             sb.AppendLine("| id | 이름 | size W×H×D (m) | collider | notes |");
             sb.AppendLine("|---|---|---|---|---|");
             foreach (var d in Catalog)
-                sb.AppendLine($"| SW_{d.id} | {d.nameKo} | {d.size.x:0.##} × {d.size.y:0.##} × {d.size.z:0.##} | {(d.solid ? "box" : "none")} | {d.note} |");
+                sb.AppendLine($"| SW_{d.id} | {d.nameKo} | {d.size.x:0.##} × {d.size.y:0.##} × {d.size.z:0.##} | {(d.solid ? "box" : "none")} | {(HasModel(d.id) ? "**Blender model in use** — " : "")}{d.note} |");
             sb.AppendLine();
             sb.AppendLine("Also wanted: the canopy (one roof over 3 bays, 24.8 × 11.2 m, height 4.3 m, blue fascia with the name), the drying / vacuum area canopy (11.3 × 5.2 m, height 3.35 m), and the angry-face icon and ring / arrow sprites for the patience timers (G6, currently drawn in code by `UiSprites`).");
             sb.AppendLine(End);

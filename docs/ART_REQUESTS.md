@@ -79,10 +79,10 @@ Each one is a prefab under `Assets/_Project/Prefabs/Props/SelfWash/SW_<id>.prefa
 
 | id | 이름 | size W×H×D (m) | collider | notes |
 |---|---|---|---|---|
-| SW_PayTerminal | 결제기 + 모드 버튼 | 0.5 × 1.5 × 0.35 | box | front = -Z; screen, coin/card slot, 4 mode buttons (물·거품·왁스·헹굼) |
-| SW_BoomArm | 회전 붐 암 (천장) | 0.3 × 0.9 × 2.8 | none | hangs from the canopy; arm along +Z; the arm slowly sways (BoomSway) |
-| SW_FoamBrushHolder | 폼브러시 거치대 | 0.4 × 1.3 × 0.25 | none | wall-mounted; front = -Z |
-| SW_HoseReelDrum | 호스 릴 | 0.6 × 0.6 × 0.3 | none | wall-mounted drum; axis along Z |
+| SW_PayTerminal | 결제기 + 모드 버튼 | 0.5 × 1.5 × 0.35 | box | **Blender model in use** — front = -Z; screen, coin/card slot, 4 mode buttons (물·거품·왁스·헹굼) |
+| SW_BoomArm | 회전 붐 암 (천장) | 0.3 × 0.9 × 2.8 | none | **Blender model in use** — hangs from the canopy; arm along +Z; the arm slowly sways (BoomSway) |
+| SW_FoamBrushHolder | 폼브러시 거치대 | 0.4 × 1.3 × 0.25 | none | **Blender model in use** — wall-mounted; front = -Z |
+| SW_HoseReelDrum | 호스 릴 | 0.6 × 0.6 × 0.3 | none | **Blender model in use** — wall-mounted drum; axis along Z |
 | SW_DrainGrate | 배수구 (바닥 중앙) | 1.6 × 0.03 × 0.6 | none | flush with the floor |
 | SW_VacuumPillar | 진공 청소기 기둥 | 0.5 × 1.9 × 0.5 | box | hose + nozzle on the side; coin box |
 | SW_MatRack | 매트 거치대 | 1.6 × 1.4 × 0.5 | box | 3 car mats hanging on a bar |

@@ -72,3 +72,13 @@ Blender 5.0 기준입니다(Steam 설치: `C:\Program Files (x86)\Steam\steamapp
 | Vehicles/B01_MonsterTruck.blend | Interior, Interior_Doors | Interiors/Interior_B01.glb, InteriorDoors_B01.glb |
 
 차량 외관 v2(`Vehicles/<id>_v2.glb`)는 같은 차량 파일의 `Body` + `Exterior_Parts`에서 내보낼 예정입니다. 기존 차량 .glb는 덮어쓰지 않습니다.
+
+### 소품 (Props)
+| .blend | Export 콜렉션 | .glb |
+|---|---|---|
+| Props/CarWash/SW_<id>.blend | EXP_SW_<id> | Generated/SelfWash/SW_<id>.glb |
+
+소품 공통 재질은 `MAT_PropAtlas`(아틀라스 `Textures/T_PropAtlas.png`: 아이콘·화면·라벨 + 색 견본 16개), `MAT_PropMetal`, `MAT_PropGlass`입니다.
+- 아틀라스를 다시 만들기: `blender -b --factory-startup --python _scripts/build_props.py -- atlas`
+- 소품 다시 만들기: `blender -b --factory-startup --python _scripts/build_props.py -- SW_PayTerminal …`
+- 정의 파일: `_scripts/props_selfwash.py`. 좌표는 Unity 로컬 기준 `U(x, y, z)`를 씁니다.

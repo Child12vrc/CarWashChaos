@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import parts_lib as L
 from parts_lib import P, G, box, clamp
 import export_all
+import vehicles_v2
 
 PROJ = L.PROJ
 VEH = os.path.join(PROJ, r"Assets\_Project\Art\Models\Generated\Vehicles")
@@ -349,6 +350,8 @@ def run(cid, file, blend_name):
         door_objs.append((o, d))
     bpy.context.view_layer.update()
 
+    _, rep2, doors_v2 = vehicles_v2.build_v2(car, cid, file, car.frontZ)  # exterior v2 in the same .blend
+    rep += rep2
     tri = sum(L.tris(o) for o, _ in made.values() if o.type == 'MESH')
     xs = [(o.matrix_world @ v.co).x for o, _ in made.values() if o.type == 'MESH' for v in o.data.vertices]
     tgt = P(0.0, fmid + 0.1, (car.floorY + car.beltY) / 2 + 0.1)
@@ -368,6 +371,10 @@ def run(cid, file, blend_name):
 
     if not RENDER:
         return
+    vehicles_v2.render_v2(car, cid, doors_v2, tgt, PREV)
+    bpy.data.collections["Reference_v1"].hide_render = False  # the interior previews below use the v1 car
+    for c in ("Body", "Exterior_Parts", "Sockets"):
+        bpy.data.collections[c].hide_render = True
     sc = bpy.context.scene
     for o, d in door_objs:  # preview only (not saved): cards ride on the doors, doors open
         mw = o.matrix_world.copy()

@@ -36,10 +36,20 @@ namespace CarWash.Editor
         }
 
         /// <summary>"V02" → ".../V02_sedan.glb", or null (graybox stays).</summary>
+        /// <summary>"…_v2.glb" → 2, "…_v3.glb" → 3, no suffix → 1.</summary>
+        public static int Revision(string path)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(Path.GetFileNameWithoutExtension(path), @"_v(\d+)$");
+            return m.Success ? int.Parse(m.Groups[1].Value) : 1;
+        }
+
         public static string GlbFor(string id)
         {
             if (!Directory.Exists(ModelDir)) return null;
-            var f = Directory.GetFiles(ModelDir, id + "_*.glb").OrderBy(x => x).FirstOrDefault();
+            // newest revision first: "<id>_<name>_v2.glb" (Blender pass with door openings) beats "<id>_<name>.glb"
+            var f = Directory.GetFiles(ModelDir, id + "_*.glb")
+                .Where(x => AssetDatabase.LoadAssetAtPath<GameObject>(x.Replace('\\', '/')) != null)
+                .OrderByDescending(Revision).ThenBy(x => x).FirstOrDefault();
             if (f == null || AssetDatabase.LoadAssetAtPath<GameObject>(f.Replace('\\', '/')) == null) return null; // glTFast missing → not imported
             return f.Replace('\\', '/');
         }
