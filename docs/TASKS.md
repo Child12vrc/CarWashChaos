@@ -476,6 +476,12 @@ Blender bulk delivery wiring + v2 wash fix (2026-11-19):
     - Final-build 100 % confirmed: V08 377 s, B02 442 s.
     - Confirmed on earlier builds today (V01–V07, B01, B03, B04 all 100 %), but those runs predate the 0.3 m subdivision → v0.9.1: rerun all 12 on the final build. Noted in README "알려진 문제".
 
+  - v0.9.1 check done (2026-11-19, after the release): all 12 at 100 % on the final v0.9 build.
+    - V08 377 s, B02 442 s, B01 650 s, V07 474 s, V06 336 s, B03 439 s, V05 269 s, V01 216 s, V02 268 s, V03 483 s, V04 262 s, B04 91 s.
+    - B04 failed once only because it was the first car of a run and the bot didn't pick up the washer (`equipped PressureWasher: False`) — a harness timing issue, not the car.
+    - The host scenario's overall timeout stops long runs after ~6 cars → split runs into ≤ 6 cars.
+    - README "알려진 문제": the special-car line is removed for the next build.
+
 ## M4.11 Performance (after v0.9; target: v0.7 level, 95 fps by day, ≥ 60 fps with 4 players; measure before / after each item)
 - [ ] Batch H wiring (Blender delivered 2026-11-19, see ART_REQUESTS "Batch H delivery status" and ART_IMPORT "Batch H"):
   - [ ] Raise `MaxRevision` to 3.
