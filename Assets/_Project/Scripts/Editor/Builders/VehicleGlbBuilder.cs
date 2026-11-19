@@ -43,9 +43,11 @@ namespace CarWash.Editor
             return m.Success ? int.Parse(m.Groups[1].Value) : 1;
         }
 
-        /// <summary>Newest model revision the builder understands. v3 (Batch H: merged `Static`, `_LOD1/_LOD2` siblings) needs the
-        /// LODGroup wiring of M4.11 — until then it would draw every LOD at once, so v0.9 stays on v2.</summary>
-        public const int MaxRevision = 2;
+        /// <summary>Newest model revision the builder understands. v3 = Batch H (merged `Static`, `&lt;Node&gt;_LOD1/_LOD2` siblings,
+        /// UV2 kept identical across the body LODs) → LODGroup via LodKit (M4.11).</summary>
+        public const int MaxRevision = 3;
+        /// <summary>Screen-relative LOD heights for cars (≈ 5 m long, 60° FOV): LOD1 from ~15 m, LOD2 from ~40 m, culled past ~800 m.</summary>
+        public static readonly float[] LodHeights = { 0.28f, 0.10f, 0.005f };
 
         public static string GlbFor(string id)
         {
@@ -75,7 +77,9 @@ namespace CarWash.Editor
             var bodyMat = bodyMr.sharedMaterials.FirstOrDefault();
             if (!bodyMf.sharedMesh.HasVertexAttribute(UnityEngine.Rendering.VertexAttribute.TexCoord1))
                 throw new System.Exception(glbPath + ": Body has no TEXCOORD_1 (UV2) — dirt needs it");
-            var mesh = MergedCopy(bodyMf.sharedMesh, $"{MeshDir}/{id}_Body.asset", bodyT, model.transform);
+            int rev = Revision(glbPath);
+            // v3: keep the delivered UV2 — Body_LOD1/2 share its layout (and the dirt RTs), a regenerated one would not match
+            var mesh = MergedCopy(bodyMf.sharedMesh, $"{MeshDir}/{id}_Body.asset", bodyT, model.transform, keepUv2: rev >= 3);
             bodyMf.sharedMesh = mesh;
             bodyMr.sharedMaterials = new[] { DirtTestBuilder.VehicleMaterial() };
             bodyT.gameObject.layer = Layers.WashSurface;
@@ -89,6 +93,21 @@ namespace CarWash.Editor
             SceneBuilder.Set(painter, "_foamShell", DirtTestBuilder.FoamShellMaterial());
             p.Painter = painter;
             p.BodyBounds = mesh.bounds;
+            // M4.11: Body_LOD1 / Body_LOD2 — the dirt material, fed the same textures by the painter (no collider: washing hits LOD0)
+            var bodyLods = new List<Renderer>();
+            foreach (var lodName in new[] { "Body_LOD1", "Body_LOD2" })
+            {
+                var lt = model.transform.Find(lodName);
+                var lr = lt != null ? lt.GetComponent<MeshRenderer>() : null;
+                if (lr == null) continue;
+                lr.sharedMaterials = new[] { DirtTestBuilder.VehicleMaterial() };
+                bodyLods.Add(lr);
+            }
+            var pso = new SerializedObject(painter);
+            var arr = pso.FindProperty("_lodRenderers");
+            arr.arraySize = bodyLods.Count;
+            for (int i = 0; i < bodyLods.Count; i++) arr.GetArrayElementAtIndex(i).objectReferenceValue = bodyLods[i];
+            pso.ApplyModifiedPropertiesWithoutUndo();
 
             // --- body-coloured parts outside the dirt body ---
             var paint = GrayboxMaterials.Get("VehiclePaint", Color.white, 0.55f);
@@ -96,7 +115,7 @@ namespace CarWash.Editor
             {
                 if (r.transform == bodyT) continue;
                 string n = r.name;
-                if (!(n.StartsWith("Door") || n == "Trunk" || n.StartsWith("Mirror"))) continue;
+                if (!(n.StartsWith("Door") || n.StartsWith("Trunk") || n.StartsWith("Mirror"))) continue; // Trunk_LOD* too (Batch H)
                 var mats = r.sharedMaterials;
                 for (int i = 0; i < mats.Length; i++)
                     if (mats[i] == bodyMat) { mats[i] = paint; p.PaintRenderers.Add(r); p.PaintSlots.Add(i); }
@@ -160,7 +179,19 @@ namespace CarWash.Editor
                 all.Encapsulate(rb);
             }
             p.Bounds = all;
+            // M4.11: the LODGroup is built on the vehicle root by VehicleBuilder once the cabin exists (BuildLods)
             return p;
+        }
+
+        /// <summary>M4.11: LOD0/1/2 from the model's `_LODn` siblings (v3); the cabin (Interior) is drawn at LOD0 only — from
+        /// ~15 m on it is a few pixels behind tinted glass. No `_LODn` nodes (v2) → no LODGroup.</summary>
+        public static LODGroup BuildLods(Transform vehicleRoot, string id)
+        {
+            var interior = vehicleRoot.Find("Interior");
+            var cabin = interior != null ? new HashSet<Renderer>(interior.GetComponentsInChildren<Renderer>(true)) : null;
+            var lg = LodKit.Build(vehicleRoot, LodHeights, lod0Only: cabin);
+            if (lg != null) Debug.Log($"[VehicleGlb] {id}: LODGroup {string.Join(" / ", lg.GetLODs().Select(l => l.renderers.Length))} renderers (cabin {cabin?.Count ?? 0} at LOD0 only)");
+            return lg;
         }
 
         /// <summary>Highest body vertex whose z lies in [z0, z1], clamped to [min, max].</summary>
@@ -231,6 +262,7 @@ namespace CarWash.Editor
                 foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true))
                 {
                     if (mf.transform == bodyT || mf.sharedMesh == null) continue;
+                    if (LodKit.IsLodNode(mf.name)) continue; // Body_LOD1 sits on the body: it would "block" every face (LOD0 parts block instead)
                     var mat = bodyT.worldToLocalMatrix * mf.transform.localToWorldMatrix; // into body-local space (= m's space)
                     var go = new GameObject("Blocker") { hideFlags = HideFlags.HideAndDontSave };
                     go.transform.SetPositionAndRotation(mat.GetPosition(), mat.rotation);
@@ -420,7 +452,7 @@ namespace CarWash.Editor
         }
 
         /// <summary>Copy of the imported body with every submesh merged into submesh 0 (saved as an asset of ours).</summary>
-        static Mesh MergedCopy(Mesh src, string path, Transform bodyT = null, Transform model = null)
+        static Mesh MergedCopy(Mesh src, string path, Transform bodyT = null, Transform model = null, bool keepUv2 = false)
         {
             Directory.CreateDirectory(MeshDir);
             var m = Object.Instantiate(src);
@@ -434,9 +466,13 @@ namespace CarWash.Editor
             // ART NOTE (2026-11-18): the delivered TEXCOORD_1 has overlapping / sliver islands (V02: the rear panel shares texels
             // with hood slivers) -> those texels can never read clean. The dirt UV2 of OUR merged copy is regenerated with
             // Unity's non-overlapping, area-proportional unwrapper (the .glb itself is untouched; dirt is procedural anyway).
-            UnwrapParam.SetDefaults(out var up);
-            up.packMargin = 4f / 512f;
-            Unwrapping.GenerateSecondaryUVSet(m, up);
+            // Batch H (v3): the Blender pass checked 0 overlap at every LOD and the body LODs share this layout → keep it.
+            if (!keepUv2)
+            {
+                UnwrapParam.SetDefaults(out var up);
+                up.packMargin = 4f / 512f;
+                Unwrapping.GenerateSecondaryUVSet(m, up);
+            }
             float hidden = BakeReachability(m, bodyT, model);
             Debug.Log($"[VehicleGlb] {m.name}: {hidden * 100f:0.00}% of the counted UV2 area is out of every player's reach → not counted");
             var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);

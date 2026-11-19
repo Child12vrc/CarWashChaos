@@ -61,7 +61,7 @@ namespace CarWash.Core
             // 2) net it
             yield return DevChecksFoam.Equip<NetPole>(me);
             float tn = Time.time;
-            while (Time.time - tn < 4f && !raccoon.IsCarried)
+            while (Time.time - tn < 4f && raccoon != null && !raccoon.IsCarried)
             {
                 var c = raccoon.transform.position;
                 me.Motor.Teleport(c + new Vector3(0f, 0.05f, -1.8f));
@@ -70,6 +70,7 @@ namespace CarWash.Core
                 yield return null;
             }
             input.sUse = false;
+            if (raccoon == null) { DevAutopilot.Log("raccoon: gone before the net (despawned by the host scenario) — net check skipped"); yield break; }
             bool netted = raccoon.IsCarried && raccoon.CarrierClient.Value == me.OwnerClientId;
             DevAutopilot.Log($"net: carried={netted} state={raccoon.State.Value} (stun left when netted ≈ {Mathf.Max(0f, 6f * 1.25f - (Time.time - t0 - stunAt)):0.0}s)");
 

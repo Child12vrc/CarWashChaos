@@ -143,14 +143,23 @@ namespace CarWash.Core
             if (tools.Equipped is PressureWasher && typeof(T) != typeof(PressureWasher))
                 for (int s = 0; s < PlayerInventory.SlotCount; s++)
                     if (inv.Get(s) == null) { input.sSlot = s; yield return new WaitForSeconds(0.4f); break; }
+            // up to 4 approaches (the first from the car's side, then around the tool): one try missed now and then (a prop
+            // or the bay wall between the bot and the tool → B04 washer / V07 towel never picked up, the wash stalled)
             var tp = tool.transform.position;
-            me.Motor.Teleport(new Vector3(tp.x, 0.05f, tp.z) + Vector3.ProjectOnPlane(near - tp, Vector3.up).normalized * 1.1f);
-            yield return new WaitForSeconds(0.35f);
-            var col = tool.GetComponent<Collider>();
-            me.Look.LookAt(col != null && col.enabled ? col.bounds.center : tool.transform.position); // GLB: root = grip (towel edge)
-            yield return new WaitForSeconds(0.3f);
-            input.sInteract = true;
-            yield return new WaitForSeconds(0.8f);
+            var toCar = Vector3.ProjectOnPlane(near - tp, Vector3.up).normalized;
+            if (toCar.sqrMagnitude < 0.01f) toCar = Vector3.forward;
+            for (int attempt = 0; attempt < 4 && !(tools.Equipped is T); attempt++)
+            {
+                var dir = Quaternion.Euler(0f, 90f * attempt, 0f) * toCar;
+                me.Motor.Teleport(new Vector3(tp.x, 0.05f, tp.z) + dir * (attempt == 0 ? 1.1f : 0.9f));
+                yield return new WaitForSeconds(0.35f);
+                var col = tool.GetComponent<Collider>();
+                me.Look.LookAt(col != null && col.enabled ? col.bounds.center : tool.transform.position); // GLB: root = grip (towel edge)
+                yield return new WaitForSeconds(0.3f);
+                input.sInteract = true;
+                yield return new WaitForSeconds(0.8f);
+                if (!(tools.Equipped is T)) Log($"equip {typeof(T).Name}: attempt {attempt + 1} missed");
+            }
             Log($"equipped {typeof(T).Name}: {tools.Equipped is T}");
         }
 

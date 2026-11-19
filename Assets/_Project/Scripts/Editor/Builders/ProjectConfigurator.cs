@@ -72,6 +72,10 @@ namespace CarWash.Editor
             PlayerSettings.SetUseDefaultGraphicsAPIs(win, false);
             PlayerSettings.SetGraphicsAPIs(win, new[] { GraphicsDeviceType.Direct3D12, GraphicsDeviceType.Direct3D11, GraphicsDeviceType.Vulkan });
             PlayerSettings.runInBackground = true; // MPPM / multi-instance testing
+            PlayerSettings.enableFrameTimingStats = true; // M4.11: CPU / GPU frame times for -autotest-perfsnap (FrameTimingManager)
+            // M4.11: the GPU Resident Drawer (URP asset, Forward+) instances the lot's static renderers itself — static batching
+            // kept those renderers out of it (draw calls 2055 → 1322 in the fixed perf view with it off)
+            PlayerSettings.SetStaticBatchingForPlatform(win, false);
 
             AssetDatabase.SaveAssets();
             Debug.Log("[CarWash] ProjectConfigurator applied: layers " + string.Join(",", Layers.Names.Where(n => n != null)));

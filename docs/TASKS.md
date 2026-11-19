@@ -496,3 +496,32 @@ Blender bulk delivery wiring + v2 wash fix (2026-11-19):
 - [ ] Turn off car interiors and small parts when the doors are closed or the car is far away.
 - [ ] Bake occlusion culling.
 - [ ] Measure fps before / after (4 instances, 13:00 / 20:30), then v0.10 (Relay) + zip + push.
+- M4.11 progress (2026-11-19):
+  - New measurement: `-autotest-perfsnap LABEL [-perf-breakdown]` (DevChecksPerf; scratchpad perfsnap.sh <label> <runs>).
+    - Host alone, 13:00, cars V01–V03 in the bays + V04 / B01 queued; fixed eye (0, 0.05, −9) → (0, 1.2, 4); HUD hidden.
+    - Vsync off, 300 frames: ProfilerRecorder (SetPass, draws, batches, tris, verts, shadow casters, GC, main-thread split) + FrameTimingManager CPU / GPU.
+    - `-perf-breakdown` re-measures with shadows / decals / cars / each Environment group switched off.
+    - PlayerSettings.enableFrameTimingStats on (ProjectConfigurator).
+  - Done so far:
+    - [x] v3 LODs (Batch H1): `MaxRevision = 3`; LodKit builds a LODGroup from `<Node>_LOD1/_LOD2` siblings (empty `_LODn` = dropped).
+      - Car LODGroup on the vehicle root, heights 0.28 / 0.10 / 0.005; cabin renderers at LOD0 only.
+      - v3 keeps the delivered UV2 (no regeneration) so Body_LOD1/2 share the dirt RTs; `DirtPainter._lodRenderers` gets the same property block.
+      - LOD nodes are not reachability blockers.
+    - [x] Trunk paint `StartsWith("Trunk")`.
+    - [x] `Interior_<id>_lod.glb` preferred.
+    - [x] `GlbKit.Find` prefers `<file>_lod.glb` and `GlbKit.Model` builds LODs (scenery / critter / canopy `_lod`), heights 0.12 / 0.04 / 0.002.
+    - [x] Static batching off (the GPU Resident Drawer, Forward+, instances the static renderers instead): draws 2055 → 1322.
+    - [x] LotPerf: shadows off for renderers < 0.6 m (31); decal draw distance 30 m small / 80 m others (194).
+    - [—] GPU occlusion culling tried: tris 414k → 198k but draws +220 and CPU +0.6 ms (CPU-bound) → off. Baked occlusion skipped (open lot, few occluders).
+    - [—] Shadow distance 70 → 45 m: no measurable change → kept 70.
+  - Fixed-view snapshot, before → after (3-run averages):
+    - SetPass 233 → 210
+    - draws 2999 → 1158 (−61 %)
+    - batches 2911 → 1111
+    - tris 755k → 415k (−45 %)
+    - shadow casters 883 → 377 (−57 %)
+    - GC 1.1 → 1.1 KB/frame
+    - CPU frame 5.81 → 5.49 ms
+    - GPU 0.67 → 0.57 ms
+    - Main thread after: scripts ~1.0, render ~2.9 ms. Decals are still ~0.8 ms CPU (194 projectors, 34 materials) → candidate: atlas the 11 dressing-decal materials into one.
+  - Still to do: the 12-car wash rerun on v3 (UV2 changed), close-up visual check of the LODs, 4-instance fps (PC idle, CPU < 20 %, 3-run average), v0.10.

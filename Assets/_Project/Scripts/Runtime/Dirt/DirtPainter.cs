@@ -21,6 +21,8 @@ namespace CarWash.Dirt
         [SerializeField] private Shader _evalShader;
         [SerializeField] private MeshFilter _body;
         [SerializeField] private Renderer _renderer;
+        [Tooltip("M4.11: Body_LOD1 / Body_LOD2 — the same UV2 layout, so they sample the same dirt / clean textures")]
+        [SerializeField] private Renderer[] _lodRenderers = new Renderer[0];
         [SerializeField] private Color _baseColor = new Color(0.15f, 0.4f, 0.85f);
         [Tooltip("M4.8 F1: foam shell material (CarWash/FoamShell, GPU instanced) — drawn as N instanced shells of the body only while foam is on it")]
         [SerializeField] private Material _foamShell;
@@ -93,7 +95,7 @@ namespace CarWash.Dirt
             _rendererMpb.SetTexture(IdClean, _clean);
             _rendererMpb.SetTexture(IdFoam, _foam);
             _rendererMpb.SetColor("_BaseColor", _baseColor);
-            _renderer.SetPropertyBlock(_rendererMpb);
+            ApplyBlock();
             HasReadback = false;
             RequestReadback();
         }
@@ -103,7 +105,13 @@ namespace CarWash.Dirt
             _baseColor = c;
             if (_rendererMpb == null) return;
             _rendererMpb.SetColor("_BaseColor", c);
+            ApplyBlock();
+        }
+
+        void ApplyBlock()
+        {
             _renderer.SetPropertyBlock(_rendererMpb);
+            if (_lodRenderers != null) foreach (var r in _lodRenderers) if (r != null) r.SetPropertyBlock(_rendererMpb);
         }
 
         RenderTexture NewRT(int size, RenderTextureFormat f, string n)

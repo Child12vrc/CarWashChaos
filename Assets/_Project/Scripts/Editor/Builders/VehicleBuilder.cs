@@ -111,6 +111,7 @@ namespace CarWash.Editor
                 var looks = PlayerLooks.Catalog.Select(c => AssetDatabase.LoadAssetAtPath<GameObject>(PlayerLooks.PathOf(c.id))).Where(g => g != null).Cast<Object>().ToArray();
                 PrefabBuilder.SetArray(drv, "_looks", looks);
             }
+            if (glb != null) VehicleGlbBuilder.BuildLods(root.transform, d.id); // M4.11: model LODs + cabin at LOD0 only
             root.AddComponent<Visual.VehicleHeadlights>(); // M4.9 G1: headlights at night (built locally from the body bounds)
             var sync = root.AddComponent<DirtNetSync>();
             SceneBuilder.Set(sync, "_painter", painter);

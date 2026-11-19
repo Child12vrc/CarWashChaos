@@ -70,6 +70,12 @@ namespace CarWash.Core
                 Log("DONE");
                 yield break;
             }
+            if (DevChecksPerf.Label != null && NetworkManager.Singleton.IsServer) // M4.11: fixed-view render metrics
+            {
+                yield return DevChecksPerf.Run(me);
+                Log("DONE");
+                yield break;
+            }
             if (DevChecksViews.Label != null) // M4.7 E4: environment screenshots, 3 spots × 8 directions
             {
                 yield return DevChecksViews.Run(me);

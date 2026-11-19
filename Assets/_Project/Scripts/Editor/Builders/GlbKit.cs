@@ -22,9 +22,17 @@ namespace CarWash.Editor
         /// <summary>"Props", "P_crate" → path, or null when missing / not imported (glTFast absent) → graybox stays.</summary>
         public static string Find(string category, string file)
         {
-            string p = $"{Root}/{category}/{file}.glb";
-            return File.Exists(p) && AssetDatabase.LoadAssetAtPath<GameObject>(p) != null ? p : null;
+            // M4.11 (Batch H): "<file>_lod.glb" = the same model with `<Node>_LOD1/_LOD2` siblings (or merged parts) → preferred
+            foreach (var name in new[] { file + "_lod", file })
+            {
+                string p = $"{Root}/{category}/{name}.glb";
+                if (File.Exists(p) && AssetDatabase.LoadAssetAtPath<GameObject>(p) != null) return p;
+            }
+            return null;
         }
+
+        /// <summary>Screen-relative LOD heights for props / scenery / critters (LOD1 at ~12 %, LOD2 at ~4 %, culled under 0.2 %).</summary>
+        public static readonly float[] LodHeights = { 0.12f, 0.04f, 0.002f };
 
         /// <summary>Instance of the .glb under `parent` named "Model", every node on `layer`, materials converted.</summary>
         public static GameObject Model(string path, Transform parent, int layer, Vector3 localPos = default, float scale = 1f, System.Func<Material, Material> remap = null, bool convert = true)
@@ -42,6 +50,7 @@ namespace CarWash.Editor
                 r.sharedMaterials = mats;
                 r.shadowCastingMode = ShadowCastingMode.On;
             }
+            LodKit.Build(model.transform, LodHeights); // no-op without `_LODn` nodes
             return model;
         }
 

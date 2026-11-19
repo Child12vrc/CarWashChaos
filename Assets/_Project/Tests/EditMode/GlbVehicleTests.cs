@@ -80,8 +80,30 @@ namespace CarWash.Tests
             {
                 var glb = VehicleGlbBuilder.GlbFor(id);
                 Assert.IsNotNull(glb, id);
-                StringAssert.EndsWith("_v2.glb", glb, id);
-                Assert.IsNotNull(Prefab(id).transform.Find("Model"), id);
+                StringAssert.EndsWith($"_v{VehicleGlbBuilder.MaxRevision}.glb", glb, id);
+                var model = Prefab(id).transform.Find("Model");
+                Assert.IsNotNull(model, id);
+                // M4.11 (Batch H v3): three LOD levels, each lighter than the one before; the body LODs are fed by the painter
+                var lg = Prefab(id).GetComponent<LODGroup>();
+                Assert.IsNotNull(lg, id + " LODGroup on the vehicle root");
+                var lods = lg.GetLODs();
+                Assert.AreEqual(3, lods.Length, id);
+                // the cabin is drawn up close only
+                var cabin = Prefab(id).transform.Find("Interior");
+                if (cabin != null)
+                    foreach (var r in cabin.GetComponentsInChildren<Renderer>(true))
+                    {
+                        Assert.IsTrue(lods[0].renderers.Contains(r), id + " cabin at LOD0: " + r.name);
+                        Assert.IsFalse(lods[1].renderers.Contains(r) || lods[2].renderers.Contains(r), id + " cabin not at LOD1/2: " + r.name);
+                    }
+                int Tris(LOD l) => l.renderers.Where(r => r != null).Sum(r => r.GetComponent<MeshFilter>().sharedMesh.triangles.Length / 3);
+                Assert.Less(Tris(lods[1]), Tris(lods[0]), id + " LOD1 < LOD0");
+                Assert.Less(Tris(lods[2]), Tris(lods[1]), id + " LOD2 < LOD1");
+                var painter = model.GetComponentInChildren<DirtPainter>(true);
+                var lodBodies = new SerializedObject(painter).FindProperty("_lodRenderers");
+                int bodyLodNodes = new[] { "Body_LOD1", "Body_LOD2" }.Count(n => model.Find(n) != null && model.Find(n).GetComponent<MeshRenderer>() != null);
+                Assert.Greater(bodyLodNodes, 0, id + " has body LODs");
+                Assert.AreEqual(bodyLodNodes, lodBodies.arraySize, id + " every Body_LODn is fed by the painter");
             }
             // tank / airboat / UFO: no side doors, no procedural cabin (seats would sit inside the hull / dome), so no driver
             foreach (var id in new[] { "V08", "B03", "B04" })

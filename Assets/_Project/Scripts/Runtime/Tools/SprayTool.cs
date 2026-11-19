@@ -20,6 +20,7 @@ namespace CarWash.Tools
 
         static readonly RaycastHit[] Hits = new RaycastHit[16];
         static readonly System.Collections.Generic.HashSet<Critters.CritterBase> WetThisTick = new System.Collections.Generic.HashSet<Critters.CritterBase>();
+        static readonly System.Collections.Generic.List<Critters.CritterBase> ConeScratch = new System.Collections.Generic.List<Critters.CritterBase>();
         static readonly Dictionary<Collider, DirtNetSync> DirtCache = new Dictionary<Collider, DirtNetSync>();
         float _spin;
 
@@ -94,7 +95,11 @@ namespace CarWash.Tools
             if (d == null) return;
             float half = ConeDeg * 0.5f + CritterConeSlackDeg;
             float lag = ViewLagSeconds();
-            foreach (var c in Critters.CritterBase.All)
+            // a copy: wetting can stun / capture / despawn a critter, which removes it from CritterBase.All mid-loop
+            // ("Collection was modified" in UseRpc — v0.10, once the surprise critters stopped falling under the lot)
+            ConeScratch.Clear();
+            ConeScratch.AddRange(Critters.CritterBase.All);
+            foreach (var c in ConeScratch)
             {
                 if (c == null || !c.IsSpawned || WetThisTick.Contains(c)) continue;
                 // test where the critter is now AND where the sprayer saw it (lag-compensated)

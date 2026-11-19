@@ -122,6 +122,7 @@ namespace CarWash.Editor
             spawns.WriteTo(new GameObject("NetworkSpawns"));
 
             new GameObject("HUD").AddComponent<UI.Hud>();
+            LotPerf.Apply(env.gameObject); // M4.11: small shadow casters off, decal draw distances
             LotNavMesh.Bake(env.gameObject, scene);
             SceneBuilder.Save(scene, SceneNames.SudsyLot);
         }

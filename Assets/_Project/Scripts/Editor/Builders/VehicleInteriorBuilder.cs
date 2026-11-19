@@ -30,7 +30,8 @@ namespace CarWash.Editor
         {
             var group = new GameObject("Interior") { layer = Layers.Vehicle }.transform;
             group.SetParent(root, false);
-            string custom = new[] { $"{ModelDir}/Interior_{id}.glb", $"{ModelDir}/Interior_Default.glb" }.FirstOrDefault(File.Exists);
+            // M4.11 (Batch H3): the _lod file merges the static parts by material, same anchors (Hand_L/R, Socket_DriverHips)
+            string custom = new[] { $"{ModelDir}/Interior_{id}_lod.glb", $"{ModelDir}/Interior_{id}.glb", $"{ModelDir}/Interior_Default.glb" }.FirstOrDefault(File.Exists);
             // Batch F #8: the tank, airboat and UFO have no cabin — no procedural seats inside the hull / dome (ART_IMPORT)
             if (custom == null && NoCabin.Contains(id)) return System.Array.Empty<Transform>();
             if (custom != null && AssetDatabase.LoadAssetAtPath<GameObject>(custom) != null)
