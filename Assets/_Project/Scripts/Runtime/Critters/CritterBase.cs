@@ -106,7 +106,10 @@ namespace CarWash.Critters
             }
             Agent.speed = Data != null ? Data.moveSpeed : 3f;
             Agent.enabled = true;
-            if (NavMesh.SamplePosition(transform.position, out var hit, 3f, NavMesh.AllAreas)) Agent.Warp(hit.position);
+            // never warp far below (or above) where it stands — v0.9: next to the B02 trailer the nearest mesh was the PlayBounds
+            // catch floor 2 m under the lot (now kept out of the bake too)
+            var here = transform.position;
+            if (NavMesh.SamplePosition(here, out var hit, 3f, NavMesh.AllAreas) && Mathf.Abs(hit.position.y - here.y) < 0.6f) Agent.Warp(hit.position);
             else Agent.enabled = false;
         }
 

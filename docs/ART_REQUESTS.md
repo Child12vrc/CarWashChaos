@@ -141,3 +141,54 @@ Status: DELIVERED means the file is in place and the Unity session can wire it. 
 | Batch F #8 vehicles: V05 ice-cream truck, V06 hearse, V07 garbage truck, V08 tank, B02 circus trailer, B03 swamp airboat, B04 crashed UFO | DELIVERED 2026-11-19 | Art/Models/Generated/Vehicles/<id>_<name>_v2.glb + Interiors/Interior_<id>.glb (V05/V06/V07/B02) | same v2 node contract; no v1 existed → generated v1-style bodies (sources Vehicles/<id>_<Name>.blend). **V08 / B03 / B04 have no cabin**: no doors, no Interior GLB (skip VehicleInteriorBuilder or keep its hidden procedural cabin); trunk = turret hatch (V08, C09 pops out) / side hatch (B04); B03 has no Trunk; the trash spots must sit on its `Deck` seats. See ART_IMPORT "Vehicles v2 — Batch F #8" |
 | Tools v2: T_pressure_washer_gun_v2, T_foam_cannon_v2, T_towel_v2, T_shop_vac_v2, T_net_pole_v2 | DELIVERED 2026-11-19 | Art/Models/Generated/Tools/<name>_v2.glb (sources Props/Tools/*.blend) | same node names, origin (= grip) and sockets as v1 (Socket_Nozzle / Socket_HoseIn / Socket_Capture at the v1 positions), forward +Z; legacy material names kept + MAT_PropMetal (steel lance, couplers) / MAT_PropAtlas (towel print); 360–2340 tris. Shop vac hose now reaches 0.66 m wide (v1 0.45) |
 | Street parked cars: Scenery/ParkedCar_Compact, ParkedCar_Sedan, ParkedCar_SUV, ParkedCar_Taxi | DELIVERED 2026-11-19 | Art/Models/Generated/Scenery/ParkedCar_*.glb | decoration only: sealed body, opaque dark glass, no doors / interior / UV2. Origin ground centre, front +Z like the customer cars; 1250–1720 tris; nodes `Body` `Glass` `Details` `Wheels` (+ `TaxiSign`); atlas swatches → recolour by swapping the swatch or tinting `Body` |
+
+## Batch H — M4.11 performance: LODs + part merge (requested 2026-11-19, Unity session) — status: DELIVERED 2026-11-19 (H1–H4, see "Batch H delivery status" below)
+Why: v0.9 runs 17–21 % slower than v0.7 (host 95 → 79 fps by day). Measured in Unity: cars 10.7–18.3k tris in 26–30 parts with 11–13 materials each; the Hunyuan critters are **50k tris each** (several on screen at once). Goal: back to ~95 fps by day, ≥ 60 fps with 4 players.
+Output: new files next to the current ones, **current files untouched**: `<file>_v3.glb` for vehicles (the loader already prefers the highest `_vN`), `<file>_lod.glb` for the rest. Unity builds the LODGroup itself from the node names.
+
+**Naming rule (all items):** each LOD mesh is a **sibling of its LOD0 node, under the same parent**, named `<Node>_LOD1` / `<Node>_LOD2` (e.g. `Door_L/DoorDetail_L_LOD1`, `Wheel_FL_LOD2`). Same origin, same transform and same material names as LOD0. If a node has no LOD for a level, Unity keeps LOD0 for that level. If a node is dropped at a level, add an empty `<Node>_LOD2` (no mesh), e.g. the LOD2 of `Wipers`, `LicensePlate_*`, `FuelCap`, lug nuts, `Antenna`.
+
+### H1 — vehicles v2 → `_v3` (all 12: V01–V08, B01–B04)
+1. **LOD0 = merge static parts.** Join every node that never moves and shares a material into one mesh per material, under one node `Static` (e.g. lamps, grille, bumpers, plates, wipers, exhaust, roof rack, cargo parts). Keep separate, with names, origins and positions unchanged: `Body`, `Glass`, `Door_*` (+ their `DoorDetail_*` and `Mirror_*` children), `Trunk`, `Wheel_*`, `Propeller` (B03), `Socket_*`, `Headlight_±1` / `Taillight_±1` (Unity looks for them by name, so an empty node at the old position is fine if their mesh goes into `Static`). Target ≤ 12 renderers per car.
+2. **LOD1 (from ~15 m, ~40 % of the tris)**:
+   - Wheels: 16–20 sides, no lug nuts.
+   - Simpler grille slats and lamp dots.
+   - **`Body_LOD1` keeps TEXCOORD_1 (UV2) with the same layout as LOD0.** The dirt / wash mask is a texture on UV2 that is shared by every LOD. Only collapse edges inside UV2 islands, never across UV2 seams, and keep 0 overlap. The same applies to the doors and the trunk, which are painted and get dirt too.
+3. **LOD2 (from ~40 m, ~12 %)**:
+   - Wheels: 10 sides.
+   - Detail parts dropped (empty `_LOD2` nodes).
+   - `Body_LOD2`: still UV2 with the LOD0 layout, coarser shape.
+   - Glass: one slab.
+   - Doors: shell only.
+
+   The cars only reach LOD2 on the road (40 m+), so the doors are closed there.
+4. No change to bounds, hinge origins, sockets, UV2 of LOD0, or the Body silhouette at LOD0. Re-run the 0-overlap UV2 check on every `Body*` and `Door*` mesh at every level.
+
+### H2 — Hunyuan critters → `C01_raccoon_hy_lod.glb`, `C05_possum_hy_lod.glb`, `C03_mud_slime_hy_lod.glb`
+- Same single-mesh contract as the `_hy` files (same node, same X+90 rotation, same origin / scale, same PBR material).
+- Decimate: `LOD0` ≈ 6k tris, `<node>_LOD1` ≈ 1.5k tris, `<node>_LOD2` ≈ 400 tris.
+- Bake the 50k detail into the LOD0 normal map if the material has one.
+
+### H3 — interiors (`Interior_<id>.glb`, 6–8k tris)
+- No LOD meshes: Unity turns the cabin off when the doors are closed and the car is far away.
+- Only ask: put the seats, dashboard, steering wheel and floor under one top-level node each. Merge static parts by material the same way as H1.1, but keep `SteeringWheel`, `Hand_L/R`, `Socket_*` and the trash-spot nodes separate with unchanged names.
+
+### H4 — scenery and big props (`_lod.glb`)
+- `Tree_A/B/C`, `Bush_A`: `_LOD1` at 50 %; `_LOD2` = 2–3 crossed quads (alpha-cut foliage on MAT_PropFoliage) or a 60–100 tri blob.
+- `ParkedCar_*`: `_LOD1` at ~35 % (wheels 12 sides, details merged into Body). No UV2 needed, because parked cars don't get dirty.
+- `StreetLamp`, `UtilityPole`: `_LOD1` at ~40 %.
+- `SW_Canopy` (7.8k), `SW_VacCanopy` (3.9k): no LOD, but merge each into ≤ 1 mesh per material, with `RoofSign` and `Lights` kept as separate nodes.
+
+### Not needed
+- Small props under 3k tris (SW_*, T_*, tools): Unity handles them with distance culling, shadow-off and static batching.
+- Previews are optional: `docs/art_preview/<id>_lod.png` showing LOD0 / 1 / 2 side by side.
+
+Priority: **H2 → H1 → H4 → H3**.
+
+### Batch H delivery status
+| Item | Status | Path | Before → after |
+|---|---|---|---|
+| H2 critters: C01_raccoon_hy_lod, C05_possum_hy_lod, C03_mud_slime_hy_lod | DELIVERED 2026-11-19 | Art/Models/Generated/Critters/<id>_hy_lod.glb | 50k tris / 1 mat → LOD0 6000 / LOD1 1500 / LOD2 ~400 tris, still 1 mat (re-baked shared 1024 texture set, see ART_IMPORT "Batch H") |
+| H1 vehicles ×12 → `<file>_v3.glb` | DELIVERED 2026-11-19 | Art/Models/Generated/Vehicles/<file>_v3.glb | per car: draw calls 63–70 → 16–22 (LOD2 10–14), materials 11–13 → 3, renderers 26–30 → 14–18; LOD1 26–42 % / LOD2 8–16 % of the tris (B04 52 / 23 %); UV2 overlap 0 at every level. Table in ART_IMPORT "H1". Unity: trunk paint check should become `StartsWith("Trunk")` |
+| H4 scenery + big props: Tree_A/B/C, Bush_A, ParkedCar_×4, StreetLamp, UtilityPole, SW_Canopy, SW_VacCanopy → `<name>_lod.glb` | DELIVERED 2026-11-19 | Art/Models/Generated/{Scenery,SelfWash}/<name>_lod.glb | trees: LOD1 50 %, LOD2 28–91 tris (blob + trunk); parked cars: LOD1 37–39 %; lamp / pole: LOD1 40 %; canopy: 6 meshes / 9 draw calls → 3 / 5, vac canopy: 5 / 7 → 2 / 3 (RoofSign / Lights kept) |
+| H3 interiors ×9 → `Interior_<id>_lod.glb` | DELIVERED 2026-11-19 | Art/Models/Interiors/Interior_<id>_lod.glb | meshes 19–25 → 5, draw calls 37–47 → 14, tris unchanged; nodes Seats / Dashboard / Floor / SteeringWheel (+Hand_L/R) / TrashBin / Socket_DriverHips. Unity: the loader looks for `Interior_{id}.glb` by name → prefer `_lod` |

@@ -19,6 +19,12 @@ namespace CarWash.Dirt
 
         public readonly NetworkVariable<float> Seed = new NetworkVariable<float>();
         public readonly NetworkVariable<float> CleanPct = new NetworkVariable<float>(1f);
+
+        /// <summary>v0.9: from this clean fraction on the car counts (and shows) as 100 %. A faint film the body shader no longer
+        /// shows (half-wiped towel edges) kept big cars like the V07 garbage truck at 99.6–99.8 % forever; the server snaps
+        /// here, so auto-finish, the HUD, the payout and the dev bots all see the same 100 % (TASKS: follow-up on the film).</summary>
+        public const float CompleteAt = 0.995f;
+        public static float Snap(float clean) => clean >= CompleteAt ? 1f : clean;
         public readonly NetworkVariable<Vector3> StartDirt = new NetworkVariable<Vector3>();
         public readonly NetworkVariable<int> TextureSize = new NetworkVariable<int>(512);
 
@@ -105,7 +111,11 @@ namespace CarWash.Dirt
         void Update()
         {
             if (!IsSpawned || !IsServer) return;
-            if (_painter.HasReadback && Mathf.Abs(CleanPct.Value - _painter.CleanPct) > 0.0005f) CleanPct.Value = _painter.CleanPct;
+            if (_painter.HasReadback)
+            {
+                float c = Snap(_painter.CleanPct);
+                if (Mathf.Abs(CleanPct.Value - c) > 0.0005f) CleanPct.Value = c;
+            }
             float rate = _data != null ? _data.balance.dirt.strokeSendRate : 10f;
             _sendT += Time.deltaTime;
             if (_sendT < 1f / rate || _outbox.Count == 0) return;

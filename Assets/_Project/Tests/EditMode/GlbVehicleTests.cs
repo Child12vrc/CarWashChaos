@@ -93,6 +93,31 @@ namespace CarWash.Tests
         }
 
         [Test]
+        public void CleanPct_SnapsTo100_FromCompleteAt()
+        {
+            Assert.AreEqual(1f, DirtNetSync.Snap(0.995f));
+            Assert.AreEqual(1f, DirtNetSync.Snap(0.998f));
+            Assert.AreEqual(0.99f, DirtNetSync.Snap(0.99f));
+            Assert.Less(DirtNetSync.CompleteAt, 0.999f, "DayManager auto-finishes at 0.999 → the snapped value must reach it");
+        }
+
+        [Test]
+        public void HullCabinBox_DoesNotRiseAboveTheCabRoof()
+        {
+            // v0.9: V05 / V07 / B02 have a cab lower than the box behind it — the cabin hull box used to reach the whole body's
+            // top and hid the box's front face from the spray (V05 stuck at 98.9 %)
+            foreach (var id in new[] { "V05", "V07", "B02", "V01" })
+            {
+                var go = Prefab(id);
+                var body = go.transform.Find("Model/Body").GetComponent<MeshFilter>().sharedMesh;
+                var glass = go.transform.Find("Model/Glass").GetComponent<MeshFilter>().sharedMesh.bounds;
+                float roof = VehicleGlbBuilder.TopOver(body, glass.min.z, glass.max.z, float.MinValue, float.MaxValue);
+                var cabin = go.transform.Find("Hull").GetComponents<BoxCollider>()[1];
+                Assert.LessOrEqual(cabin.center.y + cabin.size.y * 0.5f, roof + 0.01f, id);
+            }
+        }
+
+        [Test]
         public void HingesSwingOutward()
         {
             // left door, panel behind the hinge → free edge moves to -X

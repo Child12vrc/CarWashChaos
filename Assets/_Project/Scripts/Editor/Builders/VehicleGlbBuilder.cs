@@ -43,12 +43,17 @@ namespace CarWash.Editor
             return m.Success ? int.Parse(m.Groups[1].Value) : 1;
         }
 
+        /// <summary>Newest model revision the builder understands. v3 (Batch H: merged `Static`, `_LOD1/_LOD2` siblings) needs the
+        /// LODGroup wiring of M4.11 — until then it would draw every LOD at once, so v0.9 stays on v2.</summary>
+        public const int MaxRevision = 2;
+
         public static string GlbFor(string id)
         {
             if (!Directory.Exists(ModelDir)) return null;
             // newest revision first: "<id>_<name>_v2.glb" (Blender pass with door openings) beats "<id>_<name>.glb"
             var f = Directory.GetFiles(ModelDir, id + "_*.glb")
                 .Where(x => AssetDatabase.LoadAssetAtPath<GameObject>(x.Replace('\\', '/')) != null)
+                .Where(x => Revision(x) <= MaxRevision)
                 .OrderByDescending(Revision).ThenBy(x => x).FirstOrDefault();
             if (f == null || AssetDatabase.LoadAssetAtPath<GameObject>(f.Replace('\\', '/')) == null) return null; // glTFast missing → not imported
             return f.Replace('\\', '/');
@@ -133,8 +138,12 @@ namespace CarWash.Editor
             lower.size = new Vector3(bodyB.size.x, belt - bodyB.min.y, bodyB.size.z);
             var cabin = hull.AddComponent<BoxCollider>();
             float cw = Mathf.Min(glassB.size.x, bodyB.size.x);
-            cabin.center = new Vector3(bodyB.center.x, (belt + bodyB.max.y) * 0.5f, glassB.center.z);
-            cabin.size = new Vector3(cw, bodyB.max.y - belt, Mathf.Min(glassB.size.z, bodyB.size.z));
+            // top = the body's real height over the glass span, not the whole body's: a cab lower than the box behind it
+            // (V05 ice-cream truck 2.10 vs 2.68 m, V07 / B02 2.50 vs 3.0 m) otherwise got an invisible block of air on the
+            // cab roof that stopped the spray and the towel short of the box's front face (V05 stuck at 98.9 %)
+            float cabTop = glassT != null ? TopOver(mesh, glassB.min.z, glassB.max.z, belt + 0.1f, bodyB.max.y) : bodyB.max.y;
+            cabin.center = new Vector3(bodyB.center.x, (belt + cabTop) * 0.5f, glassB.center.z);
+            cabin.size = new Vector3(cw, cabTop - belt, Mathf.Min(glassB.size.z, bodyB.size.z));
 
             // --- sockets ---
             p.Interior = model.transform.Find("Socket_Interior");
@@ -152,6 +161,14 @@ namespace CarWash.Editor
             }
             p.Bounds = all;
             return p;
+        }
+
+        /// <summary>Highest body vertex whose z lies in [z0, z1], clamped to [min, max].</summary>
+        public static float TopOver(Mesh m, float z0, float z1, float min, float max)
+        {
+            float top = float.MinValue;
+            foreach (var v in m.vertices) if (v.z >= z0 && v.z <= z1 && v.y > top) top = v.y;
+            return top == float.MinValue ? max : Mathf.Clamp(top, min, max);
         }
 
         static Transform Socket(Transform root, string n, Vector3 local)
@@ -190,8 +207,9 @@ namespace CarWash.Editor
         }
 
         /// <summary>Where a player's eye can be: a ring 1.4 m out from the body (sprayer) and one right at it (towel), crouched,
-        /// standing, half-jump and jump apex.</summary>
-        public static readonly float[] EyeHeights = { 1.1f, 1.65f, 2.2f, 2.75f };
+        /// standing and jump apex — the same three as the DevChecksGlb bot (a 2.2 m half-jump eye counted V07's box front over
+        /// the cab, which only that fleeting height sees).</summary>
+        public static readonly float[] EyeHeights = { 1.1f, 1.65f, 2.75f };
         /// <summary>Towel: data range 1 m + 0.8 m (Towel.ServerUse), aimed ray.</summary>
         public const float TowelReach = 1.8f;
 
@@ -227,9 +245,13 @@ namespace CarWash.Editor
             {
                 float a = k * Mathf.PI * 2f / 48f;
                 var dir = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a));
+                // on the footprint RECTANGLE's edge + margin (an ellipse through the bounds put the diagonal eyes inside long
+                // boxy bodies: V07's eye sat in its cab and "reached" the box front through the cab cavity)
+                float edge = Mathf.Min(Mathf.Abs(dir.x) > 1e-4f ? b.extents.x / Mathf.Abs(dir.x) : float.MaxValue,
+                                       Mathf.Abs(dir.z) > 1e-4f ? b.extents.z / Mathf.Abs(dir.z) : float.MaxValue);
                 foreach (float margin in new[] { 1.4f, 0.45f })
                 {
-                    var e = b.center + Vector3.Scale(dir, b.extents + new Vector3(margin, 0f, margin));
+                    var e = b.center + dir * (edge + margin);
                     foreach (float h in EyeHeights) eyes.Add(new Vector3(e.x, h, e.z));
                 }
             }
@@ -249,7 +271,7 @@ namespace CarWash.Editor
                 // corners: a face that is mostly tucked away (half hidden behind a bumper lip) is left out too.
                 int reachable = 0;
                 foreach (var s in new[] { c, Vector3.Lerp(c, v[i0], 0.7f), Vector3.Lerp(c, v[i1], 0.7f), Vector3.Lerp(c, v[i2], 0.7f) })
-                    if (Reach(mc, eyes, s)) reachable++;
+                    if (Reach(mc, eyes, s, nn)) reachable++;
                 bool reach = reachable >= 3;
                 if (reach) continue;
                 hidden += ua;
@@ -266,6 +288,10 @@ namespace CarWash.Editor
         /// (balance brushMinRadius 0.15 m, soft edge) — panel gaps / bumper lips the ray stops 0.15-0.2 m short of stay dirty
         /// for real, so they are left out of the clean % instead of capping every car at ~99.5 %.</summary>
         public const float SprayTolerance = 0.12f;
+        /// <summary>Minimum sine of the angle between the eye ray and the face (≈ 15°) for that eye to count.</summary>
+        public const float MinIncidence = 0.26f;
+        /// <summary>Towel: minimum sine of the wiping angle (≈ 24°).</summary>
+        public const float TowelIncidence = 0.4f;
 
         /// <summary>UV3.x mask per FACE: hidden triangles get their own vertex copies (mask 1), so the flag never bleeds into a
         /// counted neighbour through a shared vertex (and no counted face is half-hidden by interpolation).</summary>
@@ -306,7 +332,7 @@ namespace CarWash.Editor
 
         static readonly List<MeshCollider> _blockers = new List<MeshCollider>();
 
-        static bool Reach(MeshCollider mc, List<Vector3> eyes, Vector3 c)
+        static bool Reach(MeshCollider mc, List<Vector3> eyes, Vector3 c, Vector3 faceN)
         {
             bool spray = false;
             foreach (var e in eyes)
@@ -315,13 +341,82 @@ namespace CarWash.Editor
                 if (dist > 6f || (spray && dist > TowelReach)) continue;
                 var ray = new Ray(e, d / dist);
                 if (!mc.Raycast(ray, out var hit, dist + 0.05f) || (hit.point - c).magnitude > SprayTolerance) continue;
+                // seen edge-on only (V05's 2.68 m roof from the 2.75 m jump apex, its box front over the cab from the side): the
+                // player can neither see that dirt nor hold the spray there long enough — not counted
+                if (Vector3.Dot(-ray.direction, faceN) < MinIncidence) continue;
+                // the hit must be on this face's side, not on a parallel wall in front of it: V07's box front sits 2 cm behind
+                // the cab's back wall — rays landing on the cab wall were within SprayTolerance and counted it as reachable
+                if (Vector3.Dot(hit.normal, faceN) < 0.7f) continue;
                 bool blocked = false;
                 foreach (var bl in _blockers) if (bl.Raycast(ray, out _, hit.distance - 0.03f)) { blocked = true; break; }
                 if (blocked) continue;
                 spray = true;
-                if (dist <= TowelReach) return true;
+                // the towel has to rub, not just hit: it needs a real angle (V07's
+                // side chamfers seen at 15–20° stayed spotted)
+                // from the jump apex (0.35 s in the air) only faces looking up (roofs, hoods) can be rubbed — not a vertical strip above
+                // head height like V07's box front over the cab
+                if (dist <= TowelReach && Vector3.Dot(-ray.direction, faceN) >= TowelIncidence && (e.y < 2.5f || faceN.y > 0.5f)) return true;
             }
             return false;
+        }
+
+        /// <summary>Longest body edge the reachability mask works with (m).</summary>
+        public const float MaxBakeEdge = 0.3f;
+
+        /// <summary>
+        /// v0.9: splits every triangle at the midpoint of its longest edge until no edge is longer than `maxEdge` (midpoints
+        /// shared per edge, so the surface stays closed). The reachability mask is per face: the V08 tank's deck is a few
+        /// huge triangles that run under the turret — one visible corner made the whole buried part count (stuck at 96 %).
+        /// </summary>
+        public static void Subdivide(Mesh m, float maxEdge)
+        {
+            var pos = new List<Vector3>(); m.GetVertices(pos);
+            var nrm = new List<Vector3>(); m.GetNormals(nrm);
+            var tan = new List<Vector4>(); m.GetTangents(tan);
+            var col = new List<Color>(); m.GetColors(col);
+            var uv0 = new List<Vector2>(); m.GetUVs(0, uv0);
+            var uv1 = new List<Vector2>(); m.GetUVs(1, uv1);
+            int n0 = pos.Count;
+            bool hn = nrm.Count == n0, ht = tan.Count == n0, hc = col.Count == n0, h0 = uv0.Count == n0, h1 = uv1.Count == n0;
+            var mids = new Dictionary<long, int>();
+            int Mid(int a, int b)
+            {
+                long key = a < b ? ((long)a << 32) | (uint)b : ((long)b << 32) | (uint)a;
+                if (mids.TryGetValue(key, out int k)) return k;
+                k = pos.Count;
+                pos.Add((pos[a] + pos[b]) * 0.5f);
+                if (hn) nrm.Add((nrm[a] + nrm[b]).normalized);
+                if (ht) { var t = (tan[a] + tan[b]) * 0.5f; tan.Add(new Vector4(t.x, t.y, t.z, tan[a].w)); }
+                if (hc) col.Add((col[a] + col[b]) * 0.5f);
+                if (h0) uv0.Add((uv0[a] + uv0[b]) * 0.5f);
+                if (h1) uv1.Add((uv1[a] + uv1[b]) * 0.5f);
+                mids[key] = k;
+                return k;
+            }
+            var todo = new Stack<(int, int, int)>();
+            var src = m.triangles;
+            for (int i = src.Length - 3; i >= 0; i -= 3) todo.Push((src[i], src[i + 1], src[i + 2]));
+            var outT = new List<int>(src.Length * 2);
+            float max2 = maxEdge * maxEdge;
+            while (todo.Count > 0)
+            {
+                var (a, b, c) = todo.Pop();
+                float ab = (pos[a] - pos[b]).sqrMagnitude, bc = (pos[b] - pos[c]).sqrMagnitude, ca = (pos[c] - pos[a]).sqrMagnitude;
+                float longest = Mathf.Max(ab, Mathf.Max(bc, ca));
+                if (longest <= max2) { outT.Add(a); outT.Add(b); outT.Add(c); continue; }
+                // split the longest edge, keeping the winding
+                if (longest == ab) { int d = Mid(a, b); todo.Push((a, d, c)); todo.Push((d, b, c)); }
+                else if (longest == bc) { int d = Mid(b, c); todo.Push((a, b, d)); todo.Push((a, d, c)); }
+                else { int d = Mid(c, a); todo.Push((a, b, d)); todo.Push((d, b, c)); }
+            }
+            if (pos.Count > 65535) m.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            m.SetVertices(pos);
+            if (hn) m.SetNormals(nrm);
+            if (ht) m.SetTangents(tan);
+            if (hc) m.SetColors(col);
+            if (h0) m.SetUVs(0, uv0);
+            if (h1) m.SetUVs(1, uv1);
+            m.SetTriangles(outT, 0);
         }
 
         /// <summary>Copy of the imported body with every submesh merged into submesh 0 (saved as an asset of ours).</summary>
@@ -334,6 +429,7 @@ namespace CarWash.Editor
             for (int s = 0; s < src.subMeshCount; s++) tris.AddRange(src.GetTriangles(s));
             m.subMeshCount = 1;
             m.SetTriangles(tris, 0);
+            Subdivide(m, MaxBakeEdge);
             m.RecalculateBounds();
             // ART NOTE (2026-11-18): the delivered TEXCOORD_1 has overlapping / sliver islands (V02: the rear panel shares texels
             // with hood slivers) -> those texels can never read clean. The dirt UV2 of OUR merged copy is regenerated with

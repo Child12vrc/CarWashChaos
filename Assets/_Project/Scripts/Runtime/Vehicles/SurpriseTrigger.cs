@@ -115,6 +115,27 @@ namespace CarWash.Vehicles
 
         /// <summary>5 cm above the walkable ground under <paramref name="p"/> (bay floors / lanes sit 2.5–5 cm up since M4.10: a
         /// fixed y 0.05 spawned critters inside the floor slab and they dropped under the lot).</summary>
+        /// <summary>
+        /// v0.9: every critter of a group gets its own valid spot — on the ground, on the NavMesh and not inside the car or a
+        /// prop — stepping outward from the car (0.5 m steps, up to 4 m). The B02 trailer's raccoon trio: the first one landed
+        /// under the raised trailer (NavMesh carved there) and dropped to the −2 m catch floor.
+        /// </summary>
+        Vector3 FreeSpot(Vector3 p)
+        {
+            var c = _v.transform.position;
+            var outDir = new Vector3(p.x - c.x, 0f, p.z - c.z);
+            outDir = outDir.sqrMagnitude > 1e-4f ? outDir.normalized : _v.transform.right;
+            int block = (1 << Core.Layers.Vehicle) | (1 << Core.Layers.Prop) | (1 << Core.Layers.Default);
+            for (int k = 0; k <= 8; k++)
+            {
+                var q = OnGround(p + outDir * (0.5f * k));
+                if (!UnityEngine.AI.NavMesh.SamplePosition(q, out var nh, 0.3f, UnityEngine.AI.NavMesh.AllAreas)) continue;
+                if (Physics.CheckCapsule(q + Vector3.up * 0.25f, q + Vector3.up * 0.7f, 0.25f, block, QueryTriggerInteraction.Ignore)) continue;
+                return new Vector3(q.x, Mathf.Max(q.y, nh.position.y), q.z);
+            }
+            return OnGround(p);
+        }
+
         static Vector3 OnGround(Vector3 p)
         {
             int mask = 1 << Core.Layers.Default;
@@ -129,7 +150,8 @@ namespace CarWash.Vehicles
             Fired = true;
             for (int i = 0; i < Mathf.Max(1, Pending.count); i++)
             {
-                var c = CritterSpawner.Instance.ServerSpawnRevealed(Pending.critterId, pos + new Vector3(i * 0.7f, 0f, 0f), Quaternion.LookRotation(pos - _v.transform.position), true);
+                var at = FreeSpot(pos + new Vector3(i * 0.7f, 0f, 0f));
+                var c = CritterSpawner.Instance.ServerSpawnRevealed(Pending.critterId, at, Quaternion.LookRotation(pos - _v.transform.position), true);
                 if (c != null) _spawned.Add(c);
             }
             Debug.Log($"[SURPRISE] {_v.DataId} fired {Pending.critterId} x{_spawned.Count} ({why})");

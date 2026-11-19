@@ -17,7 +17,9 @@ Shader "Hidden/CarWash/DirtEval"
             float4 _SrcTexel;   // x = 1/srcSize
             int _Block;         // src texels per output texel (per axis)
             float3 _Weights;    // mud, grease, spots
-            #define FAINT 0.05
+            // v0.9: 0.05 → 0.10 — a 5–10 % film left by half-wiped towel edges is invisible on the body but kept big cars
+            // (V07 garbage truck) at 99.8 % with nothing left to see; the % now counts only what the body shader shows
+            #define FAINT 0.10
             float Faint(float d) { return saturate((d - FAINT) / (1.0 - FAINT)); }
 
             float4 frag(v2f_img i) : SV_Target

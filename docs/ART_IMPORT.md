@@ -249,3 +249,104 @@ These use the same node names, origin (grip) and sockets as v1, so ToolBuilder c
 
 ## Street parked cars (2026-11-19) — `Art/Models/Generated/Scenery/ParkedCar_{Compact,Sedan,SUV,Taxi}.glb` (generator `_scripts/props_parked.py`)
 These are low-poly decoration. Each car has 4 nodes: `Body`, `Glass` (opaque navy, so nothing needs to sit behind it), `Details` (lamps, bumpers, plates, grille, mirrors) and `Wheels`. They have no colliders. The origin is at ground centre and the front is +Z. They use MAT_PropAtlas only.
+
+## Batch H — LOD / merged files (2026-11-19, performance; generators `_scripts/build_lod_*.py`, helpers `lod_lib.py`)
+Each LOD file is new and sits next to the current one; the current files are unchanged. LOD meshes are siblings of their LOD0 node, with the same parent, origin, transform and material names, and are named `<Node>_LOD1` and `<Node>_LOD2`.
+
+### H2 critters — `Critters/<id>_hy_lod.glb` (sources `ArtSource/Blender/Critters/<id>_hy_lod.blend`)
+| File | LOD0 | `_LOD1` | `_LOD2` | Notes |
+|---|---|---|---|---|
+| C01_raccoon_hy_lod | 6000 | 1500 | 400 | 3 nodes at the scene root: `C01_raccoon_hy`, `C01_raccoon_hy_LOD1`, `C01_raccoon_hy_LOD2` (each X+90 like the _hy file) |
+| C05_possum_hy_lod | 6000 | 1500 | 400 | same |
+| C03_mud_slime_hy_lod | 6000 | 1500 | 398 | same |
+
+- All three critters still have **one material**, named like before (e.g. `C01_raccoon_hy`), which the three LODs share.
+- Its textures are new and shared by all three LODs: base colour 1024 JPEG, normal map 1024, metal/rough map 512. The 50k originals were baked into them (colour, metal/rough, and geometry together with the old normal map).
+- Each LOD has its own UV region in the textures: U 0–0.75 is LOD0, the top-right quarter is LOD1, and the bottom-right quarter is LOD2.
+- Reason: decimating while keeping the old UVs smeared the eyes and mouth at 1.5k and 400 tris.
+- Bounds, feet at y≈0, and facing +Z are all unchanged. Each GLB is 2.2–2.4 MB (the _hy files were 2.0–2.6 MB).
+
+### H1 vehicles — `Vehicles/<file>_v3.glb` (sources `ArtSource/Blender/Vehicles/<id>_<Name>_v3.blend`, built from the v2 .blend, which is left unchanged)
+**LOD0 nodes**
+- Unchanged, with the same names, origins, parents and UV2: `Body`, `Glass`, `Door_*` (and their children `DoorDetail_*` and `Mirror_*`), `Trunk`, `Wheel_*`, `Propeller` (B03), `Barrel` (V08) and `Socket_*`.
+- New `Static` node (origin = car origin): every other mesh joined into one.
+- `Headlight_±1` and `Taillight_±1` are now empty nodes at their old positions.
+- Nothing else changed: bounds, hinge origins, the Body silhouette and LOD0's UV2.
+
+**Materials**
+- **3 per car**: the paint (Body's material, same name as in v2), the glass, and `MAT_VehicleAtlas`.
+- `MAT_VehicleAtlas` is the new shared material for every other colour. Its texture `T_VehicleAtlas` is 1024 and identical in all 12 GLBs:
+  - The lower-left quarter is T_PropAtlas at half size, used by plates and decals.
+  - The 16 legacy flat colours (navy rubber, white rims, lamp yellow and red, PropMetal, etc.) are 64 px colour cells.
+- Faces that used the paint material outside the doors keep the paint material, as before. Examples: the V02 tail lamps and some wheel hubs.
+
+**LOD meshes**
+- `Wheel_*_LOD1`: 18 sides, no lug nuts. `Wheel_*_LOD2`: 10 sides.
+- `Static_LOD1`: collapse to about 40 %. `Static_LOD2`: about 14 %, without plates, wipers, fuel cap, antenna, exhaust, speaker, or parts under 100 tris.
+- `Body`, `Door_*` and `Trunk` LODs use a limited dissolve (6° for LOD1, 22° for LOD2) that never crosses a UV or UV2 seam, so the UV2 layout is exactly LOD0's. The UV2 overlap check returns 0 on every `Body*` and `Door*` mesh at every level.
+- If a door or trunk is already too simple to reduce, it has no `_LOD` node, and Unity keeps LOD0.
+- `DoorDetail_*_LOD1` and `Mirror_*_LOD1`: about 45 %. Their `_LOD2` nodes are empty.
+- `Glass_LOD2`: a convex hull slab, only when Glass has more than 60 tris.
+- `Propeller` and `Barrel` have `_LOD1` (50 %) and `_LOD2` (20 %).
+
+| Car | tris v2 → LOD0 / LOD1 / LOD2 | renderers v2 → v3 | draw calls (submeshes) v2 → LOD0 / LOD2 | materials |
+|---|---|---|---|---|
+| V01 | 10684 → 10684 / 3818 / 1302 | 26 → 14 | 63 → 22 / 12 | 11 → 3 |
+| V02 | 11832 → 11832 / 4646 / 1544 | 30 → 18 | 70 → 21 / 13 | 11 → 3 |
+| V03 | 11584 → 11584 / 4597 / 1771 | 27 → 14 | 63 → 18 / 12 | 13 → 3 |
+| V04 | 11228 → 11228 / 4318 / 1494 | 26 → 14 | 65 → 20 / 14 | 12 → 3 |
+| V05 | 11676 → 11676 / 4266 / 1298 | 28 → 14 | 65 → 17 / 11 | 13 → 4 |
+| V06 | 11188 → 11188 / 4008 / 1206 | 27 → 14 | 62 → 16 / 10 | 12 → 3 |
+| V07 | 13928 → 13928 / 4740 / 1458 | 28 → 16 | 69 → 18 / 12 | 12 → 3 |
+| V08 | 7664 → 7664 / 3280 / 1265 | 9 → 4 | 20 → 5 / 5 | 7 → 2 |
+| B01 | 18278 → 18278 / 4918 / 1463 | 28 → 14 | 64 → 21 / 11 | 11 → 3 |
+| B02 | 15325 → 15325 / 5299 / 1654 | 28 → 16 | 69 → 18 / 12 | 12 → 3 |
+| B03 | 10188 → 10188 / 3344 / 1064 | 13 → 7 | 36 → 7 / 7 | 8 → 2 |
+| B04 | 2744 → 2744 / 1450 / 634 | 4 → 4 | 5 → 4 / 4 | 4 → 3 |
+
+The renderer counts above are for LOD0; at LOD2 the empty nodes drop out. Cars with 4 doors (V02, B02, V07) stay above 12 renderers because the spec keeps each `DoorDetail_*` and `Mirror_*` as its own node.
+
+**Changes needed in Unity:**
+- `VehicleGlbBuilder` paints renderers named `n == "Trunk"`. To paint the trunk LODs too, it needs `n.StartsWith("Trunk")`. `Door*` and `Mirror*` LODs already match by prefix.
+- The door box collider still comes from LOD0 (`Door_L`), which is correct.
+- Previews: `docs/art_preview/Vehicle_<id>_v3_lod.png` (LOD0 / LOD1 / LOD2).
+
+### H4 scenery and big props — `<folder>/<name>_lod.glb` (sources `ArtSource/Blender/{Scenery,Buildings}/<name>_lod.blend`, generator `_scripts/build_lod_props.py`)
+**How the meshes were reduced**
+- The collapse is atlas-safe: each face keeps its material and its atlas cell, and its UVs are clamped back into that cell. Colours and icons don't bleed.
+- Materials are unchanged.
+- Parked cars have no UV2, which is fine because they don't get dirty.
+
+| File | LOD0 (unchanged) | `_LOD1` | `_LOD2` | Nodes |
+|---|---|---|---|---|
+| Tree_A_lod | 840 | 420 | 90 | `Foliage`, `Trunk` (+ `_LOD1`, `_LOD2`); `Foliage_LOD2` is an 80-tri convex blob |
+| Tree_B_lod | 152 | 76 | 28 | same; a 20-tri blob (the tree is already tiny) |
+| Tree_C_lod | 516 | 258 | 91 | same |
+| Bush_A_lod | 428 | 214 | 80 | `Bush`, `Bush_LOD1`, `Bush_LOD2` (blob, foliage only) |
+| ParkedCar_Compact / Sedan / SUV / Taxi_lod | 1252 / 1280 / 1252 / 1716 | 484 / 494 / 484 / 624 (≈ 37–39 %) | — | see below |
+| StreetLamp_lod | 468 | 186 | — | `Head_LOD1`, `Pole_LOD1` |
+| UtilityPole_lod | 1368 | 534 | — | `Arms_LOD1`, `Pole_LOD1`, `Transformer_LOD1` |
+| SW_Canopy_lod | 7792 | — | — | 6 meshes / 9 draw calls → `Structure` (atlas + metal), `RoofSign`, `Lights`: 3 meshes / 5 draw calls |
+| SW_VacCanopy_lod | 3868 | — | — | 5 meshes / 7 draw calls → `Structure`, `Lights`: 2 meshes / 3 draw calls |
+
+**Parked cars**
+- `Body_LOD1` is Body, Details and TaxiSign joined, then collapsed.
+- `Details_LOD1` and `TaxiSign_LOD1` are empty nodes.
+- `Wheels_LOD1`: 12-sided tyres with a flat 8-gon hub disc each.
+- `Glass_LOD1`: 45 %.
+- Draw calls go from 4 (5 for the taxi) at LOD0 to 3 at LOD1.
+
+Previews: `docs/art_preview/<name>_lod.png` (not made for the two canopies, which have no LOD).
+
+### H3 interiors — `Interiors/Interior_<id>_lod.glb` (sources `ArtSource/Blender/Vehicles/<id>_<Name>_Interior_lod.blend`, generator `_scripts/build_interior_lod.py`)
+These interiors have no LOD meshes. Each one has the following top-level nodes under the `Interior_<id>` root:
+- `Seats`: the seats and rear bench.
+- `Dashboard`: dash, centre stack, cluster, vents, column, rear-view mirror and air freshener.
+- `Floor`: floor, mats, pedals, console, gear lever and rear panel.
+- Unchanged: `SteeringWheel` with `Hand_L` and `Hand_R` under it, `TrashBin`, and `Socket_DriverHips`.
+
+`Seats`, `Dashboard` and `Floor` are each one mesh with one submesh per material. The four `MAT_*` interior materials are unchanged.
+
+Bounds, the hands and the socket positions are identical to `Interior_<id>.glb`, so Unity's width scaling still works. Draw calls drop from 37–47 to 14 per interior, and the triangle count is unchanged (5972–8284).
+
+**Change needed in Unity:** `VehicleInteriorBuilder` loads `Interior_{id}.glb` by its exact name. Point it at `Interior_{id}_lod.glb` when that file exists.

@@ -53,6 +53,7 @@ namespace CarWash.Editor
         public static void Bake(GameObject env, Scene scene)
         {
             EnsureAgentTypes();
+            ClipAudit.DisposeProbes(); // a leaked audit box (HideAndDontSave, y 0–0.38) was baked as a walkable floor over the lot
             // shutters move at runtime: keep them out of the bake, carve instead
             foreach (var t in env.GetComponentsInChildren<Transform>())
                 if (t.name.StartsWith("Shutter"))
@@ -61,6 +62,12 @@ namespace CarWash.Editor
                     var obs = t.gameObject.AddComponent<NavMeshObstacle>();
                     obs.carving = true; obs.shape = NavMeshObstacleShape.Box; obs.size = Vector3.one;
                 }
+
+            // the PlayBounds catch floor (y −2) is not ground: baked, it was the nearest NavMesh under a car's carved hole and
+            // SetupAgent warped a critter spawned beside the B02 trailer 2 m down onto it (v0.9). Walls stay in (they end the mesh).
+            foreach (var col in env.GetComponentsInChildren<Collider>(true))
+                if (col.gameObject.layer == Layers.PlayBounds && col.bounds.max.y < -0.5f && col.GetComponent<NavMeshModifier>() == null)
+                    col.gameObject.AddComponent<NavMeshModifier>().ignoreFromBuild = true;
 
             var root = new GameObject("NavMesh");
             string dir = SceneNames.Folder + SceneNames.SudsyLot;

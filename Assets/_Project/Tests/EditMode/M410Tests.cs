@@ -19,6 +19,25 @@ namespace CarWash.Tests
         }
 
         [Test]
+        public void LotNavMesh_LiesOnTheFloor_NotOnALeakedAuditProbe()
+        {
+            // v0.9: a leaked ClipAudit probe was baked as a walkable slab at y 0.40 over the bays → critters fell under the lot
+            WithLot(roots =>
+            {
+                foreach (var p in new[] { new Vector3(-6.28f, 1f, 0.82f), new Vector3(-8.87f, 1f, 4.36f) })
+                {
+                    Assert.IsTrue(UnityEngine.AI.NavMesh.SamplePosition(p, out var hit, 2f, UnityEngine.AI.NavMesh.AllAreas), p.ToString());
+                    Assert.Less(hit.position.y, 0.2f, "navmesh above the floor at " + p);
+                }
+                // nothing walkable under the lot (the PlayBounds catch floor at y −2 must not be baked)
+                Assert.IsFalse(UnityEngine.AI.NavMesh.SamplePosition(new Vector3(-6.98f, -1.95f, 0.82f), out var under, 1f, UnityEngine.AI.NavMesh.AllAreas),
+                    "navmesh under the lot at " + under.position);
+            });
+            ClipAudit.DisposeProbes();
+            Assert.IsFalse(Resources.FindObjectsOfTypeAll<GameObject>().Any(g => g.name == "ClipAuditProbe"));
+        }
+
+        [Test]
         public void WorldTextShader_DepthTested_NoSlopeOffset()
         {
             var src = File.ReadAllText("Assets/_Project/Shaders/WorldText.shader");

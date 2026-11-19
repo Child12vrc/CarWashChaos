@@ -119,6 +119,7 @@ namespace CarWash.Editor
                     }
                 }
             }
+            DisposeProbes();
             return list.Distinct().ToList();
         }
 
@@ -126,6 +127,18 @@ namespace CarWash.Editor
         public static readonly string[] Mounted = { "FoamBrushHolder", "HoseReelDrum", "Cctv", "ElectricBox", "Pipes", "Extinguisher", "BoomArm", "Parasol" }; // Parasol: the shade overhangs (its AABB is not its shape)
 
         static BoxCollider _probe;
+
+        /// <summary>
+        /// v0.9: removes every audit probe, including ones leaked by earlier domain reloads (HideAndDontSave survives them).
+        /// A probe left behind is an invisible 0.76 m box in the editor's physics scene: LotNavMesh baked it as a walkable
+        /// floor at y 0.40 over the lot, so critters walked on air and fell to the −2 m catch floor.
+        /// </summary>
+        public static void DisposeProbes()
+        {
+            foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+                if (go != null && go.name == "ClipAuditProbe" && !EditorUtility.IsPersistent(go)) Object.DestroyImmediate(go);
+            _probe = null;
+        }
         static Collider BoxOf(Renderer r)
         {
             if (_probe == null) { var go = new GameObject("ClipAuditProbe") { hideFlags = HideFlags.HideAndDontSave }; _probe = go.AddComponent<BoxCollider>(); }

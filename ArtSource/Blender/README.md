@@ -119,3 +119,18 @@ Blender 5.0 기준입니다(Steam 설치: `C:\Program Files (x86)\Steam\steamapp
 - 다시 만들기: `blender -b --factory-startup --python _scripts/build_interiors.py -- V05 V06 …`
   (인자 없이 실행하면 V01~B01만 만들고, `new`를 붙이면 신규 차종도 함께 만듭니다.)
 - V08·B03·B04는 캐빈이 없어서 실내 GLB가 없습니다.
+
+## Batch H — LOD·병합 파일 (최적화, 2026-11-19)
+기존 .blend와 .glb는 건드리지 않습니다. 각 스크립트는 원본 .blend를 열어 결과를 **새 .blend**와 **새 .glb**로 저장합니다.
+LOD 노드 이름 규칙: LOD0 노드와 같은 부모 아래에 `<Node>_LOD1` / `<Node>_LOD2`로 둡니다. 생략된 레벨의 노드는 빈 노드로 남깁니다.
+
+| 스크립트 | 원본 → 결과 .blend | .glb |
+|---|---|---|
+| `_scripts/build_lod_critters.py` | Critters `_hy.glb` → `Critters/<id>_hy_lod.blend` (50k 원본은 숨김 콜렉션 `Reference_hy`에 보관, 베이크용) | Critters/<id>_hy_lod.glb |
+| `_scripts/build_lod_vehicles.py` | `Vehicles/<id>_<Name>.blend`의 Vehicle_v2 → `Vehicles/<id>_<Name>_v3.blend` (Vehicle_v3) | Vehicles/<file>_v3.glb |
+| `_scripts/build_interior_lod.py` | 같은 .blend의 Interior → `Vehicles/<id>_<Name>_Interior_lod.blend` | Interiors/Interior_<id>_lod.glb |
+| `_scripts/build_lod_props.py` | `Scenery/<name>.blend`, `Buildings/SW_*Canopy.blend` → `<name>_lod.blend` | Scenery/·SelfWash/<name>_lod.glb |
+
+- 공용 함수는 `_scripts/lod_lib.py`에 있습니다(삼각형 수 목표 decimate, 프리뷰).
+- 차량 공용 아틀라스: `Textures/T_VehicleAtlas.png`(소품 아틀라스를 절반 크기로 넣고 + 단색 칸) → 재질 `MAT_VehicleAtlas`. 12대가 같은 텍스처를 쓰므로 항상 `build_lod_vehicles.py`로 다시 만듭니다(전체 색을 스캔한 뒤 칸을 배정).
+- 실행 예: `blender -b --factory-startup --python ArtSource/Blender/_scripts/build_lod_vehicles.py -- V02`

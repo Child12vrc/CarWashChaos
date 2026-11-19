@@ -93,7 +93,9 @@ namespace CarWash.Core
                     Log($"surprise critter {c.name} at {p.ToString("F2")} {where} → {(ok ? "OK" : "BAD")}");
                 }
                 foreach (var kv in seen.ToArray())
-                    if (kv.Key != null && kv.Key.IsSpawned && Time.time - kv.Value > 6f) kv.Key.NetworkObject.Despawn(true);
+                    // 1 s: the spawn spot is checked; a live raccoon would steal the bot's towel (v0.9: the critters stopped falling
+                    // under the lot, so they now play — this check is about washing, critters have their own tests)
+                    if (kv.Key != null && kv.Key.IsSpawned && Time.time - kv.Value > 1f) kv.Key.NetworkObject.Despawn(true);
                 if (batch >= Batches.Length && current.All(v => v == null || !v.IsSpawned || v.State.Value == VehicleState.Leaving)) { Log("all batches done"); yield break; }
                 yield return new WaitForSeconds(0.2f);
             }

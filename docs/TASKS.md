@@ -444,3 +444,49 @@ Blender bulk delivery wiring + v2 wash fix (2026-11-19):
   - Critters → new cage: raccoon net + possum by hand, +$15 each.
   - Routes 94 / 0 blocked; NavMesh OK. CI 208 green (GlbVehicleTests now asserts every vehicle on v2 and no cabin / doors on the 3 doorless ones).
 - Performance vs v0.7, 4 instances on one PC, uncapped: host 95.5 → 79.1 fps at 13:00 and 90.3 → 71.3 at 20:30 (p50 9.8 → 12.2 ms). Every instance stays above 60 fps. Follow-up: static batching / LOD for the GLB props.
+- v0.9 release fixes (2026-11-19):
+  - V05 stuck at 99.5 %, then V07 at 99.8 %:
+    - Hull cabin box now ends at the real cab roof (`TopOver`), not at the whole body's top.
+    - BakeReachability counts an eye only when its ray meets the face at ≥ 15° (`MinIncidence`).
+    - The hit must also face the same way as the target face, so V07's box front, sitting 2 cm behind the cab wall, is no longer counted.
+    - Masked outer skin is only covered or out-of-reach areas: trunk floor, sills behind the doors, 3 m roofs, the bed under the hay.
+  - Batch H `_v3` cars arrived before v0.9 → `VehicleGlbBuilder.MaxRevision = 2` keeps v0.9 on the verified v2 cars.
+
+  - V07 (garbage truck) still stuck at 99.6–99.8 % after the reach fixes (box front over the cab, then side chamfers and the 3 m roof edge), with 0 dirty texels in the bot's list. Pragmatic fix, decided by the user:
+    - `DirtNetSync.CompleteAt = 0.995`: the server snaps the synced clean % to 100 % from there, so the game (auto-finish, HUD, payout) and the bots share the same rule.
+    - DirtEval `FAINT` 0.05 → 0.10: residue the body shader doesn't show no longer counts.
+  - DESIGN-GAP follow-up: find out why a faint film (towel-edge residue, mostly on big boxy bodies) never wipes to 0 — towel brush falloff vs stroke strength, server vs client stroke divergence at the jump apex. Then try going back to 0.999.
+  - Also seen: a run2p pair died silently mid-V07 (both processes gone at 14:15, no crash in the logs) → check for a leftover run2p taskkill from a stopped run.
+
+  - V08 tank stuck at 96 % (7 % mud): the deck is a few huge triangles running under the turret, and the reachability mask is per face → `Subdivide` (edges ≤ 0.3 m) before the bake. V08 masked share 4 → 32 %; the other cars got slightly finer masks.
+  - Critters at y −1.95 again: a leaked `ClipAuditProbe` (HideAndDontSave box, top at y 0.38) had been baked into the lot NavMesh as a floor. Agents walked on it and dropped to the −2 m catch floor.
+    - `ClipAudit.DisposeProbes()` now runs at the end of the Buried audit and before `LotNavMesh.Bake`.
+    - New test: M410Tests `LotNavMesh_LiesOnTheFloor_NotOnALeakedAuditProbe`. CI 211.
+
+  - Critter at y −1.95 (B02 raccoon trio): `CritterBase.SetupAgent` warped to the nearest NavMesh within 3 m, which was the PlayBounds catch floor (y −2) under the trailer's carved hole.
+    - Below-ground PlayBounds colliders are now `ignoreFromBuild`.
+    - The warp only accepts points within ±0.6 m of the critter's height.
+    - `SurpriseTrigger.FreeSpot` gives each critter its own checked spot.
+  - Raccoons now play (they no longer fall) and stole the test bot's towel:
+    - `Raccoon.OnNetworkDespawn` drops the loot (a tool was lost for good otherwise).
+    - DevGlbScenario despawns surprise critters 1 s after the spawn check.
+  - Harness: TaskStop left run2p.sh scripts alive; each one's 9000 s timeout taskkilled later runs (the silent deaths at 14:15 / 15:49). Before a new run2p, kill leftover run2p.sh processes.
+  - v0.9 released early (user priority, 3 h after the v0.8.2 regression):
+    - BuildRelease + BuildVerify OK; Relay PASS full loop (code W6QJDT, 2 players, wash + settle + summary); zip 110.7 MB.
+    - Final-build 100 % confirmed: V08 377 s, B02 442 s.
+    - Confirmed on earlier builds today (V01–V07, B01, B03, B04 all 100 %), but those runs predate the 0.3 m subdivision → v0.9.1: rerun all 12 on the final build. Noted in README "알려진 문제".
+
+## M4.11 Performance (after v0.9; target: v0.7 level, 95 fps by day, ≥ 60 fps with 4 players; measure before / after each item)
+- [ ] Batch H wiring (Blender delivered 2026-11-19, see ART_REQUESTS "Batch H delivery status" and ART_IMPORT "Batch H"):
+  - [ ] Raise `MaxRevision` to 3.
+  - [ ] Build a LODGroup from the `<Node>_LOD1/_LOD2` siblings: car LOD1 26–42 %, LOD2 8–16 % (UFO 52 / 23 %); renderers 26–30 → 14–18; `DoorDetail` and `Mirror` stay separate nodes.
+  - [ ] Paint check for the trunk: `== "Trunk"` → `StartsWith("Trunk")`, so `Trunk_LOD*` gets the car colour too.
+  - [ ] Body / Door / Trunk: every LOD shares the dirt RT through UV2 (overlap 0 at every level). The merged Body copy and the reachability mask must apply to each LOD.
+  - [ ] Critters `_hy_lod`: each LOD has its own UV and one shared 1024 texture set.
+  - [ ] VehicleInteriorBuilder prefers `Interior_<id>_lod.glb` (Hand_L/R and Socket_DriverHips unchanged).
+  - [ ] Compare against the previews `docs/art_preview/*_lod.png` and `Vehicle_<id>_v3_lod.png`.
+- [ ] SRP Batcher compatibility check, static batching for the lot props, shared materials / atlas.
+- [ ] Shadow casters off for small props; layer cull distances on the camera.
+- [ ] Turn off car interiors and small parts when the doors are closed or the car is far away.
+- [ ] Bake occlusion culling.
+- [ ] Measure fps before / after (4 instances, 13:00 / 20:30), then v0.10 (Relay) + zip + push.

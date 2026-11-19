@@ -255,7 +255,7 @@ namespace CarWash.Core
         }
 
         /// <summary>Same dead zone as DirtEval.shader (residue under 5 % counts as clean).</summary>
-        static float Faint(float d) => Mathf.Clamp01((d - 0.05f) / 0.95f);
+        static float Faint(float d) => Mathf.Clamp01((d - 0.10f) / 0.90f); // = DirtEval.shader FAINT
 
         static Texture2D Read(RenderTexture rt)
         {

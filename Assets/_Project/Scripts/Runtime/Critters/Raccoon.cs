@@ -26,6 +26,13 @@ namespace CarWash.Critters
                 DropLoot();
         }
 
+        /// <summary>Despawned while carrying a tool (day end, cleanup): drop it so the tool is not lost for good.</summary>
+        public override void OnNetworkDespawn()
+        {
+            if (IsServer) DropLoot();
+            base.OnNetworkDespawn();
+        }
+
         void DropLoot()
         {
             if (_loot == null) return;
