@@ -88,6 +88,31 @@ Surface textures are seamless (checked by half-offset). Signs: alpha-cut quads (
 | Critters/C05_possum_hy.glb | ~50k | Hunyuan3D, same format as above, 0.70 m standing pose (long tail −Z), faces +Z. In game: scaled to 0.52 m, playing dead = lies on its side; preferred over C05_possum.glb (fallback) |
 | Critters/C03_mud_slime_hy.glb | ~50k | Hunyuan3D (2026-11-19), same format (node X+90 → upright), 0.85 × 0.78 × 0.87 m blob, eye toward +Z. In game: scaled to the part-node slime's width (0.81 m → ~0.73 m tall) under a "Body" pivot at the bottom centre (CritterAnimator.Slime squash / stretch; no eye / drip nodes); preferred over C03_mud_slime.glb (fallback). Gameplay sphere collider unchanged. Bees: generation failed → C02_bee.glb stays |
 
+## Interiors (Batch F #1, 2026-11-19) — `Art/Models/Interiors/` (source: `ArtSource/Blender/Vehicles/<id>_<Name>.blend`, see ArtSource/Blender/README.md)
+Assembled from the part library `Art/Models/Parts/Interior/*.glb` (16 parts, source `ArtSource/Blender/Parts/Parts_Library.blend`). Cartoon low poly, bevelled, no colliders, UV0 = box projection with 1 UV unit = 1 m (tiling fabric / carpet normals). There are 4 materials: `MAT_Fabric_Seat` is white and gets the per-car seat tint; the others are `MAT_Fabric_Carpet`, `MAT_Plastic_Dark` and `MAT_Rubber_Black`.
+- **Interior_<id>.glb**: the root node `Interior_<id>` is at the cabin floor centre, and +Z is forward. The cabin box is the one VehicleBuilder already computes from the GLB Glass bounds (halfW = min(glass, body width) / 2 − 0.1, floorY = max(body min + 0.25, glass min − 0.75), rearZ = glass min z + 0.15, frontZ = glass max z − 0.25). The model's X width is **exactly 2 × halfW**, so VehicleInteriorBuilder's width scale comes out at 1.0 and the numbers below are real metres. The driver sits on the left (−X). Seats, dashboard and wheel follow the procedural layout (frontSeatZ = frontZ − 0.93, driverX = ∓0.48 halfW, seatH = clamp((belt − floor) × 0.45, 0.25, 0.42), rear bench rule), so the existing TrashSpots land on the cushions.
+  - Nodes: `Floor`, `Seat_Driver`, `Seat_Passenger` (origin = the floor under the cushion centre), `RearBench` / `RearBench_2`, `RearPanel`.
+  - `Dashboard` with children `InstrumentCluster`, `Vent_L`, `Vent_R`, `CenterStack`.
+  - `SteeringColumn` and **`SteeringWheel`** (origin = hub; local +Z runs down the column away from the driver, local +Y = 12 o'clock). The wheel has the empties **`Hand_L` / `Hand_R`** on the rim at 10 / 2 o'clock (R 0.17 m).
+  - `Console` (child `GearLever`), `Pedals`, `FloorMat_FL/FR/R1L/R1R/R2L/R2R`, `TrashBin`, `RearViewMirror` (child `AirFreshener`), and the empty **`Socket_DriverHips`** (hip joint, 0.09 m above the cushion, 0.06 m behind the seat centre).
+- **InteriorDoors_<id>.glb**: inner door cards `DoorPanel_L` / `DoorPanel_R` / `DoorPanel_Rear_L` / `DoorPanel_Rear_R` (sedan), each in the vehicle frame with its origin = that door node's pivot and no rotation → parent each under `Door_*` with local pose 0 / scale 1 so it swings with the door. Replaces VehicleInteriorBuilder.DoorTrim when present.
+- **Unity follow-ups (not done by the art pass):**
+  1. CustomerDriver / DevChecksInterior look for `Interior/DriverSeat` (+ `Roof`) and `Interior/SteeringWheel`. With a GLB these nodes sit under `Interior/Model/Interior_<id>/…`, so map them: DriverSeat ≈ `Socket_DriverHips` − 0.09 m Y; Roof = roofY above it. The `Hand_L` / `Hand_R` empties can replace the ±0.15 m grip offsets.
+  2. Load `InteriorDoors_<id>.glb`.
+  3. The vehicle bodies are closed solids below the belt line: their top "deck" sits 0.06–0.24 m under the glass, and the side walls are closed except the V01 door openings. Through the glass only the parts above the deck show (seat backs, headrests, dash top, wheel, mirror). An open door shows the body's side wall, not the seats. This is a vehicle-model limit; the exterior v2 pass should cut door openings and drop the deck.
+
+| file | tris (+door cards) | cabin W × L × floor→roof (m) | origin in vehicle (Unity) | contents |
+|---|---|---|---|---|
+| Interior_V01.glb | 5972 (+688) | 1.29 × 1.67 × 0.83 | (0, 0.56, −0.145) | 2 front seats (no room for a rear bench: rear glass) |
+| Interior_V02.glb | 7128 (+1376) | 1.32 × 1.61 × 0.77 | (0, 0.55, −0.075) | 2 front seats + compact rear bench at z −0.64, 4 door cards |
+| Interior_V03.glb | 5972 (+688) | 1.41 × 1.75 × 1.12 | (0, 0.55, 0.475) | single cab, 2 seats, cab back wall |
+| Interior_V04.glb | 8284 (+688) | 1.41 × 3.10 × 1.12 | (0, 0.55, −0.177) | 2 seats + benches at z −0.51 and −1.46 |
+| Interior_B01.glb | 5972 (+688) | 1.76 × 1.75 × 1.52 | (0, 1.43, 0.325) | single cab, 2 seats |
+
+Clipping: every vertex is ray-checked against Body / Doors / Glass / Trunk (1.5 cm margin): 0 clipping vertices, except where parts pass through the body deck below the belt line (unavoidable, see 3). Previews: `docs/art_preview/Interior_<id>_{open,open_R,top}.png`.
+
+Parts library (`Art/Models/Parts/Interior/`, origin of each part in the comments in `ArtSource/Blender/_scripts/parts_lib.py`): Seat_Bucket, Seat_Bench, SteeringWheel (+Hand_L/R), SteeringColumn, InstrumentCluster, Vent_Round, CenterStack, Console, GearLever, Pedals, FloorMat, RearViewMirror, AirFreshener, TrashBin_Small, TissueBox, DoorCard (56–1316 tris each).
+
 
 ## PBR texture sets (third-party, CC0 — Poly Haven, no attribution required) — `Art/ThirdParty/PolyHaven/<set>/`
 1k JPG: `<set>_diff_1k.jpg` albedo (sRGB), `<set>_nor_gl_1k.jpg` OpenGL normal (used as-is, import type set to Normal map), `<set>_arm_1k.jpg` R AO / G roughness / B metallic (linear). Licence: `Art/ThirdParty/PolyHaven/LICENSE_CC0_PolyHaven.txt`. The JPGs are only read: GrayboxMaterials.PbrMask packs ARM into `Art/Generated/PBR/<set>_mask.png` (R metallic, G AO, A smoothness = 1 − roughness) for URP Lit's _MetallicGlossMap + _OcclusionMap. A delivered set wins over the old single texture + generated normal (M4.6 D5).
