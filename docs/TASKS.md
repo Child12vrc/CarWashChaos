@@ -411,3 +411,5 @@ Batch F #1 Blender interiors (2026-11-19):
   - InteriorDoors_<id>.glb door cards are parented under the matching Door_* (local pose 0) and replace the procedural door trims.
 - Test: every main car has a driver; Blender interiors use the hand targets, hip height and socket-derived seat. 208 green.
 - Repo: ArtSource/Blender/*.blend under Git LFS (already in .gitattributes); .gitignore *.blend1 / *.blend2 / __pycache__.
+
+v0.8.1 (2026-11-19, fix build): Blender interiors + the driver NPC back (v0.8 regression). Builds/Release/CarWashChaos_v0.8.1.zip (108 MB). Relay verified (-joincode WHDBHR): full W1D1 loop PASS (wash 79 → 91 %, paid, summary). Interior screenshots are in Builds/Release/verify_screenshots/v0.8.1.
