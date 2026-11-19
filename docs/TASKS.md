@@ -399,3 +399,15 @@ M4.10 (2026-11-19, user feedback on v0.7):
 - Gameplay re-check: 2-player loop PASS; routes 94 segments, 0 blocked; NavMesh complete.
 
 v0.8 (2026-11-19, M4.10): Builds/Release/CarWashChaos_v0.8.zip (README v0.8). Relay verified with the verify exe pair (-joincode N8PPFQ): full W1D1 loop PASS (wash 79 → 91 %, paid, summary). The build grew 231 → 258 MB because of the uncompressed baked text textures. Before / after close-up sheets, 8-direction sheets and the hands-camera shot are in Builds/Release/verify_screenshots/v0.8.
+
+Batch F #1 Blender interiors (2026-11-19):
+- Interior_<V01–V04, B01>.glb from the Blender session replace the procedural cabins. The swap-in already existed in VehicleInteriorBuilder.
+- Regression: the GLB branch created no `DriverSeat`, and `Interior/SteeringWheel` was nested, so **v0.8 shipped those 5 cars without the driver NPC**.
+- Fix, as ART_IMPORT asks:
+  - `DriverSeat` = `Socket_DriverHips` − 0.09 m, with its `Roof` anchor at the cabin roof.
+  - The steering wheel is found at any depth.
+  - CustomerDriver got `_handL` / `_handR` (the rim empties at 10 / 2 o'clock) and `_hipHeight` 0.09.
+  - New `ReachWheel` lets a shrunk driver slide forward on the cushion (≤ 15 cm) so the IK reaches the grips: 0.15 → 0.08 m from the targets in the 2-player check.
+  - InteriorDoors_<id>.glb door cards are parented under the matching Door_* (local pose 0) and replace the procedural door trims.
+- Test: every main car has a driver; Blender interiors use the hand targets, hip height and socket-derived seat. 208 green.
+- Repo: ArtSource/Blender/*.blend under Git LFS (already in .gitattributes); .gitignore *.blend1 / *.blend2 / __pycache__.

@@ -58,15 +58,17 @@ namespace CarWash.Core
             var drv = car.GetComponent<CustomerDriver>();
             var dm2 = drv != null ? drv.transform.Find("Interior/DriverSeat/Driver") : null;
             var an = dm2 != null ? dm2.GetComponent<Animator>() : null;
-            var wheelT = car.transform.Find("Interior/SteeringWheel");
+            Transform Deep(Transform t, string n) { if (t == null) return null; if (t.name == n) return t; foreach (Transform ch in t) { var r = Deep(ch, n); if (r != null) return r; } return null; }
+            var wheelT = Deep(car.transform.Find("Interior"), "SteeringWheel"); // procedural or nested in a Blender interior
+            var tgtL = Deep(wheelT, "Hand_L"); var tgtR = Deep(wheelT, "Hand_R");
             if (an != null && wheelT != null)
             {
-                float lh = Vector3.Distance(an.GetBoneTransform(HumanBodyBones.LeftHand).position, wheelT.position), rh = Vector3.Distance(an.GetBoneTransform(HumanBodyBones.RightHand).position, wheelT.position);
+                float lh = Vector3.Distance(an.GetBoneTransform(HumanBodyBones.LeftHand).position, tgtL != null ? tgtL.position : wheelT.position), rh = Vector3.Distance(an.GetBoneTransform(HumanBodyBones.RightHand).position, tgtR != null ? tgtR.position : wheelT.position);
                 var head = an.GetBoneTransform(HumanBodyBones.Head).position;
                 var seatT = dm2.parent; var roofT = seatT.Find("Roof");
                 float headTop = seatT.InverseTransformPoint(head).y + 0.22f * dm2.localScale.y;
                 Log($"{car.DataId}: driver scale {dm2.localScale.y:0.00}, head top {headTop:0.00} vs roof {(roofT != null ? roofT.localPosition.y : -1f):0.00} above the cushion, hips {seatT.InverseTransformPoint(an.GetBoneTransform(HumanBodyBones.Hips).position).ToString("F2")}, visible={dm2.GetComponentInChildren<SkinnedMeshRenderer>().isVisible}");
-                Log($"{car.DataId}: driver {dm2.GetComponentInChildren<SkinnedMeshRenderer>()?.sharedMesh?.name} hands→wheel L {lh:0.00} R {rh:0.00} m, head {car.transform.InverseTransformPoint(head).ToString("F2")} (car local), drivers in scene {CustomerDriver.Count} → {(lh < 0.3f && rh < 0.3f ? "OK" : "CHECK")}");
+                Log($"{car.DataId}: driver {dm2.GetComponentInChildren<SkinnedMeshRenderer>()?.sharedMesh?.name} hands→{(tgtL != null ? "rim targets" : "wheel")} L {lh:0.00} R {rh:0.00} m, head {car.transform.InverseTransformPoint(head).ToString("F2")} (car local), drivers in scene {CustomerDriver.Count} → {(lh < 0.3f && rh < 0.3f ? "OK" : "CHECK")}");
             }
             else Log($"{car.DataId}: FAIL no driver (component={(drv != null)})");
             // open the driver door and look in

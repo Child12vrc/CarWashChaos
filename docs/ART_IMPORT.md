@@ -113,6 +113,21 @@ Clipping: every vertex is ray-checked against Body / Doors / Glass / Trunk (1.5 
 
 Parts library (`Art/Models/Parts/Interior/`, origin of each part in the comments in `ArtSource/Blender/_scripts/parts_lib.py`): Seat_Bucket, Seat_Bench, SteeringWheel (+Hand_L/R), SteeringColumn, InstrumentCluster, Vent_Round, CenterStack, Console, GearLever, Pedals, FloorMat, RearViewMirror, AirFreshener, TrashBin_Small, TissueBox, DoorCard (56–1316 tris each).
 
+## Self-wash props (G9 replacements, 2026-11-19) — `Art/Models/Generated/SelfWash/SW_<id>.glb` (source: `ArtSource/Blender/Props/CarWash/SW_<id>.blend`, generator `_scripts/props_selfwash.py`)
+Self-made (no matching CC0 asset exists for Korean self-wash equipment). Style: cartoon, bevelled, flat colours plus icon details. Every node keeps the graybox prefab's local frame (same pivot, front = −Z, same node names where the code uses them), so it swaps in 1:1.
+
+Materials, at most 2–3 per prop and shared by every prop:
+- `MAT_PropAtlas`: base colour = the 1024 atlas `T_PropAtlas.png` (embedded in each GLB; the source is `ArtSource/Blender/Textures/T_PropAtlas.png`). The atlas holds icons, screens and labels plus 16 flat swatches. GlbKit.Lit keeps `baseColorTexture` and reuses one material asset by name, so all props share a single material and texture at runtime.
+- `MAT_PropMetal`: steel, metallic 0.85, roughness 0.32.
+- `MAT_PropGlass`: transparent, where needed.
+
+| file | tris | size W×H×D (m) | nodes / notes |
+|---|---|---|---|
+| SW_PayTerminal.glb | 2368 | 0.55 × 1.51 × 0.39 (incl. holster) | `Body`. Screen, 4 icon buttons (water / foam / wax / rinse, left→right, top→bottom), coin + card panel, emergency stop, hazard plinth, side vent, wand holster on +X |
+| SW_BoomArm.glb | 2212 | 0.30 × 1.65 × 2.96 | origin = ceiling mount. `Pivot` = plate + column + bearing. `Arm` = node at y −0.72: truss beam along +Z, counterweight, hose with clips, rotary joint and a hose drop to y −1.62 |
+| SW_FoamBrushHolder.glb | 1604 | 0.40 × 1.06 × 0.22 | wall at +Z. `Holder` = plate + foam sign + cradle + drip shelf; `Brush` = handle + head + pink bristles + foam blobs + hose |
+| SW_HoseReelDrum.glb | 2880 | 0.61 × 0.96 × 0.35 | origin = drum centre. `Bracket` (wall at +Z), `Drum` (spins about Z: solid back flange, spoked front flange, wound hose, crank), `HoseOut` (drops to y −0.66) |
+
 
 ## PBR texture sets (third-party, CC0 — Poly Haven, no attribution required) — `Art/ThirdParty/PolyHaven/<set>/`
 1k JPG: `<set>_diff_1k.jpg` albedo (sRGB), `<set>_nor_gl_1k.jpg` OpenGL normal (used as-is, import type set to Normal map), `<set>_arm_1k.jpg` R AO / G roughness / B metallic (linear). Licence: `Art/ThirdParty/PolyHaven/LICENSE_CC0_PolyHaven.txt`. The JPGs are only read: GrayboxMaterials.PbrMask packs ARM into `Art/Generated/PBR/<set>_mask.png` (R metallic, G AO, A smoothness = 1 − roughness) for URP Lit's _MetallicGlossMap + _OcclusionMap. A delivered set wins over the old single texture + generated normal (M4.6 D5).

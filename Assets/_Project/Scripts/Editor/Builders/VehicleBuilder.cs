@@ -94,11 +94,20 @@ namespace CarWash.Editor
 
             var trashSpots = VehicleInteriorBuilder.Build(root.transform, d.id, cabin); // M4.6 D3
             // M4.8 F4: a customer behind the wheel (local, posed in code; the 12 Quaternius looks)
-            var seatT = root.transform.Find("Interior/DriverSeat"); var wheelT = root.transform.Find("Interior/SteeringWheel");
+            var interiorT = root.transform.Find("Interior");
+            var seatT = root.transform.Find("Interior/DriverSeat");
+            var wheelT = interiorT != null ? VehicleInteriorBuilder.Deep(interiorT, "SteeringWheel") : null; // may be nested in a Blender interior
             if (seatT != null && wheelT != null)
             {
                 var drv = root.AddComponent<CustomerDriver>();
                 SceneBuilder.Set(drv, "_seat", seatT); SceneBuilder.Set(drv, "_wheel", wheelT);
+                // Blender interiors: hand targets on the rim (10 / 2 o'clock) and the real hip height above the cushion
+                var hl = VehicleInteriorBuilder.Deep(wheelT, "Hand_L"); var hr = VehicleInteriorBuilder.Deep(wheelT, "Hand_R");
+                if (hl != null && hr != null) { SceneBuilder.Set(drv, "_handL", hl); SceneBuilder.Set(drv, "_handR", hr); }
+                if (VehicleInteriorBuilder.Deep(interiorT, "Socket_DriverHips") != null)
+                {
+                    var so = new SerializedObject(drv); so.FindProperty("_hipHeight").floatValue = VehicleInteriorBuilder.GlbHipHeight; so.ApplyModifiedPropertiesWithoutUndo();
+                }
                 var looks = PlayerLooks.Catalog.Select(c => AssetDatabase.LoadAssetAtPath<GameObject>(PlayerLooks.PathOf(c.id))).Where(g => g != null).Cast<Object>().ToArray();
                 PrefabBuilder.SetArray(drv, "_looks", looks);
             }

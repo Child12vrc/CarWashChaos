@@ -34,10 +34,59 @@ namespace CarWash.Editor
                 var m = GlbKit.Model(custom, group, Layers.Vehicle, new Vector3(0f, c.floorY, (c.rearZ + c.frontZ) * 0.5f));
                 var b = GlbKit.LocalBounds(m, group);
                 m.transform.localScale = Vector3.one * (c.halfW * 2f / Mathf.Max(0.1f, b.size.x));
+                GlbAnchors(group, m.transform, c);
             }
             else Procedural(group, id, c);
-            DoorTrim(root);
+            if (!GlbDoorCards(root, id)) DoorTrim(root);
             return TrashSpots(group, c);
+        }
+
+        public static Transform Deep(Transform t, string name)
+        {
+            if (t.name == name) return t;
+            foreach (Transform ch in t) { var r = Deep(ch, name); if (r != null) return r; }
+            return null;
+        }
+
+        /// <summary>
+        /// Blender interiors (docs/ART_IMPORT.md, Batch F #1): the same anchors the procedural cabin makes, from the model's
+        /// empties — "DriverSeat" = cushion top under <c>Socket_DriverHips</c> (the hip joint is 0.09 m above it), its "Roof"
+        /// child at the headliner, and "SteeringWheel" / "Hand_L" / "Hand_R" refs used by CustomerDriver.
+        /// </summary>
+        static void GlbAnchors(Transform group, Transform model, Cabin c)
+        {
+            var hips = Deep(model, "Socket_DriverHips");
+            if (hips == null) { Debug.LogWarning($"[Interior] {model.name}: no Socket_DriverHips"); return; }
+            var seat = new GameObject("DriverSeat") { layer = Layers.Vehicle }.transform; seat.SetParent(group, false);
+            seat.position = hips.position - group.up * (GlbHipHeight * model.lossyScale.y);
+            seat.localRotation = Quaternion.identity; // facing the vehicle's +Z like the procedural seat
+            var roof = new GameObject("Roof") { layer = Layers.Vehicle }.transform; roof.SetParent(seat, false);
+            roof.localPosition = new Vector3(0f, c.roofY - seat.localPosition.y - 0.05f, 0f);
+        }
+
+        /// <summary>The Socket_DriverHips joint height above the cushion in the Blender interiors.</summary>
+        public const float GlbHipHeight = 0.09f;
+
+        /// <summary>InteriorDoors_&lt;id&gt;.glb: inner door cards authored in the vehicle frame with their origin at each door
+        /// pivot → parented under the matching Door_* node (local pose 0, scale 1) so they swing with the door.</summary>
+        static bool GlbDoorCards(Transform root, string id)
+        {
+            string path = $"{ModelDir}/InteriorDoors_{id}.glb";
+            if (!File.Exists(path) || AssetDatabase.LoadAssetAtPath<GameObject>(path) == null) return false;
+            var holder = new GameObject("InteriorDoorsTmp").transform; holder.SetParent(root, false);
+            var m = GlbKit.Model(path, holder, Layers.Vehicle, Vector3.zero);
+            int n = 0;
+            foreach (var panel in m.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith("DoorPanel_")).ToArray())
+            {
+                var door = Deep(root, "Door_" + panel.name.Substring("DoorPanel_".Length));
+                if (door == null) { Debug.LogWarning($"[Interior] {id}: no {("Door_" + panel.name.Substring(10))} for {panel.name}"); continue; }
+                panel.SetParent(door, false);
+                panel.localPosition = Vector3.zero; panel.localRotation = Quaternion.identity; panel.localScale = Vector3.one;
+                foreach (var r in panel.GetComponentsInChildren<Renderer>(true)) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                n++;
+            }
+            Object.DestroyImmediate(holder.gameObject);
+            return n > 0;
         }
 
         static Material M(string n, Color col, float smooth = 0.15f) => GrayboxMaterials.Get("Interior_" + n, col, smooth);

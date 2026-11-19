@@ -112,3 +112,14 @@ Each one is a prefab under `Assets/_Project/Prefabs/Props/SelfWash/SW_<id>.prefa
 
 Also wanted: the canopy (one roof over 3 bays, 24.8 × 11.2 m, height 4.3 m, blue fascia with the name), the drying / vacuum area canopy (11.3 × 5.2 m, height 3.35 m), and the angry-face icon and ring / arrow sprites for the patience timers (G6, currently drawn in code by `UiSprites`).
 <!-- /G9 self-wash props -->
+
+## Art delivery status (3D model pass, kept outside the generated G9 block so SelfWashBuilder can regenerate it)
+Status: DELIVERED means the file is in place and the Unity session can wire it. Details for each file (nodes, pivots, materials) are in ART_IMPORT.md "Self-wash props". Each item also has a source .blend under `ArtSource/Blender/…` and a preview at `docs/art_preview/<id>.png`.
+| id | status | file | notes for wiring |
+|---|---|---|---|
+| Batch F #1 interiors | DELIVERED 2026-11-19 | Art/Models/Interiors/Interior_<id>.glb, InteriorDoors_<id>.glb | see ART_IMPORT "Interiors" (follow-ups 1–3) |
+| SW_PayTerminal | DELIVERED 2026-11-19 | Art/Models/Generated/SelfWash/SW_PayTerminal.glb | same frame as the graybox (pivot bottom centre, front −Z); one node `Body`; keep the box collider |
+| SW_BoomArm | DELIVERED 2026-11-19 | …/SelfWash/SW_BoomArm.glb | origin = ceiling mount (like the graybox); `Pivot` (static) + `Arm` (pivot at y −0.72 → put BoomSway on it); hose drop ends at y −1.62 |
+| SW_FoamBrushHolder | DELIVERED 2026-11-19 | …/SelfWash/SW_FoamBrushHolder.glb | wall at local +Z (plate back at z 0.12); `Holder` + `Brush` (separate node, could be grabbed later) |
+| SW_HoseReelDrum | DELIVERED 2026-11-19 | …/SelfWash/SW_HoseReelDrum.glb | origin = drum centre (like the graybox); `Bracket` (wall plate back at z 0.155), `Drum` (spins about local Z), `HoseOut` (static drop to y −0.66) |
+| SW_DrainGrate | skipped | — | already a decal since M4.10 (a mesh would z-fight the floor again) |

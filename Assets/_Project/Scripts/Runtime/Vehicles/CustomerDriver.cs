@@ -14,13 +14,17 @@ namespace CarWash.Vehicles
     {
         [SerializeField] private GameObject[] _looks = System.Array.Empty<GameObject>();
         [SerializeField] private Transform _seat, _wheel;
+        [Tooltip("Blender interiors: grip points on the rim (Hand_L / Hand_R empties); empty = ±0.15 m from the hub")]
+        [SerializeField] private Transform _handL, _handR;
+        [Tooltip("Hips above the cushion top (Blender interiors: Socket_DriverHips = 0.09 m)")]
+        [SerializeField] private float _hipHeight = 0.06f;
 
         Animator _anim;
         HumanPoseHandler _poser;
         HumanPose _pose;
         float[] _rest;
         Vector3 _bodyPos; Quaternion _bodyRot;
-        float _hipY = 0.06f; // hips above the cushion top (negative = sunk into a soft seat in a low cabin)
+        float _hipY; // hips above the cushion top (negative = sunk into a soft seat in a low cabin)
         Transform _model, _head, _chest, _lUp, _lLo, _lHand, _rUp, _rLo, _rHand;
         Quaternion _headOff;
         SkinnedMeshRenderer _blinkSmr; int _blinkIdx = -1;
@@ -37,6 +41,7 @@ namespace CarWash.Vehicles
         void Start()
         {
             if (_seat == null || _wheel == null || _looks == null || _looks.Length == 0) { enabled = false; return; }
+            _hipY = _hipHeight;
             var no = GetComponentInParent<Unity.Netcode.NetworkObject>();
             ulong id = no != null ? no.NetworkObjectId : 0;
             var look = _looks[(int)(id * 2654435761UL % (ulong)_looks.Length)];
@@ -75,6 +80,7 @@ namespace CarWash.Vehicles
             _nextBlink = Time.time + 2f;
             ApplyPose(0f);
             FitToSeat();
+            ReachWheel();
             if (_head != null) { _headOff = Quaternion.Inverse(Quaternion.LookRotation(_seat.forward, _seat.up)) * _head.rotation; _headCur = _head.rotation; }
             Count++;
         }
@@ -133,6 +139,19 @@ namespace CarWash.Vehicles
             _model.localPosition -= new Vector3(d.x, d.y - _hipY, d.z + 0.02f);
         }
 
+        /// <summary>A shrunk driver in a deep cabin can come up short of the rim: slide forward on the cushion (≤ 15 cm) until
+        /// both grips are within ~95 % of the arm length (the two-bone IK then lands the hands on Hand_L / Hand_R).</summary>
+        void ReachWheel()
+        {
+            if (_lUp == null || _lLo == null || _lHand == null || _rUp == null) return;
+            float arm = Vector3.Distance(_lUp.position, _lLo.position) + Vector3.Distance(_lLo.position, _lHand.position);
+            var gl = _handL != null ? _handL.position : _wheel.position - _wheel.right * 0.15f;
+            var gr = _handR != null ? _handR.position : _wheel.position + _wheel.right * 0.15f;
+            float need = Mathf.Max(Vector3.Distance(_lUp.position, gl), Vector3.Distance(_rUp.position, gr)) - arm * 0.95f;
+            if (need <= 0f) return;
+            _model.position += _seat.forward * Mathf.Min(0.15f, need);
+        }
+
         /// <summary>Spray hit near the driver (SprayVfx, local): annoyed for a moment.</summary>
         public void Splashed() { if (_angryT < 0f) _angryT = 0f; }
 
@@ -151,9 +170,11 @@ namespace CarWash.Vehicles
 
         void HandsOnWheel()
         {
-            if (_angryT >= 0f) { TwoBone(_rUp, _rLo, _rHand, _wheel.position + _wheel.right * 0.15f + _wheel.forward * 0.02f); return; } // left fist up
-            TwoBone(_lUp, _lLo, _lHand, _wheel.position - _wheel.right * 0.15f + _wheel.up * 0.0f + _wheel.forward * 0.02f);
-            TwoBone(_rUp, _rLo, _rHand, _wheel.position + _wheel.right * 0.15f + _wheel.forward * 0.02f);
+            var gl = _handL != null ? _handL.position : _wheel.position - _wheel.right * 0.15f + _wheel.forward * 0.02f;
+            var gr = _handR != null ? _handR.position : _wheel.position + _wheel.right * 0.15f + _wheel.forward * 0.02f;
+            if (_angryT >= 0f) { TwoBone(_rUp, _rLo, _rHand, gr); return; } // left fist up
+            TwoBone(_lUp, _lLo, _lHand, gl);
+            TwoBone(_rUp, _rLo, _rHand, gr);
         }
 
         /// <summary>Analytic two-bone IK in world space (keeps the elbow bending the way it already bends).</summary>
