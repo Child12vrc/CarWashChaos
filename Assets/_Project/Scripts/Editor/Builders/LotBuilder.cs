@@ -210,10 +210,10 @@ namespace CarWash.Editor
             var lights = new List<Light>(); var bars = new List<Renderer>();
             foreach (float x in new[] { -1.45f, 1.45f })
             {
-                GrayboxMaterials.Box(root, "LedHousing", new Vector3(x, 4.27f, 0f), new Vector3(0.22f, 0.06f, 4.6f), GrayboxMaterials.Get("Panel", new Color(0.25f, 0.3f, 0.4f)), collider: false);
-                bars.Add(GrayboxMaterials.Box(root, "LedBar", new Vector3(x, 4.215f, 0f), new Vector3(0.14f, 0.03f, 4.4f), off, collider: false).GetComponent<Renderer>());
+                GrayboxMaterials.Box(root, "LedHousing", new Vector3(x, 4.2275f, 0f), new Vector3(0.22f, 0.055f, 4.6f), GrayboxMaterials.Get("Panel", new Color(0.25f, 0.3f, 0.4f)), collider: false);
+                bars.Add(GrayboxMaterials.Box(root, "LedBar", new Vector3(x, 4.185f, 0f), new Vector3(0.14f, 0.03f, 4.4f), off, collider: false).GetComponent<Renderer>());
                 var lg = new GameObject("BayLight") { layer = b.gameObject.layer }; lg.transform.SetParent(root, false);
-                lg.transform.localPosition = new Vector3(x, 4.18f, 0f); lg.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                lg.transform.localPosition = new Vector3(x, 4.15f, 0f); lg.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 var l = lg.AddComponent<Light>();
                 l.type = LightType.Spot; l.range = 9f; l.spotAngle = 140f; l.innerSpotAngle = 80f; l.intensity = 9f; l.color = new Color(1f, 0.98f, 0.94f);
                 l.shadows = LightShadows.None; l.enabled = false;

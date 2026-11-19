@@ -82,3 +82,16 @@ Blender 5.0 기준입니다(Steam 설치: `C:\Program Files (x86)\Steam\steamapp
 - 아틀라스를 다시 만들기: `blender -b --factory-startup --python _scripts/build_props.py -- atlas`
 - 소품 다시 만들기: `blender -b --factory-startup --python _scripts/build_props.py -- SW_PayTerminal …`
 - 정의 파일: `_scripts/props_selfwash.py`. 좌표는 Unity 로컬 기준 `U(x, y, z)`를 씁니다.
+
+### 차량 외관 v2
+차량 파일(`Vehicles/<id>_<Name>.blend`)에 `Vehicle_v2` Export 콜렉션이 있고, 자식은 `Body`, `Exterior_Parts`, `Sockets`입니다. 내보내는 곳은 `Generated/Vehicles/<file>_v2.glb`입니다.
+- 원본 v1은 숨겨진 `Reference_v1` 콜렉션에 있습니다. 오브젝트 이름에 `_v1`이 붙어 있고, 내보내지 않습니다.
+- 다시 만들기: `_scripts/build_interiors.py`. 실내와 v2를 한 번에 만듭니다. 외관 생성 로직은 `_scripts/vehicles_v2.py`에 있습니다.
+
+| .blend | Export 콜렉션 | .glb |
+|---|---|---|
+| Vehicles/V01_Hatchback.blend | Vehicle_v2 | Generated/Vehicles/V01_hatchback_v2.glb |
+| Vehicles/V02_Sedan.blend | Vehicle_v2 | Generated/Vehicles/V02_sedan_v2.glb |
+| Vehicles/V03_Pickup.blend | Vehicle_v2 | Generated/Vehicles/V03_pickup_v2.glb |
+| Vehicles/V04_Minivan.blend | Vehicle_v2 | Generated/Vehicles/V04_minivan_v2.glb |
+| Vehicles/B01_MonsterTruck.blend | Vehicle_v2 | Generated/Vehicles/B01_monster_truck_v2.glb |

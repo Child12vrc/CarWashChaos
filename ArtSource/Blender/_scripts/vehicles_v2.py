@@ -30,6 +30,7 @@ def _world_copy(o, name, merge=True):
     bm.transform(o.matrix_world)
     if merge:
         bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+        bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])  # mirrored v1 parts can be inside-out
     me = bpy.data.meshes.new("SM_" + name)
     bm.to_mesh(me)
     bm.free()
@@ -72,6 +73,7 @@ def _boolean(target, cutters, op):
         mod.collection = col
     try:
         mod.use_hole_tolerant = True
+        mod.use_self = True  # v1 parts are several overlapping shells
     except Exception:
         pass
     dg = bpy.context.evaluated_depsgraph_get()
@@ -297,7 +299,7 @@ def build_v2(car, cid, file_stem, cabin_front_z):
     body = _world_copy(body1, "Body")
     _link(body, body_c)
     cav_lo = fl - 0.045
-    cutters = [_box_obj("CUT_Cabin", Vector((-(hw + 0.01), g0.y + 0.03, cav_lo)), Vector((hw + 0.01, g1.y - 0.08, deck + 0.03)), bmat)]
+    cutters = [_box_obj("CUT_Cabin", Vector((-(hw + 0.01), g0.y + 0.03, cav_lo)), Vector((hw + 0.01, g1.y - 0.03, g0.z - 0.005)), bmat)]
     openings = {}
     for dn in ("Door_L", "Door_R", "Door_Rear_L", "Door_Rear_R"):
         d = objs.get(dn)
@@ -320,9 +322,14 @@ def build_v2(car, cid, file_stem, cabin_front_z):
         cut = _box_obj("CUT_in_" + dn, Vector((mn.x, mn.y + GAP, mn.z + GAP)), Vector((mx.x, mx.y - GAP, mx.z)), bmat)
         _boolean(chunk, [cut], 'INTERSECT')
         vol = _volume(chunk)
-        if cid == "V01":  # its v1 door also carries the side-window frame → keep it (union)
-            old = _world_copy(d1o, "OLD_" + dn)
-            _boolean(chunk, [old], 'UNION')
+        if vol < 1e-3:  # hatchback: the v1 body has no side wall here, the v1 door IS the wall → v1 door cut at the belt line
+            bpy.data.objects.remove(chunk)
+            chunk = _world_copy(d1o, dn)
+            _link(chunk, body_c)
+            d0, d1 = car.bb(d1o)
+            cut = _box_obj("CUT_belt_" + dn, Vector((d0.x - 0.1, d0.y - 0.1, d0.z - 0.1)), Vector((d1.x + 0.1, d1.y + 0.1, g0.z + 0.004)), bmat)
+            _boolean(chunk, [cut], 'INTERSECT')
+            vol = _volume(chunk)
         _set_origin(chunk, d1o.matrix_world.copy())
         doors[dn] = chunk
         rep.append(f"{dn}: chunk volume {vol * 1000:.1f} L, verts {len(chunk.data.vertices)}")
@@ -331,8 +338,21 @@ def build_v2(car, cid, file_stem, cabin_front_z):
         y_a = max(mn.y + 0.04, -(cabin_front_z - 0.36) + 0.03)
         y_b = mx.y - 0.05
         z_a, z_b = mn.z + 0.05, g0.z - 0.035
+        rp = bpy.data.objects.get("RearPanel")
+        if rp:  # stop in front of the cabin's rear wall
+            y_b = min(y_b, min((rp.matrix_world @ v.co).y for v in rp.data.vertices) - 0.012)
+        reach = 0.0  # how far the seats / benches come towards this door inside the card's box
+        icol = bpy.data.collections.get("Interior")
+        for io in (icol.all_objects if icol else []):
+            if io.type != 'MESH' or io.name in ("Floor", "RearPanel") or io.name.startswith("FloorMat"):
+                continue
+            for v in io.data.vertices:
+                p = io.matrix_world @ v.co
+                if y_a - 0.01 < p.y < y_b + 0.01 and z_a - 0.01 < p.z < z_b + 0.01:
+                    reach = max(reach, side * p.x)
+        depth = max(0.012, (hw + 0.005) - reach - 0.01)
         if y_b - y_a > 0.2:
-            card = L.door_card(y_b - y_a, z_b - z_a, side)
+            card = L.door_card(y_b - y_a, z_b - z_a, side, depth)
             dd.merge(card, Matrix.Translation(Vector((side * (hw + 0.005), (y_a + y_b) / 2, (z_a + z_b) / 2))))
         hy = mx.y - 0.18
         hz = mn.z + (g0.z - mn.z) * 0.78

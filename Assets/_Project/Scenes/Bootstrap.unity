@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &1340697958
+--- !u!1 &626416507
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,11 +127,11 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1340697963}
-  - component: {fileID: 1340697962}
-  - component: {fileID: 1340697961}
-  - component: {fileID: 1340697960}
-  - component: {fileID: 1340697959}
+  - component: {fileID: 626416512}
+  - component: {fileID: 626416511}
+  - component: {fileID: 626416510}
+  - component: {fileID: 626416509}
+  - component: {fileID: 626416508}
   m_Layer: 0
   m_Name: Bootstrap
   m_TagString: Untagged
@@ -139,43 +139,43 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1340697959
+--- !u!114 &626416508
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1340697958}
+  m_GameObject: {fileID: 626416507}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1aca4c61682e55a49a05c585362bdad0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CarWash.Runtime::CarWash.Core.GameBootstrap
   _data: {fileID: 11400000, guid: 6d3a888c524001140b9b23885d25b224, type: 2}
-  _net: {fileID: 1340697960}
-  _audio: {fileID: 1984548231}
+  _net: {fileID: 626416509}
+  _audio: {fileID: 1918105775}
   _skin: {fileID: 11400000, guid: 3f711a99000d7834c9e19d1490e26482, type: 2}
---- !u!114 &1340697960
+--- !u!114 &626416509
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1340697958}
+  m_GameObject: {fileID: 626416507}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7d546da99d82ddd4b85913f02de439cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CarWash.Runtime::CarWash.Net.NetSession
   _backend: 0
-  _manager: {fileID: 1340697962}
---- !u!114 &1340697961
+  _manager: {fileID: 626416511}
+--- !u!114 &626416510
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1340697958}
+  m_GameObject: {fileID: 626416507}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6960e84d07fb87f47956e7a81d71c4e6, type: 3}
@@ -200,13 +200,13 @@ MonoBehaviour:
     PacketDelayMS: 0
     PacketJitterMS: 0
     PacketDropRate: 0
---- !u!114 &1340697962
+--- !u!114 &626416511
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1340697958}
+  m_GameObject: {fileID: 626416507}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 593a2fe42fa9d37498c96f9a383b6521, type: 3}
@@ -215,7 +215,7 @@ MonoBehaviour:
   NetworkManagerExpanded: 0
   NetworkConfig:
     ProtocolVersion: 0
-    NetworkTransport: {fileID: 1340697961}
+    NetworkTransport: {fileID: 626416510}
     PlayerPrefab: {fileID: 0}
     Prefabs:
       NetworkPrefabsLists:
@@ -243,23 +243,23 @@ MonoBehaviour:
     OldPrefabList: []
   RunInBackground: 1
   LogLevel: 1
---- !u!4 &1340697963
+--- !u!4 &626416512
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1340697958}
+  m_GameObject: {fileID: 626416507}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1984548232}
+  - {fileID: 1918105776}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1984548230
+--- !u!1 &1918105774
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -267,8 +267,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1984548232}
-  - component: {fileID: 1984548231}
+  - component: {fileID: 1918105776}
+  - component: {fileID: 1918105775}
   m_Layer: 0
   m_Name: AudioService
   m_TagString: Untagged
@@ -276,36 +276,36 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1984548231
+--- !u!114 &1918105775
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1984548230}
+  m_GameObject: {fileID: 1918105774}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7311f297e48502a4ca40c0c877a36c98, type: 3}
   m_Name: 
   m_EditorClassIdentifier: CarWash.Runtime::CarWash.Core.AudioService
   _poolSize: 24
---- !u!4 &1984548232
+--- !u!4 &1918105776
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1984548230}
+  m_GameObject: {fileID: 1918105774}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1340697963}
+  m_Father: {fileID: 626416512}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1340697963}
+  - {fileID: 626416512}

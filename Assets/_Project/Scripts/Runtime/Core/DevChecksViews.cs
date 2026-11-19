@@ -43,6 +43,7 @@ namespace CarWash.Core
             ("vacuum_area", new Vector3(25f, 0.05f, -5f), new Vector3(25f, 1f, -9.5f)),
             ("pay_terminal", new Vector3(-6.9f, 0.05f, 6.8f), new Vector3(-5.2f, 1.0f, 7.6f)),
             ("boom_reel", new Vector3(-6.2f, 0.05f, 1.2f), new Vector3(-9.5f, 2.2f, 4f)),
+            ("canopy_up", new Vector3(0f, 0.05f, 1.5f), new Vector3(0f, 4.3f, 7f)),
         };
 
         public static IEnumerator Run(PlayerNet me)

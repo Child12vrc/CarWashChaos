@@ -185,11 +185,12 @@ namespace CarWash.Visual
                 _shTimer = 0.25f;
                 Color sky = Color.Lerp(Color.Lerp(new Color(0.6f, 0.68f, 0.8f), new Color(0.62f, 0.5f, 0.5f), dusk), new Color(0.1f, 0.12f, 0.2f), night);
                 Color eq = Color.Lerp(Color.Lerp(new Color(0.55f, 0.57f, 0.6f), new Color(0.6f, 0.45f, 0.38f), dusk), new Color(0.07f, 0.08f, 0.12f), night);
-                Color gr = Color.Lerp(new Color(0.33f, 0.32f, 0.3f), new Color(0.04f, 0.04f, 0.05f), night);
+                // light bounced up from the concrete / asphalt: NEUTRAL grey, never darker than the old ambient (M4.10 fix — the old
+                // "ground − equator" lobe was negative and lost the most blue, so ceilings / undersides turned dark red-brown)
+                Color gr = Color.Lerp(new Color(0.46f, 0.46f, 0.47f), new Color(0.06f, 0.065f, 0.08f), night);
                 var sh = new SphericalHarmonicsL2();
-                sh.AddAmbientLight(eq);
-                sh.AddDirectionalLight(Vector3.up, (sky - eq) * 1.2f, 1f);
-                sh.AddDirectionalLight(Vector3.down, (gr - eq) * 1.2f, 1f);
+                sh.AddAmbientLight((sky + gr) * 0.5f * 0.6f + eq * 0.4f);
+                sh.AddDirectionalLight(Vector3.up, (sky - gr) * 0.5f, 1f); // up = sky, down = ground bounce (one symmetric lobe)
                 RenderSettings.ambientProbe = sh;
             }
         }

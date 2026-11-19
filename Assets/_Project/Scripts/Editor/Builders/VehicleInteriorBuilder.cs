@@ -37,7 +37,9 @@ namespace CarWash.Editor
                 GlbAnchors(group, m.transform, c);
             }
             else Procedural(group, id, c);
-            if (!GlbDoorCards(root, id)) DoorTrim(root);
+            // v2 vehicles (Batch F #7) carry their own inner door cards (DoorDetail_* under each door): no InteriorDoors / DoorTrim
+            bool v2Cards = root.GetComponentsInChildren<Transform>(true).Any(t => t.name.StartsWith("DoorDetail_"));
+            if (!v2Cards && !GlbDoorCards(root, id)) DoorTrim(root);
             return TrashSpots(group, c);
         }
 

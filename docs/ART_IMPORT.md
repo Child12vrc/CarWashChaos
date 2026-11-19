@@ -113,6 +113,54 @@ Clipping: every vertex is ray-checked against Body / Doors / Glass / Trunk (1.5 
 
 Parts library (`Art/Models/Parts/Interior/`, origin of each part in the comments in `ArtSource/Blender/_scripts/parts_lib.py`): Seat_Bucket, Seat_Bench, SteeringWheel (+Hand_L/R), SteeringColumn, InstrumentCluster, Vent_Round, CenterStack, Console, GearLever, Pedals, FloorMat, RearViewMirror, AirFreshener, TrashBin_Small, TissueBox, DoorCard (56–1316 tris each).
 
+## Vehicles v2 (Batch F #7, 2026-11-19) — `Art/Models/Generated/Vehicles/<file>_v2.glb` (source: the `Vehicle_v2` export collection in `ArtSource/Blender/Vehicles/<id>_<Name>.blend`, generator `_scripts/vehicles_v2.py`)
+New files; the v1 GLBs are untouched, and v1 is kept inside each .blend as the hidden `Reference_v1` collection.
+
+**Node contract (same as v1, top-level nodes, no extra root):**
+- `Body`: one material = the v1 paint material, TEXCOORD_0 + **TEXCOORD_1 (UV2) regenerated with no overlap** (rasterised check: 0 overlapping texels).
+- `Glass`: the same bounds as v1, so the cabin box and the Interior GLBs still fit. Its horizontal faces are removed, so no glass sheet lies across the cabin.
+- `Door_L` / `Door_R` / `Trunk`: the origin = the hinge, the same position as v1.
+- `Wheel_FL/FR/RL/RR`: same centres and sizes.
+- `Headlight_±1`, `Taillight_±1`, `Grille`, `Bumper_Front/Rear` and `Socket_*`: same names and bounds.
+- Extra v1 nodes are kept: CargoBed, HayBales, LiftedFrame, Suspension, RoofLightBar.
+- `Body` bounds are identical to v1, so VehicleHeadlights still places the lights right. Exception: V04 is ±0.86 m wide instead of ±0.90, because its side trim strip now lives on the doors.
+
+**What changed:**
+1. **Body**: the v1 solid minus a cabin cavity. The cavity is x ±(halfW + 0.01), from floorY − 0.045 up to the belt line, across the glass length. This removes the deck under the glass, so the interior is fully visible through the windows. The two side-door openings are cut down to the sill.
+2. **Doors**: each door is the piece of v1 body that filled its opening. It is flush with the skin, has real thickness (its inner face sits at the cavity wall) and a 6 mm seam.
+   - V02's `Door_Rear_L/R` are rebuilt the same way: flush and static.
+   - V01: the v1 body has no side wall at the doors, so its door is the v1 door cut at the belt line.
+   - Children of each door: `DoorDetail_*` (inner door card sized to the gap left by the seats + outer handle; replaces InteriorDoors_<id>.glb and DoorTrim for v2) and **`Mirror_L/R`** (painted housing, chrome glass, arm). Mirrors still get the paint because they keep the body material and the `Mirror` name.
+3. **Modular parts**, built in the v1 bounds:
+   - Lamps: rubber housing, bevelled lens and round LED dots on the headlights; tail lights with a reverse strip.
+   - Grille: chrome slats.
+   - Bumpers: bevelled, with a trim line.
+   - `LicensePlate_Front/Rear`: a Korean-style 52 × 11 cm plate from the prop atlas.
+   - `Wipers` on the windscreen base.
+   - Wheels: lathe tyres with grooves and shoulders, 5-spoke rims, a hub cap in the v1 hub colour and lug nuts. B01 gets chunky tread blocks.
+   - `Exhaust` and `FuelCap` on every car, `RoofRack` on V01 and V04, `Antenna` on V02.
+4. **Materials**: the v1 materials keep their names (Soap Blue, Dark Navy Rubber, Foam White Rims, Warm Yellow Lights, Rear Red Lights, Light Blue Glass, …). New on v2:
+   - `MAT_PropMetal`: chrome
+   - `MAT_PropAtlas`: plates
+   - interior `MAT_*`: door cards
+
+**Checks:**
+- The Interior GLB (unchanged) against every v2 Body / Door / DoorDetail mesh: 0 BVH overlaps on all 5 cars.
+- Previews: `docs/art_preview/Vehicle_<id>_v2{,_rear,_open,_open_R}.png`.
+
+**Unity:**
+- v2 is opt-in. `GlbFor` sorts `id_*.glb` and picks v1 first, so it must prefer `*_v2.glb`.
+- The door box colliders get thicker, because they come from the door mesh bounds.
+- The physics hull is unchanged.
+
+| file | tris (whole car) | Body tris | notes |
+|---|---|---|---|
+| V01_hatchback_v2.glb | 10684 | 430 | roof rack, belt-cut v1 doors |
+| V02_sedan_v2.glb | 11832 | 1074 | 4 flush doors (rear static), antenna |
+| V03_pickup_v2.glb | 11584 | 1362 | cargo bed + hay bales kept |
+| V04_minivan_v2.glb | 11228 | 946 | long side doors, roof rack |
+| B01_monster_truck_v2.glb | 18278 | 974 | chunky tread tyres (most of the tris), light bar kept |
+
 ## Self-wash props (G9 replacements, 2026-11-19) — `Art/Models/Generated/SelfWash/SW_<id>.glb` (source: `ArtSource/Blender/Props/CarWash/SW_<id>.blend`, generator `_scripts/props_selfwash.py`)
 Self-made (no matching CC0 asset exists for Korean self-wash equipment). Style: cartoon, bevelled, flat colours plus icon details. Every node keeps the graybox prefab's local frame (same pivot, front = −Z, same node names where the code uses them), so it swaps in 1:1.
 

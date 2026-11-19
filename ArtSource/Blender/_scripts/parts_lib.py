@@ -345,17 +345,18 @@ def tissue_box():
     return g
 
 
-def door_card(L=0.9, H=0.4, side=1):
-    """Inner door card. Origin = centre of the door's inner surface; panel grows inward (towards -side·X)."""
+def door_card(L=0.9, H=0.4, side=1, depth=0.095):
+    """Inner door card. Origin = centre of the door's inner surface; panel grows inward (towards -side·X) by at most `depth`."""
     g = G("DoorCard")
-    t = 0.025
+    k = clamp(depth / 0.095, 0.25, 1.0)  # squeeze everything when the seats sit close to the door
+    t = 0.025 * k
     X = lambda dx: -side * dx
-    box(g, "Plastic_Dark", Vector((X(t / 2), 0, 0)), (t, L, H), bev=0.008, seg=1)
-    box(g, "Fabric_Carpet", Vector((X(t + 0.004), 0.02, H * 0.08)), (0.008, L * 0.7, H * 0.36), bev=0.003, seg=1)
-    box(g, "Plastic_Dark", Vector((X(t + 0.035), L * 0.05, -H * 0.14)), (0.07, L * 0.42, 0.045), bev=0.018, seg=2)  # armrest
-    box(g, "Rubber_Black", Vector((X(t + 0.012), -L / 2 + L * 0.2, H * 0.22)), (0.025, 0.12, 0.03), bev=0.008, seg=1)  # handle
-    g.add(t_cyl(min(0.07, H * 0.2), 0.012, 16), "Rubber_Black", Matrix.Translation(Vector((X(t + 0.002), L / 2 - L * 0.22, -H * 0.33))) @ RY90)  # speaker
-    box(g, "Plastic_Dark", Vector((X(t + 0.02), 0, -H * 0.4)), (0.04, L * 0.5, 0.06), bev=0.015, seg=1)  # map pocket
+    box(g, "Plastic_Dark", Vector((X(t / 2), 0, 0)), (t, L, H), bev=0.008 * k, seg=1)
+    box(g, "Fabric_Carpet", Vector((X(t + 0.004 * k), 0.02, H * 0.08)), (0.008 * k, L * 0.7, H * 0.36), bev=0.003 * k, seg=1)
+    box(g, "Plastic_Dark", Vector((X(t + 0.035 * k), L * 0.05, -H * 0.14)), (0.07 * k, L * 0.42, 0.045), bev=0.018 * k, seg=2)  # armrest
+    box(g, "Rubber_Black", Vector((X(t + 0.012 * k), -L / 2 + L * 0.2, H * 0.22)), (0.025 * k, 0.12, 0.03), bev=0.008 * k, seg=1)  # handle
+    g.add(t_cyl(min(0.07, H * 0.2), 0.012 * k, 16), "Rubber_Black", Matrix.Translation(Vector((X(t + 0.002), L / 2 - L * 0.22, -H * 0.33))) @ RY90)  # speaker
+    box(g, "Plastic_Dark", Vector((X(t + 0.02 * k), 0, -H * 0.4)), (0.04 * k, L * 0.5, 0.06), bev=0.015 * k, seg=1)  # map pocket
     return g
 
 

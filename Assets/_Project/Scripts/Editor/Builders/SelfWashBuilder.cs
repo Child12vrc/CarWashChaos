@@ -348,6 +348,38 @@ namespace CarWash.Editor
             WriteArtRequests();
         }
 
+        /// <summary>M4.10 follow-up: light metal ceiling panels (linear strips every 0.3 m with dark seams, joints every 1.2 m),
+        /// generated once (Art/Generated/Textures/ceiling_panels.png, mipmapped + anisotropic), tiled per 1.2 m.</summary>
+        static Material CeilingMat(string name, Vector2 size)
+        {
+            const string texPath = "Assets/_Project/Art/Generated/Textures/ceiling_panels.png";
+            if (!File.Exists(texPath))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(texPath));
+                const int S = 512; var px = new Color[S * S];
+                for (int y = 0; y < S; y++)
+                    for (int x = 0; x < S; x++)
+                    {
+                        float v = 0.9f;
+                        int sy = y % 128, sx = x % 512;
+                        if (sy < 3) v = 0.6f; else if (sy < 5) v = 0.97f;              // strip seam + highlight lip
+                        if (sx < 2) v = Mathf.Min(v, 0.7f);                            // panel joint every 1.2 m
+                        v *= 0.985f + 0.015f * Mathf.PerlinNoise(x * 0.05f, y * 0.05f);
+                        px[y * S + x] = new Color(v, v, v * 1.01f, 1f);
+                    }
+                var t = new Texture2D(S, S, TextureFormat.RGBA32, true); t.SetPixels(px); t.Apply();
+                File.WriteAllBytes(texPath, t.EncodeToPNG()); Object.DestroyImmediate(t);
+                AssetDatabase.ImportAsset(texPath, ImportAssetOptions.ForceUpdate);
+                if (AssetImporter.GetAtPath(texPath) is TextureImporter ti) { ti.mipmapEnabled = true; ti.anisoLevel = 8; ti.filterMode = FilterMode.Trilinear; ti.wrapMode = TextureWrapMode.Repeat; ti.SaveAndReimport(); }
+            }
+            var m = M(name, Color.white, 0.55f);
+            m.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(texPath));
+            m.SetTextureScale("_BaseMap", new Vector2(size.x / 1.2f, size.y / 1.2f));
+            m.SetFloat("_Metallic", 0.12f);
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
         static void Canopy(Transform root)
         {
             var c = new GameObject("Canopy") { layer = Layers.Default }.transform; c.SetParent(root, false);
@@ -356,6 +388,8 @@ namespace CarWash.Editor
             const float x0 = -12.4f, x1 = 12.4f, z0 = -1.6f, z1 = 9.6f;
             float cx = (x0 + x1) / 2f, cz = (z0 + z1) / 2f, w = x1 - x0, d = z1 - z0;
             GrayboxMaterials.Box(c, "Roof", new Vector3(cx, CanopyY + 0.15f, cz), new Vector3(w, 0.3f, d), roof);
+            // the underside people look up at: bright metal ceiling panels (the roof box underside read as a dark brown slab)
+            B(c, "Ceiling", new Vector3(cx, CanopyY - 0.03f, cz), new Vector3(w - 0.24f, 0.02f, d - 0.24f), CeilingMat("CanopyCeiling", new Vector2(w - 0.24f, d - 0.24f)));
             B(c, "FasciaN", new Vector3(cx, CanopyY - 0.05f, z1), new Vector3(w + 0.1f, 0.75f, 0.12f), fascia);
             B(c, "FasciaS", new Vector3(cx, CanopyY - 0.05f, z0), new Vector3(w + 0.1f, 0.75f, 0.12f), fascia);
             B(c, "StripeN", new Vector3(cx, CanopyY - 0.32f, z1 + 0.08f), new Vector3(w + 0.14f, 0.08f, 0.04f), Yellow);   // M4.10: 4 cm proud of the fascia
@@ -392,6 +426,7 @@ namespace CarWash.Editor
             float cx = z.center.x, cz = z.center.y;
             // light canopy on four posts
             GrayboxMaterials.Box(g, "VacRoof", new Vector3(cx, 3.35f, cz), new Vector3(z.width + 0.8f, 0.18f, z.height + 0.8f), M("VacRoof", new Color(0.2f, 0.55f, 0.35f), 0.3f));
+            B(g, "VacCeiling", new Vector3(cx, 3.21f, cz), new Vector3(z.width + 0.6f, 0.02f, z.height + 0.6f), CeilingMat("VacCeiling", new Vector2(z.width + 0.6f, z.height + 0.6f)));
             foreach (float x in new[] { z.xMin + 0.2f, z.xMax - 0.2f })
                 foreach (float zz in new[] { z.yMin + 0.2f, z.yMax - 0.2f })
                     GrayboxMaterials.Box(g, $"VacPost_{x}_{zz}", new Vector3(x, 1.65f, zz), new Vector3(0.22f, 3.3f, 0.22f), Steel);
@@ -401,7 +436,7 @@ namespace CarWash.Editor
             Place(g, "AirGun", new Vector3(z.xMin + 5.8f, 0, z.yMin + 0.5f), 180f);
             Place(g, "RecycleBins", new Vector3(z.xMin + 7.8f, 0, z.yMin + 0.55f), 180f);
             Place(g, "TowelRack", new Vector3(z.xMax - 0.9f, 0, z.yMin + 0.6f), 180f);
-            EnvironmentBuilder.NightSpot(g, "VacLight", new Vector3(cx, 3.2f, cz), new Vector3(cx, 0f, cz), 9f, 12f, new Color(1f, 0.95f, 0.85f), 0.38f, 130f);
+            EnvironmentBuilder.NightSpot(g, "VacLight", new Vector3(cx, 3.12f, cz), new Vector3(cx, 0f, cz), 9f, 12f, new Color(1f, 0.95f, 0.85f), 0.38f, 130f);
             Footprints.Add((new Vector3(cx, 0, cz), 4.5f));
         }
 

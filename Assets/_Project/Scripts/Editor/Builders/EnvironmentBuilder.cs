@@ -237,6 +237,8 @@ namespace CarWash.Editor
             var mats = new System.Collections.Generic.List<Material>(); var cols = new System.Collections.Generic.List<Color>(); var on = new System.Collections.Generic.List<float>();
             void G(Material m, Color c, float o) { if (m == null) return; m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", Color.black); EditorUtility.SetDirty(m); mats.Add(m); cols.Add(c); on.Add(o); }
             G(GrayboxMaterials.Get("Scenery_LampHead", new Color(1f, 0.95f, 0.8f), 0.8f), new Color(1f, 0.85f, 0.6f) * 3f, 0.35f);
+            // canopy / vacuum-area ceilings: a faint glow at night stands in for the LED bars lighting the panels (no extra lights)
+            foreach (var cn in new[] { "SW_CanopyCeiling", "SW_VacCeiling" }) { var cm = AssetDatabase.LoadAssetAtPath<Material>($"{GrayboxMaterials.Dir}/{cn}.mat"); if (cm != null) G(cm, new Color(0.2f, 0.2f, 0.21f), 0.4f); }
             foreach (var guid in AssetDatabase.FindAssets("Sign_ t:Material", new[] { MatDir }))
             {
                 var m = AssetDatabase.LoadAssetAtPath<Material>(AssetDatabase.GUIDToAssetPath(guid));
